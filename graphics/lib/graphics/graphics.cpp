@@ -48,32 +48,17 @@ int r_set_ibuf(int num_indices, int *indices) {
     return 0;
 }
 
-int r_render(int draw_flag, int draw_layer) {
+int r_render(mat3 matrix, int draw_flag, int draw_layer) {
     if (render_s.n_vertices > 0) {
-        int vbi = 0, ovf = 0;
+        int vbi = 0;
         for (int i = 0; i < render_s.n_vertices; i += 1) {
-            if (i == VBMAX) {
-                vbi = 0;
-                
-                DRAW[draw_flag](i, render_s.ibuf, render_s.vbuf);
-                
-                i -= 1;
-
-                render_s.ibuf += i;
-                ovf += i;
-            }
-
-            transform_vec3(&render_s.camera.matrix, &render_s.vptr[i].pos, &render_s.vbuf[vbi++].pos);
+            transform_vec3(&matrix, &render_s.vptr[i].pos, &render_s.vbuf[i].pos);
+            transform_vec3(&render_s.camera.matrix, &render_s.vbuf[i].pos, &render_s.vbuf[i].pos);
+            render_s.vbuf[i].color = render_s.vptr[i].color;
         }
 
-        DRAW[draw_flag](render_s.n_indices - ovf, render_s.ibuf, render_s.vbuf);
+        DRAW[draw_flag](render_s.n_indices, render_s.ibuf, render_s.vbuf);
     }
-
-    return 0;
-}
-
-int r_clear(uint16_t c) {
-    
 
     return 0;
 }

@@ -11,7 +11,6 @@
 
 #define RW_TOGGLE   0
 #define VMAX        64
-#define VBMAX       VMAX / 2
 
 typedef struct {
     vec2 pos;
@@ -30,7 +29,7 @@ static struct render_s {
 
     int *ibuf;
     vertex_t *vptr;
-    vertex_t vbuf[VBMAX];
+    vertex_t vbuf[VMAX];
     vertex_t vram[VMAX];
 
     vertex_t *nalloc;
@@ -44,8 +43,7 @@ int r_init();
 int r_set_vbuf(int num_vertices, vertex_t *vertices);
 int r_set_ibuf(int num_indices, int *indices);
 
-int r_render(int draw_flag, int draw_layer);
-int r_clear(uint16_t c);
+int r_render(mat3 matrix, int draw_flag, int draw_layer);
 
 int c_bake_matrix(camera_t *c);
 camera_t new_camera(vec2 pos, float rot, float scale);
