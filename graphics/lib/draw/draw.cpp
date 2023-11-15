@@ -1,15 +1,19 @@
 #include "draw.h"
 
-// pass vec2 of 0-color,1-color for lerp
+void set_line_width(int width) {
+    _LINE_WIDTH = width;
+}
+
 void set_line_draw(int x0, int y0, int x1, int y1, uint16_t c) {
-    // int cx0 = x0, cy0 = y0, cx1 = x1, cy1 = y1;
     int dx =  abs(x1-x0), sx = x0<x1 ? 1 : -1;
     int dy = -abs(y1-y0), sy = y0<y1 ? 1 : -1; 
     int err = dx+dy, e2; /* error value e_xy */
 
     for(;;) {  /* loop */
-        // int c = lerp(x0, cx0, cy0, cx1, cy1);
-        set_pixel(x0, y0, c);
+        for (int i = _LINE_WIDTH / -2; i <= _LINE_WIDTH / 2; i += 1) {
+            set_pixel(x0 + i, y0, c);
+            set_pixel(x0, y0 + i, c);
+        }
         if (x0==x1 && y0==y1) break;
         e2 = 2*err;
         if (e2 >= dy) { err += dy; x0 += sx; } /* e_xy+e_x > 0 */

@@ -17,13 +17,20 @@
 #define DRAW_TRIANGLE_STRIP     5
 #define DRAW_TRIANGLE_FAN       6
 
+#define LINE_WIDTH_0     1
+#define LINE_WIDTH_2     2
+#define LINE_WIDTH_4     4
+#define LINE_WIDTH_8     8
+
 typedef struct {
     vec3 pos;
     uint16_t color;
 } vertex_t;
 
 typedef void (*DrawCallback)(int n_indices, int *v_indices, vertex_t *vertices);
+static uint8_t _LINE_WIDTH = LINE_WIDTH_0;
 
+void set_line_width(int width);
 void set_line_draw(int x0, int y0, int x1, int y1, uint16_t c);
 
 void draw_points(int n_indices, int *v_indices, vertex_t *vertices);
