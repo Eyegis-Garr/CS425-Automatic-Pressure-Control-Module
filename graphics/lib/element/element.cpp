@@ -9,7 +9,7 @@ element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t
 
     ret.n_vertices = num_vertices;
     ret.n_indices = num_vertices;
-    ret.ibuf = (int*) malloc(sizeof(int) * num_vertices);
+    ret.ibuf = NULL;
     ret.vbuf = vmalloc(num_vertices);
     if (ret.vbuf && vertex_list) {
         memcpy(ret.vbuf, vertex_list, sizeof(vertex_t) * num_vertices);
@@ -33,7 +33,7 @@ int e_draw(element_t *e) {
         r_set_vbuf(e->n_vertices, e->vbuf);
         r_set_ibuf(e->n_indices, e->ibuf);
 
-        r_render(e->draw_flag, e->draw_layer);
+        r_render(e->matrix, e->draw_flag, e->draw_layer);
     }
 
     return 0;
