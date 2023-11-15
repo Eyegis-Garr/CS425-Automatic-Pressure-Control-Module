@@ -2,6 +2,7 @@
 #define FONT_H
 
 #include <Arduino.h>
+#include <avr8-stub.h>
 #include "matrix.h"
 #include "ili9341.h"
 
@@ -9,6 +10,10 @@
 // [space]!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJLMNOPQRSTUVWXYZ[\]^_`
 //                             32 - 96 (ASCII)
 
+/*
+TODO:
+    
+*/
 
 #define FOFFSET 32
 #define FNGLYPH 64
@@ -21,8 +26,8 @@ typedef struct {
     uint16_t color;
 } font_t;
 
-int f_setup(font_t *f, const uint8_t *glyphs[], uint8_t pt, uint16_t scale);
-int f_draw(font_t *f, char *str, int len, vec2 pos);
+int f_setup(font_t *f, const uint8_t *glyphs[], uint16_t color, uint8_t spacing, uint16_t scale);
+int f_draw(font_t *f, const char *str, int len, vec2 pos);
 
 uint8_t f_getc_idx(char c);
 
