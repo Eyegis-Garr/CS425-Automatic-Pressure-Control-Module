@@ -70,3 +70,7 @@ void insertion_sort_index(int *data, int *idx, uint16_t len) {
 int lerp(int x, int x0, int y0, int x1, int y1) {
     return (int) ((float) (y0 * (x1 * x) + y1 * (x - x0)) / (float)(x1 - x0));
 }
+
+int mod(int a, int m) {
+    return (a % m < 0) ? (a % m) + m : (a % m);
+}

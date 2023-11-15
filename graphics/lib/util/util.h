@@ -9,5 +9,6 @@ void insertion_sort_index(int *data, int *idx, uint16_t len);
 void insertion_sort(int *data, uint16_t len);
 
 int lerp(int x, int x0, int y0, int x1, int y1);
+int mod(int a, int m);
 
 #endif // UTIL_H
