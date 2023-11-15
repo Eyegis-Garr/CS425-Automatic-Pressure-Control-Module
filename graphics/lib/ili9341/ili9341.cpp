@@ -39,6 +39,8 @@ void init_display() {
 
         if (delay) _delay_ms(delay);
     }
+
+    clear_screen(0);
 }
 
 void hw_reset() {

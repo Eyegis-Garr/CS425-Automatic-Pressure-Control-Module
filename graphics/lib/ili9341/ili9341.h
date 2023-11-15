@@ -5,6 +5,14 @@
 #include <Arduino.h>
 #include <inttypes.h>
 
+/*
+TODO:
+    implement landscape and portrait switching
+        ILI_MAC command
+    better color control
+    actual rasterization?
+*/
+
 // CONTROL & DATA GPIO
 static volatile uint8_t* P_DATA     = (uint8_t*)0x22;
 static volatile uint8_t* DDR_DATA   = (uint8_t*)0x21;
@@ -27,9 +35,9 @@ static volatile uint8_t* DDR_CTRL   = (uint8_t*)0x27;
 #define strobe(R,B) { clr_b(R,B); set_b(R,B); }
 
 // DISPLAY DIMENSIONS
-#define ILI_COLS    (uint32_t)240
-#define ILI_ROWS    (uint32_t)320
-#define ILI_MEMLEN  (uint32_t)76800
+#define ILI_COLS    240
+#define ILI_ROWS    320
+#define ILI_MEMLEN  76800
 
 // ILI9341 COMMANDS
 #define ILI_NOP     0x00    // No Operation
