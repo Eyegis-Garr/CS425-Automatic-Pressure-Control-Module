@@ -27,7 +27,7 @@ typedef struct {
 } font_t;
 
 int f_setup(font_t *f, const uint8_t *glyphs[], uint16_t color, uint8_t spacing, uint16_t scale);
-int f_draw(font_t *f, const char *str, int len, vec2 pos);
+int f_draw(font_t *f, const char *str, int len, vec2 pos, uint16_t color);
 
 uint8_t f_getc_idx(char c);
 

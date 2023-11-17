@@ -14,7 +14,7 @@ int f_setup(font_t *f, const uint8_t *glyphs[], uint16_t color, uint8_t spacing,
     return 0;
 }
 
-int f_draw(font_t *f, const char *str, int len, vec2 pos) {
+int f_draw(font_t *f, const char *str, int len, vec2 pos, uint16_t color) {
     if (!f || !str || len <= 0) {
         return -1;
     }
@@ -29,10 +29,10 @@ int f_draw(font_t *f, const char *str, int len, vec2 pos) {
             glyph = f->g[idx];
         }
 
-        coffset += pgm_read_byte(glyph);
+        coffset += pgm_read_byte(glyph++);
     }
 
-    pos.x = (ILI_COLS / 2) - pos.x - (coffset / 2);
+    pos.x = (ILI_COLS / 2) + pos.x - (coffset / 2);
     pos.y = (ILI_ROWS / 2) - pos.y;
 
     begin_write();
@@ -47,7 +47,7 @@ int f_draw(font_t *f, const char *str, int len, vec2 pos) {
                         z = (i / f->scale) * c + (k / f->scale);
                         rd = pgm_read_byte(glyph + z);
                         if (rd) {
-                            set_pixel(pos.x + k, pos.y + i, f->color);
+                            set_pixel(pos.x + k, pos.y + i, color);
                         }
                     }
                 }
