@@ -26,7 +26,7 @@ int r_init() {
     render_s.ibuf = NULL;
     render_s.vptr = NULL;
 
-    render_s.nalloc = &render_s.vram[0];
+    render_s.nalloc = render_s.vram;
 
     return 0;
 }
@@ -48,13 +48,12 @@ int r_set_ibuf(int num_indices, int *indices) {
     return 0;
 }
 
-int r_render(mat3 matrix, int draw_flag, int draw_layer) {
+int r_render(mat3 matrix, int draw_flag, int clear) {
     if (render_s.n_vertices > 0) {
-        int vbi = 0;
         for (int i = 0; i < render_s.n_vertices; i += 1) {
             transform_vec3(&matrix, &render_s.vptr[i].pos, &render_s.vbuf[i].pos);
             transform_vec3(&render_s.camera.matrix, &render_s.vbuf[i].pos, &render_s.vbuf[i].pos);
-            render_s.vbuf[i].color = render_s.vptr[i].color;
+            render_s.vbuf[i].color = (clear) ? 0 : render_s.vptr[i].color;
         }
 
         DRAW[draw_flag](render_s.n_indices, render_s.ibuf, render_s.vbuf);
