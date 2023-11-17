@@ -34,10 +34,21 @@ static volatile uint8_t* DDR_CTRL   = (uint8_t*)0x27;
 #define clr_b(R,B)  { R &= ~(1 << B); }
 #define strobe(R,B) { clr_b(R,B); set_b(R,B); }
 
+// DISPLAY ORIENTATION
+// #define PORTRAIT
+#define LANDSCAPE
+
+#define ILI_MEMLEN  76800
 // DISPLAY DIMENSIONS
+#if defined(PORTRAIT)
 #define ILI_COLS    240
 #define ILI_ROWS    320
-#define ILI_MEMLEN  76800
+#define ILI_ORI     0x4C
+#elif defined(LANDSCAPE)
+#define ILI_COLS    320
+#define ILI_ROWS    240
+#define ILI_ORI     0x2C
+#endif
 
 // ILI9341 COMMANDS
 #define ILI_NOP     0x00    // No Operation
