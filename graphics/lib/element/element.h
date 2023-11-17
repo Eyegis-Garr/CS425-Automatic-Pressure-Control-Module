@@ -18,11 +18,11 @@ typedef struct {
     mat3 matrix;
 
     uint8_t draw_flag;
-    uint8_t draw_layer;
 } element_t;
 
 int e_draw(element_t *e);
+int e_clear(element_t *e);
 int e_bake_matrix(element_t *e);
-element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t draw_flag, uint8_t draw_layer);
+element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t draw_flag);
 
 #endif // ELEMENT_H

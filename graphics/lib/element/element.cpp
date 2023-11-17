@@ -1,6 +1,6 @@
 #include "element.h"
 
-element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t draw_flag, uint8_t draw_layer) {
+element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t draw_flag) {
     element_t ret;
 
     ret.pos = pos;
@@ -17,7 +17,6 @@ element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t
 
     ret.matrix = IDENT_MAT3;
     ret.draw_flag = draw_flag;
-    ret.draw_layer = draw_layer;
 
     e_bake_matrix(&ret);
 
@@ -33,7 +32,20 @@ int e_draw(element_t *e) {
         r_set_vbuf(e->n_vertices, e->vbuf);
         r_set_ibuf(e->n_indices, e->ibuf);
 
-        r_render(e->matrix, e->draw_flag, e->draw_layer);
+        r_render(e->matrix, e->draw_flag, 0);
+    }
+
+    return 0;
+}
+
+int e_clear(element_t *e) {
+    if (!e) return -1;
+
+    if (e->n_vertices > 0) {
+        r_set_vbuf(e->n_vertices, e->vbuf);
+        r_set_ibuf(e->n_indices, e->ibuf);
+
+        r_render(e->matrix, e->draw_flag, 1);
     }
 
     return 0;
