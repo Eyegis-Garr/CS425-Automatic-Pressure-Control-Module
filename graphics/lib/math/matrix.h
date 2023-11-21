@@ -44,19 +44,20 @@ void transform_vec3(mat3 *t, vec3 *v, vec3 *w);
 
 void translate_vec3(vec3 *v, vec3 *t);
 void rotate_vec3(float theta, vec3* v);
-void scale_vec3(vec3 *sc, vec3 *v);
+void scale_vec3(float sc, vec3 *v);
 
 void translate_vec2(vec2 *v, vec2 *t);
 void rotate_vec2(float theta, vec2* v);
-void scale_vec2(vec2 *sc, vec2 *v);
+void scale_vec2(float sc, vec2 *v);
 
 void translate_mat3(vec2 *t, mat3 *m);
 void rotate_mat3(float theta, mat3 *m);
 void scale_mat3(vec3 s, mat3 *m);
 
 void rotate_mat2(float theta, mat2 *m);
-void scale_mat2(vec3 s, mat2 *m);
+void scale_mat2(vec2 s, mat2 *m);
 
+void norm_vec3(vec3 *v);
 void norm_vec2(vec2 *v);
 
 #endif // MATH_H

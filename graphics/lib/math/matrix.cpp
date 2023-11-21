@@ -36,7 +36,9 @@ void transform_vec3(mat3 *t, vec3 *v, vec3 *w) {
 }
 
 void translate_vec3(vec3 *v, vec3 *t) {
-    
+    v->x += t->x;
+    v->y += t->y;
+    v->w += t->w;
 }
 
 void rotate_vec3(float theta, vec3* v) {
@@ -50,12 +52,15 @@ void rotate_vec3(float theta, vec3* v) {
     *v = t;
 }
 
-void scale_vec3(vec3 *sc, vec3 *v) {
-
+void scale_vec3(float sc, vec3 *v) {
+    v->x *= sc;
+    v->y *= sc;
+    v->w *= sc;
 }
 
 void translate_vec2(vec2 *v, vec2 *t) {
-
+    v->x += t->x;
+    v->y += t->y;
 }
 
 void rotate_vec2(float theta, vec2* v) {
@@ -68,10 +73,10 @@ void rotate_vec2(float theta, vec2* v) {
     *v = t;
 }
 
-void scale_vec2(vec2 *sc, vec2 *v) {
-
+void scale_vec2(float sc, vec2 *v) {
+    v->x *= sc;
+    v->y *= sc;
 }
-
 void translate_mat3(vec2 *t, mat3 *m) {
     mat3 translate = { 1, 0, (float)t->x, 
                        0, 1, (float)t->y, 
@@ -92,11 +97,9 @@ void rotate_mat3(float theta, mat3 *m) {
 }
 
 void scale_mat3(vec3 s, mat3 *m) {
-    mat3 scale = { (float)s.x, 0, 0, 
-                   0, (float)s.y, 0,
-                   0, 0, (float)s.w };
-    mat3 mcopy = mat3_copy(m);
-    multiply_mat3(&scale, &mcopy, m);
+    m->a *= s.x;
+    m->e *= s.y;
+    m->i *= s.w;
 }
 
 void rotate_mat2(float theta, mat2 *m) {
@@ -108,11 +111,18 @@ void rotate_mat2(float theta, mat2 *m) {
     multiply_mat2(&rotate, &mcopy, m);
 }
 
-void scale_mat2(vec3 s, mat2 *m) {
-    mat2 scale = { (float)s.x, 0, 
-                   0, (float)s.y };
-    mat2 mcopy = mat2_copy(m);
-    multiply_mat2(&scale, &mcopy, m);
+void scale_mat2(vec2 s, mat2 *m) {
+    m->a *= s.x;
+    m->d *= s.y;
+}
+
+void norm_vec3(vec3 *v) {
+    static float len = sqrt(v->x * v->x + 
+                            v->y * v->y +
+                            v->w * v->w);
+    v->x /= len;
+    v->y /= len;
+    v->w /= len;
 }
 
 void norm_vec2(vec2 *v) {
