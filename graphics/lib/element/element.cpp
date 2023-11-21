@@ -23,30 +23,15 @@ element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t
     return ret;
 } 
 
-int e_draw(element_t *e) {
-    if (!e) {
+int e_draw(element_t *e, int clear) {
+    if (!e || e->n_vertices <= 0) {
         return -1;
     }
 
-    if (e->n_vertices > 0) {
-        r_set_vbuf(e->n_vertices, e->vbuf);
-        r_set_ibuf(e->n_indices, e->ibuf);
+    r_set_vbuf(e->n_vertices, e->vbuf);
+    r_set_ibuf(e->n_indices, e->ibuf);
 
-        r_render(e->matrix, e->draw_flag, 0);
-    }
-
-    return 0;
-}
-
-int e_clear(element_t *e) {
-    if (!e) return -1;
-
-    if (e->n_vertices > 0) {
-        r_set_vbuf(e->n_vertices, e->vbuf);
-        r_set_ibuf(e->n_indices, e->ibuf);
-
-        r_render(e->matrix, e->draw_flag, 1);
-    }
+    r_render(e->matrix, e->draw_flag, clear);
 
     return 0;
 }

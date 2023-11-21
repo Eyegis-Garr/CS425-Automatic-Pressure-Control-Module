@@ -20,8 +20,7 @@ typedef struct {
     uint8_t draw_flag;
 } element_t;
 
-int e_draw(element_t *e);
-int e_clear(element_t *e);
+int e_draw(element_t *e, int clear);
 int e_bake_matrix(element_t *e);
 element_t new_element(vec2 pos, int num_vertices, vertex_t *vertex_list, uint8_t draw_flag);
 
