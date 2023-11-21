@@ -1,7 +1,16 @@
 #include "draw.h"
 
+uint8_t _LINE_WIDTH = LINE_WIDTH_0;
+uint8_t _CLEAR = 0;
+vec3 A, B, C;
+uint16_t color;
+
 void set_line_width(int width) {
     _LINE_WIDTH = width;
+}
+
+void set_draw_clear(int clear) {
+    _CLEAR = clear;
 }
 
 void set_line_draw(int x0, int y0, int x1, int y1, uint16_t c) {
@@ -21,123 +30,111 @@ void set_line_draw(int x0, int y0, int x1, int y1, uint16_t c) {
     }
 }
 
-void draw_points(int n_indices, int *v_indices, vertex_t *vertices) {
-    static vertex_t d_vertex;
-
+void draw_points(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
     begin_write();
         for (int i = 0; i < n_indices; i += 1) {
-            d_vertex = vertices[v_indices[i]];
-
-            set_pixel(d_vertex.pos.x, d_vertex.pos.y, d_vertex.color);
+            color = vertices[v_indices[i]].color;
+            transform_vec3(transform, &vertices[v_indices[i]].pos, &A);
+            set_pixel(A.x, A.y, (_CLEAR) ?  0 : color);
         }
     end_write();
 }
 
-void draw_lines(int n_indices, int *v_indices, vertex_t *vertices) {
-    static vertex_t a, b;
-
+void draw_lines(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
     begin_write();
-        for (int i = 0; i < n_indices; i += 2) {
-            a = vertices[v_indices[i]];
-            b = vertices[v_indices[i + 1]];
-
-            // can use pixel distance from either point to interpolate color
-            // rasterization!
-
-            set_line_draw(a.pos.x, a.pos.y, b.pos.x, b.pos.y, a.color); 
+        for (int i = 0; i < n_indices; i += 2) {      
+            color = vertices[v_indices[i]].color;      
+            transform_vec3(transform, &vertices[v_indices[i]].pos, &A);
+            transform_vec3(transform, &vertices[v_indices[i+1]].pos, &B);
+            set_line_draw(A.x, A.y, B.x, B.y, (_CLEAR) ?  0 : color); 
         }
     end_write();
 }
 
-void draw_line_strip(int n_indices, int *v_indices, vertex_t *vertices) {
-    static vertex_t a, b;
-
+void draw_line_strip(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
     begin_write();
         for (int i = 0; i < n_indices - 1; i += 1) {
-            a = vertices[v_indices[i]];
-            b = vertices[v_indices[i + 1]];
+            color = vertices[v_indices[i]].color;
+            
+            transform_vec3(transform, &vertices[v_indices[i]].pos, &A);
+            transform_vec3(transform, &vertices[v_indices[i+1]].pos, &B);
 
-            set_line_draw(a.pos.x, a.pos.y, b.pos.x, b.pos.y, a.color); 
+            set_line_draw(A.x, A.y, B.x, B.y, (_CLEAR) ?  0 : color); 
         }
     end_write();
 }
 
-void draw_line_loop(int n_indices, int *v_indices, vertex_t *vertices) {
-    static vertex_t a, b;
-
+void draw_line_loop(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
     begin_write();
         for (int i = 0; i < n_indices; i += 1) {
-            a = vertices[v_indices[i]];
+            color = vertices[v_indices[i]].color;
 
             if (i == n_indices - 1) {
-                b = vertices[v_indices[0]];
+                transform_vec3(transform, &vertices[v_indices[0]].pos, &B);
             } else {
-                b = vertices[v_indices[i + 1]];
+                transform_vec3(transform, &vertices[v_indices[i+1]].pos, &B);
             }
 
-            set_line_draw(a.pos.x, a.pos.y, b.pos.x, b.pos.y, a.color); 
+            transform_vec3(transform, &vertices[v_indices[i]].pos, &A);
+
+            set_line_draw(A.x, A.y, B.x, B.y, (_CLEAR) ?  0 : color); 
         }
     end_write();
 }
 
-void draw_triangles(int n_indices, int *v_indices, vertex_t *vertices) {
-    static vertex_t a, b, c;
+void draw_triangles(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
 
     begin_write();
         for (int i = 0; i < n_indices - 2; i += 3) {
-            a = vertices[v_indices[i]];
-            b = vertices[v_indices[i + 1]];
-            c = vertices[v_indices[i + 2]];
+            color = vertices[v_indices[i]].color;
 
-            // can use barycentric coords to interpolate color values for pixels within triangle?
-            // requires further step of processing before drawing (rasterization!)
+            transform_vec3(transform, &vertices[v_indices[i]].pos, &A);
+            transform_vec3(transform, &vertices[v_indices[i+1]].pos, &B);
+            transform_vec3(transform, &vertices[v_indices[i+2]].pos, &C);
 
-            set_line_draw(a.pos.x, a.pos.y, b.pos.x, b.pos.y, a.color);
-            set_line_draw(a.pos.x, a.pos.y, c.pos.x, c.pos.y, a.color);
-            set_line_draw(c.pos.x, c.pos.y, b.pos.x, b.pos.y, a.color);
+            set_line_draw(A.x, A.y, B.x, B.y, (_CLEAR) ?  0 : color);
+            set_line_draw(A.x, A.y, C.x, C.y, (_CLEAR) ?  0 : color);
+            set_line_draw(C.x, C.y, B.x, B.y, (_CLEAR) ?  0 : color);
         }
     end_write();
 }
 
-void draw_triangle_strip(int n_indices, int *v_indices, vertex_t *vertices) {
-    static vertex_t a, b, c;
+void draw_triangle_strip(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
 
     begin_write();
         for (int i = 0; i < n_indices - 2; i += 1) {
-            a = vertices[v_indices[i]];
-            b = vertices[v_indices[i + 1]];
-            c = vertices[v_indices[i + 2]];
+            color = vertices[v_indices[i]].color;
 
-            // can use barycentric coords to interpolate color values for pixels within triangle?
-            // requires further step of processing before drawing (rasterization!)
+            transform_vec3(transform, &vertices[v_indices[i]].pos, &A);
+            transform_vec3(transform, &vertices[v_indices[i+1]].pos, &B);
+            transform_vec3(transform, &vertices[v_indices[i+2]].pos, &C);
 
-            set_line_draw(a.pos.x, a.pos.y, b.pos.x, b.pos.y, a.color);
-            set_line_draw(a.pos.x, a.pos.y, c.pos.x, c.pos.y, a.color);
-            set_line_draw(c.pos.x, c.pos.y, b.pos.x, b.pos.y, a.color); 
+            set_line_draw(A.x, A.y, B.x, B.y, (_CLEAR) ?  0 : color);
+            set_line_draw(A.x, A.y, C.x, C.y, (_CLEAR) ?  0 : color);
+            set_line_draw(C.x, C.y, B.x, B.y, (_CLEAR) ?  0 : color); 
         }
     end_write();
 }
 
-void draw_triangle_fan(int n_indices, int *v_indices, vertex_t *vertices) {
-    static vertex_t a, b, c;
+void draw_triangle_fan(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
 
     begin_write();
-        a = vertices[v_indices[0]];
+        A = vertices[v_indices[0]].pos;
+        transform_vec3(transform, &vertices[v_indices[0]].pos, &A);
         for (int i = 1; i < n_indices - 1; i += 1) {
-            b = vertices[v_indices[i]];
-            c = vertices[v_indices[i + 1]];
+            color = vertices[v_indices[i]].color;
 
-            // can use barycentric coords to interpolate color values for pixels within triangle?
-            // requires further step of processing before drawing (rasterization!)
+            transform_vec3(transform, &vertices[v_indices[i]].pos, &B);
+            transform_vec3(transform, &vertices[v_indices[i+1]].pos, &C);
 
-            set_line_draw(a.pos.x, a.pos.y, b.pos.x, b.pos.y, a.color);
-            set_line_draw(a.pos.x, a.pos.y, c.pos.x, c.pos.y, a.color);
-            set_line_draw(c.pos.x, c.pos.y, b.pos.x, b.pos.y, a.color); 
+            set_line_draw(A.x, A.y, B.x, B.y, (_CLEAR) ?  0 : color);
+            set_line_draw(A.x, A.y, C.x, C.y, (_CLEAR) ?  0 : color);
+            set_line_draw(C.x, C.y, B.x, B.y, (_CLEAR) ?  0 : color); 
         }
     end_write();
 }
 
-void draw_polygon_fill(int n_indices, int *v_indices, vertex_t *vertices) {
+void draw_polygon_fill(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform) {
     begin_write();
                
     end_write();

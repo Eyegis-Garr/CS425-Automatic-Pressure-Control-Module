@@ -27,20 +27,26 @@ typedef struct {
     uint16_t color;
 } vertex_t;
 
-typedef void (*DrawCallback)(int n_indices, int *v_indices, vertex_t *vertices);
-static uint8_t _LINE_WIDTH = LINE_WIDTH_0;
+typedef void (*DrawCallback)(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
 
 void set_line_width(int width);
+void set_draw_clear(int clear);
 void set_line_draw(int x0, int y0, int x1, int y1, uint16_t c);
 
-void draw_points(int n_indices, int *v_indices, vertex_t *vertices);
-void draw_lines(int n_indices, int *v_indices, vertex_t *vertices);
-void draw_line_strip(int n_indices, int *v_indices, vertex_t *vertices);
-void draw_line_loop(int n_indices, int *v_indices, vertex_t *vertices);
-void draw_triangles(int n_indices, int *v_indices, vertex_t *vertices);
-void draw_triangle_strip(int n_indices, int *v_indices, vertex_t *vertices);
-void draw_triangle_fan(int n_indices, int *v_indices, vertex_t *vertices);
-void draw_polygon_fill(int n_indices, int *v_indices, vertex_t *vertices);
+void draw_points(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+void draw_lines(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+void draw_line_strip(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+void draw_line_loop(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+void draw_triangles(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+void draw_triangle_strip(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+void draw_triangle_fan(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+void draw_polygon_fill(int n_indices, int *v_indices, vertex_t *vertices, mat3 *transform);
+
+extern uint8_t _LINE_WIDTH;
+extern uint8_t _CLEAR;
+extern uint16_t color;
+extern vec3 A, B, C;
+
 
 static const DrawCallback DRAW[8] = {
     draw_points,
