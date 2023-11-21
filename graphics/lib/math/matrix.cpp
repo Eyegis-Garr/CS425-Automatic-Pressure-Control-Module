@@ -25,14 +25,51 @@ void multiply_mat3(mat3 *a, mat3 *b, mat3 *p) {
 }
 
 void transform_vec2(mat2 *t, vec2 *v, vec2 *w) {
-    w->x = t->a * v->x + t->b * v->y;
-    w->y = t->c * v->x + t->d * v->y;
+    w->x = t->a * (float)v->x + t->b * (float)v->y;
+    w->y = t->c * (float)v->x + t->d * (float)v->y;
 }
 
 void transform_vec3(mat3 *t, vec3 *v, vec3 *w) {
-    w->x = t->a * v->x + t->b * v->y + t->c * v->w;
-    w->y = t->d * v->x + t->e * v->y + t->f * v->w;
-    w->w = t->g * v->x + t->h * v->y + t->i * v->w;
+    w->x = t->a * (float)v->x + t->b * (float)v->y + t->c * (float)v->w;
+    w->y = t->d * (float)v->x + t->e * (float)v->y + t->f * (float)v->w;
+    w->w = t->g * (float)v->x + t->h * (float)v->y + t->i * (float)v->w;
+}
+
+void translate_vec3(vec3 *v, vec3 *t) {
+    
+}
+
+void rotate_vec3(float theta, vec3* v) {
+    static vec3 t;
+    static float c_theta, s_theta;
+    c_theta = cos(theta); s_theta = sin(theta);
+    mat3 rotate = { c_theta, -s_theta, 0,
+                    s_theta, c_theta, 0, 
+                    0,       0,       1};
+    transform_vec3(&rotate, v, &t);
+    *v = t;
+}
+
+void scale_vec3(vec3 *sc, vec3 *v) {
+
+}
+
+void translate_vec2(vec2 *v, vec2 *t) {
+
+}
+
+void rotate_vec2(float theta, vec2* v) {
+    static vec2 t;
+    static float c_theta, s_theta;
+    c_theta = cos(theta); s_theta = sin(theta);
+    mat2 rotate = { c_theta, -s_theta,
+                    s_theta, c_theta };
+    transform_vec2(&rotate, v, &t);
+    *v = t;
+}
+
+void scale_vec2(vec2 *sc, vec2 *v) {
+
 }
 
 void translate_mat3(vec2 *t, mat3 *m) {
@@ -45,7 +82,8 @@ void translate_mat3(vec2 *t, mat3 *m) {
 }
 
 void rotate_mat3(float theta, mat3 *m) {
-    float c_theta = cos(theta), s_theta = sin(theta);
+    static float c_theta, s_theta;
+    c_theta = cos(theta); s_theta = sin(theta);
     mat3 rotate = { c_theta, -s_theta, 0,
                     s_theta, c_theta, 0, 
                     0,       0,       1};
@@ -62,7 +100,8 @@ void scale_mat3(vec3 s, mat3 *m) {
 }
 
 void rotate_mat2(float theta, mat2 *m) {
-    float c_theta = cos(theta), s_theta = sin(theta);
+    static float c_theta, s_theta;
+    c_theta = cos(theta); s_theta = sin(theta);
     mat2 rotate = { c_theta, -s_theta,
                     s_theta, c_theta};
     mat2 mcopy = mat2_copy(m);
@@ -74,4 +113,9 @@ void scale_mat2(vec3 s, mat2 *m) {
                    0, (float)s.y };
     mat2 mcopy = mat2_copy(m);
     multiply_mat2(&scale, &mcopy, m);
+}
+
+void norm_vec2(vec2 *v) {
+    static float len = sqrt(v->x * v->x + v->y * v->y);
+    v->x /= len; v->y /= len;
 }
