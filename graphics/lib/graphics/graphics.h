@@ -10,7 +10,7 @@
 #include "draw.h"
 
 #define RW_TOGGLE   0
-#define VMAX        64
+#define VMAX        32
 
 typedef struct {
     vec2 pos;
@@ -19,7 +19,7 @@ typedef struct {
     mat3 matrix;
 } camera_t;
 
-static struct render_s {
+typedef struct render_t {
     uint8_t flags;
     
     camera_t camera;
@@ -29,11 +29,10 @@ static struct render_s {
 
     int *ibuf;
     vertex_t *vptr;
-    vertex_t vbuf[VMAX];
     vertex_t vram[VMAX];
 
     vertex_t *nalloc;
-} render_s;
+} render_t;
 
 vertex_t *vmalloc(size_t size);
 void vfree(vertex_t *vptr);

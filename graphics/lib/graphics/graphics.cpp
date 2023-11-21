@@ -1,5 +1,7 @@
 #include "graphics.h"
 
+static render_t render_s;
+
 vertex_t *vmalloc(size_t size) {
     vertex_t *t = render_s.nalloc;
     if (t + size >= &render_s.vram[VMAX])
@@ -49,14 +51,12 @@ int r_set_ibuf(int num_indices, int *indices) {
 }
 
 int r_render(mat3 matrix, int draw_flag, int clear) {
+    static mat3 transform;
+    set_draw_clear(clear);
+    c_bake_matrix(&render_s.camera);
     if (render_s.n_vertices > 0) {
-        for (int i = 0; i < render_s.n_vertices; i += 1) {
-            transform_vec3(&matrix, &render_s.vptr[i].pos, &render_s.vbuf[i].pos);
-            transform_vec3(&render_s.camera.matrix, &render_s.vbuf[i].pos, &render_s.vbuf[i].pos);
-            render_s.vbuf[i].color = (clear) ? 0 : render_s.vptr[i].color;
-        }
-
-        DRAW[draw_flag](render_s.n_indices, render_s.ibuf, render_s.vbuf);
+        multiply_mat3(&render_s.camera.matrix, &matrix, &transform);
+        DRAW[draw_flag](render_s.n_indices, render_s.ibuf, render_s.vptr, &transform);
     }
 
     return 0;
@@ -66,8 +66,7 @@ int c_bake_matrix(camera_t *c) {
     vec2 v_translate = (vec2) { (ILI_COLS >> 1) - c->pos.x, (ILI_ROWS >> 1) + c->pos.y };
     vec3 v_scale = (vec3) { c->scale, -1 * c->scale, 1 };
 
-    if (!c)
-        return -1;
+    if (!c) return -1;
 
     c->matrix = IDENT_MAT3;
 
