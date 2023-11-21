@@ -6,7 +6,7 @@
 #include "font.h"
 #include "util.h"
 
-#define OPTION_LEN  32
+#define OPTION_LEN  16
 #define TITLE_LEN   16
 #define MAX_VIS_OPT 4
 
@@ -18,10 +18,17 @@
 #define CURS_SELECT 4
 #define CURS_BACK   5
 
-// BASIC MENU TYPES
-#define M_SIMPLE    0
-#define M_TOGGLE    1
-#define M_INPUT     2
+// MENU DRAW FUNCTIONS
+#define M_LIST      0
+#define M_SET       1
+#define M_TOGGLE    2
+#define M_PRINT     3
+
+// MENU INTERACT FUNCTIONS
+#define I_LIST    0
+#define I_SET     1
+#define I_TOGGLE  2
+#define I_PRINT   3
 
 /*
 TODO:
@@ -41,14 +48,15 @@ TODO:
 typedef struct menu_t menu_t;
 
 typedef struct option_t {
-    char *name;
+    char name[OPTION_LEN];
     menu_t *target;
-    int value;
+    double value;
 } option_t;
 
-typedef int (*MenuCallback)(menu_t *m, int selection);
+typedef int (*MenuCallback)(menu_t *m, option_t *o);
+typedef int (*MenuDrawCallback)(menu_t *m, int clear);
 typedef struct menu_t {
-    char *title;
+    char title[TITLE_LEN];
     uint8_t nopts;
     option_t *options;
 
@@ -65,6 +73,7 @@ typedef struct menu_t {
     int cursor;
     uint16_t cur_color;
 
+    int draw_flag;
     element_t *m_element;
     element_t *o_element;
     font_t *font;
@@ -75,10 +84,19 @@ menu_t *new_menu(const char *title, uint8_t num_options, font_t *font, vec2 cent
                 element_t *menu_element, element_t *option_element);
 int m_set_options(menu_t *m, int num_options, option_t *options);
 int m_set_size(menu_t *m, int width, int height);
+int m_set_draw(menu_t *m, int draw_flag);
 
-int m_interact(menu_t *m, int it);
+int m_interact_default(menu_t *m, int it);
+int m_interact_optset(menu_t *m, int it);
+int m_interact_toggle(menu_t *m, int it);
 
 int m_draw(menu_t *m, int clear);
-int m_draw_options(menu_t *m, int clear);
+
+int m_list_options(menu_t *m, int clear);
+int m_set_value(menu_t *m, int clear);
+int m_toggle_value(menu_t *m, int clear);
+int m_print_value(menu_t *m, int clear);
+
+extern MenuDrawCallback MENU_DRAW[4];
 
 #endif // MENU_H
