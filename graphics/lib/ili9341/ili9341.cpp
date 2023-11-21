@@ -1,5 +1,10 @@
 #include "ili9341.h"
 
+volatile uint8_t* P_DATA     = (uint8_t*)0x22;
+volatile uint8_t* DDR_DATA   = (uint8_t*)0x21;
+volatile uint8_t* P_CTRL     = (uint8_t*)0x28;
+volatile uint8_t* DDR_CTRL   = (uint8_t*)0x27;
+
 static const uint8_t PROGMEM init_commands[] = {
     13,
     0, 200, ILI_SWRES,                      // SW Reset

@@ -14,10 +14,10 @@ TODO:
 */
 
 // CONTROL & DATA GPIO
-static volatile uint8_t* P_DATA     = (uint8_t*)0x22;
-static volatile uint8_t* DDR_DATA   = (uint8_t*)0x21;
-static volatile uint8_t* P_CTRL     = (uint8_t*)0x28;
-static volatile uint8_t* DDR_CTRL   = (uint8_t*)0x27;
+extern volatile uint8_t* P_DATA;
+extern volatile uint8_t* DDR_DATA;
+extern volatile uint8_t* P_CTRL;
+extern volatile uint8_t* DDR_CTRL;
 
 // DATA BUS DIRECTONALITY
 #define DATA_WR     { DDR_DATA |= 0xFF; }
