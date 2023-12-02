@@ -19,8 +19,6 @@
 
 #define LINE_WIDTH_0     1
 #define LINE_WIDTH_2     2
-#define LINE_WIDTH_4     4
-#define LINE_WIDTH_8     8
 
 typedef struct {
     vec3 pos;

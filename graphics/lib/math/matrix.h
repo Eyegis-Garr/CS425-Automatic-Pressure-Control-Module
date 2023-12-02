@@ -1,5 +1,5 @@
-#ifndef MATH_H
-#define MATH_H
+#ifndef MATRIX_H
+#define MATRIX_H
 
 #define __DELAY_BACKWARD_COMPATIBLE__
 
@@ -15,11 +15,11 @@
 #include <Arduino.h>
 
 typedef struct vec2 {
-    float x, y;
+    int x, y;
 } vec2;
 
 typedef struct {
-    float x, y, w;
+    int x, y, w;
 } vec3;
 
 typedef struct {
@@ -60,4 +60,4 @@ void scale_mat2(vec2 s, mat2 *m);
 void norm_vec3(vec3 *v);
 void norm_vec2(vec2 *v);
 
-#endif // MATH_H
+#endif // MATRIX_H

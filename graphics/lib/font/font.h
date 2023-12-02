@@ -2,18 +2,12 @@
 #define FONT_H
 
 #include <Arduino.h>
-#include <avr8-stub.h>
 #include "matrix.h"
 #include "ili9341.h"
 
 // FONT GLYPH ORDERING
 // [space]!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJLMNOPQRSTUVWXYZ[\]^_`
 //                             32 - 96 (ASCII)
-
-/*
-TODO:
-    
-*/
 
 #define FOFFSET 32
 #define FNGLYPH 64
