@@ -63,7 +63,7 @@ int m_set_value(menu_t *m, int clear) {
 
     vec2 tpos = (vec2) { m->center.x, m->center.y + m->opt_offset - m->opt_div };
     uint16_t c = (clear) ? 0 : m->font->color;
-    int d, x, y, z, w;
+    int q, r, s, t, x;
 
     f_draw(m->font, "+", 1, tpos, c);
     tpos.y -= m->opt_div;
@@ -73,13 +73,15 @@ int m_set_value(menu_t *m, int clear) {
     e_draw(m->o_element, clear);
 
     if (m->options) {
-        d = (int)m->options[0].value;
-        x = (int)(m->options[0].value / 10) % 100;
-        y = ((int)m->options[0].value) % 10;
-        z = (m->options[0].value - (double)d) * 10;
-        w = (m->options[0].value - (double)d) * 100;
-        sprintf(m->options[0].name, "%d%d %d%d", x, y, z, w);
-        f_draw(m->font, m->options[0].name, 5, tpos, c);
+        x = tpos.x - m->font->spacing;
+        q = m->options[0].value / 1000 % 10;
+        r = m->options[0].value / 100  % 10;
+        s = m->options[0].value / 10   % 10;
+        t = m->options[0].value % 10;
+        sprintf(m->options[0].name, "%d%d%d%d", q, r, s, t);
+        f_draw(m->font, m->options[0].name, 4, tpos, c);
+        f_draw(m->font, ".", 1, (vec2){tpos.x, tpos.y - 10}, c);
+        f_draw(m->font, "^", 1, (vec2){x + m->cursor * m->font->spacing, tpos.y - m->font->spacing}, c);
     } else {
         f_draw(m->font, "NULL", 4, tpos, c);
     }
@@ -92,7 +94,7 @@ int m_set_value(menu_t *m, int clear) {
     m->o_element->pos = tpos;
     e_bake_matrix(m->o_element);
     e_draw(m->o_element, clear);
-    f_draw(m->font, "OK", 2, tpos, c);    
+    f_draw(m->font, "OK", 2, tpos, (m->cursor < 0) ? 0x05A0 : c);
 
     return 0;
 }

@@ -56,7 +56,7 @@ int m_set_size(menu_t *m, int width, int height) {
     m->w = width;
     m->h = height;
 
-    m->opt_offset = (m->h / 2) - (m->opt_sp / 2);
+    m->opt_offset = (m->h - m->opt_sp) / 2;
     m->opt_div = (m->h - m->opt_sp) / (MAX_VIS_OPT + 1) + 3;
     m->vis_items = fmin((m->h / m->opt_div) - 1, m->nopts);
 
@@ -67,6 +67,14 @@ int m_set_draw(menu_t *m, int draw_flag) {
     if (!m || draw_flag < 0 || draw_flag >= 4) return -1;
 
     m->draw_flag = draw_flag;
+
+    return 0;
+}
+
+int m_set_interact(menu_t *m, int it_flag) {
+    if (!m || it_flag < 0 || it_flag >= 4) return -1;
+
+    m->it_flag = it_flag;
 
     return 0;
 }

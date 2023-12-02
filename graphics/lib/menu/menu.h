@@ -2,7 +2,7 @@
 #define MENU_H
 
 #include <Arduino.h>
-#include "element.h"
+#include "graphics.h"
 #include "font.h"
 #include "util.h"
 
@@ -19,16 +19,16 @@
 #define CURS_BACK   5
 
 // MENU DRAW FUNCTIONS
-#define M_LIST      0
+#define M_DEFAULT   0
 #define M_SET       1
 #define M_TOGGLE    2
 #define M_PRINT     3
 
 // MENU INTERACT FUNCTIONS
-#define I_LIST    0
-#define I_SET     1
-#define I_TOGGLE  2
-#define I_PRINT   3
+#define I_DEFAULT   0
+#define I_SET       1
+#define I_TOGGLE    2
+#define I_PRINT     3
 
 /*
 TODO:
@@ -40,21 +40,20 @@ TODO:
         array of option lists/pairs
     better color formatting?
     menu draw clearing
-    menu freeing/pooling?
 */
-
-// master menu LUT
 
 typedef struct menu_t menu_t;
 
 typedef struct option_t {
     char name[OPTION_LEN];
     menu_t *target;
-    double value;
+    int value;
 } option_t;
 
 typedef int (*MenuCallback)(menu_t *m, option_t *o);
 typedef int (*MenuDrawCallback)(menu_t *m, int clear);
+typedef int (*MenuInteractCallback)(menu_t *m, int it);
+
 typedef struct menu_t {
     char title[TITLE_LEN];
     uint8_t nopts;
@@ -64,16 +63,18 @@ typedef struct menu_t {
     int w;
     int h;
 
-    int opt_offset;
-    int opt_sp;
-    int opt_div;
-    int vis_items;
+    uint8_t opt_offset;
+    uint8_t opt_sp;
+    uint8_t opt_div;
+    uint8_t vis_items;
 
-    int coffset;
+    uint8_t coffset;
     int cursor;
     uint16_t cur_color;
 
-    int draw_flag;
+    uint8_t draw_flag;
+    uint8_t it_flag;
+
     element_t *m_element;
     element_t *o_element;
     font_t *font;
@@ -85,9 +86,12 @@ menu_t *new_menu(const char *title, uint8_t num_options, font_t *font, vec2 cent
 int m_set_options(menu_t *m, int num_options, option_t *options);
 int m_set_size(menu_t *m, int width, int height);
 int m_set_draw(menu_t *m, int draw_flag);
+int m_set_interact(menu_t *m, int it_flag);
+
+int m_interact(menu_t *m, int it);
 
 int m_interact_default(menu_t *m, int it);
-int m_interact_optset(menu_t *m, int it);
+int m_interact_set(menu_t *m, int it);
 int m_interact_toggle(menu_t *m, int it);
 
 int m_draw(menu_t *m, int clear);
@@ -98,5 +102,6 @@ int m_toggle_value(menu_t *m, int clear);
 int m_print_value(menu_t *m, int clear);
 
 extern MenuDrawCallback MENU_DRAW[4];
+extern MenuInteractCallback MENU_INTERACT[4];
 
 #endif // MENU_H

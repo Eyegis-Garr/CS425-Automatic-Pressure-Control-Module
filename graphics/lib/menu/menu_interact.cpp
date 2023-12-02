@@ -1,5 +1,18 @@
 #include "menu.h"
 
+MenuInteractCallback MENU_INTERACT[4] = {
+    m_interact_default,
+    m_interact_set,
+    NULL,
+    NULL
+};
+
+int m_interact(menu_t *m, int it) {
+    if (!m) return -1;
+
+    return MENU_INTERACT[m->it_flag](m, it);
+}
+
 int m_interact_default(menu_t *m, int it) {
     static int prev_cursor;
     if (!m) return -1;
@@ -40,7 +53,40 @@ int m_interact_default(menu_t *m, int it) {
         case CURS_SELECT:
             break;
         default:
+            return 1;
+    }
+
+    return 0;
+}
+
+int m_interact_set(menu_t *m, int it) {
+    static int prev_cursor;
+    if (!m) return -1;
+
+    prev_cursor = m->cursor;
+
+    switch (it) {
+        case CURS_UP:
+            if (m->cursor < 0) m->cursor = 0;
+            m->options[0].value += pow(10, m->cursor);
             break;
+        case CURS_DOWN:
+            if (m->cursor < 0) m->cursor = 0;
+            m->options[0].value -= pow(10, m->cursor);
+            break;
+        case CURS_LEFT:
+            if (m->cursor < 0) m->cursor = 0;
+            m->cursor = mod(m->cursor + 1, 4);
+            break;
+        case CURS_RIGHT:
+            if (m->cursor < 0) m->cursor = 0;
+            m->cursor = mod(m->cursor - 1, 4);
+            break;
+        case CURS_SELECT:
+            m->cursor = -1;
+            break;
+        default:
+            return 1;
     }
 
     return 0;
