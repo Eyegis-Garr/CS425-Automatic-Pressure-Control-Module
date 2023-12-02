@@ -47,7 +47,7 @@ extern volatile uint8_t* DDR_CTRL;
 #elif defined(LANDSCAPE)
 #define ILI_COLS    320
 #define ILI_ROWS    240
-#define ILI_ORI     0x2C
+#define ILI_ORI     (1 << 2) | (1 << 3) | (1 << 5)
 #endif
 
 // ILI9341 COMMANDS

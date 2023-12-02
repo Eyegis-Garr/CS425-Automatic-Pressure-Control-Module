@@ -13,7 +13,7 @@ static const uint8_t PROGMEM init_commands[] = {
     1, 0, ILI_PWRCT2,     0x10,             // idk
     2, 0, ILI_VCOMCT1,    0x2B,    0x2B,    // VCOMH of 3.775v, VCOML -1.425
     1, 0, ILI_VCOMCT2,    0xC0,             // nVM -> 1, VCOM offset of VCOMH + 0 and VCOML + 0
-    1, 0, ILI_MAC,        ILI_ORI,   // MX (column addr. order), BGR (color filter panel)
+    1, 0, ILI_MAC,        ILI_ORI,          // MX (column addr. order), BGR (color filter panel)
     1, 0, ILI_PIXFMT,     0x55,             // 16-bit/pix RGB interface, 16-bit/pix MCU interface
     2, 0, ILI_FRCNOR,     0x00,    0x17,    // Division ratio of fosc, 83Hz refresh (default)
     1, 0, ILI_EMS,        0x06,             // Low voltage detection ctr. enabled, gate driver g1-g320 normal display
@@ -170,11 +170,8 @@ void set_color565(uint16_t c, uint32_t ct) {
 
 void clear_screen(uint16_t color) {
     begin_write();
-        for (uint32_t i = 0; i < ILI_ROWS; i += 1) {
-            for (uint32_t k = 0; k < ILI_COLS; k += 1) {
-                set_pixel(k, i, color);
-            }
-        }
+        set_active_area(0, 0, ILI_COLS, ILI_ROWS);
+        set_color565(color, ILI_MEMLEN);
     end_write();
 }
 
