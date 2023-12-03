@@ -20,6 +20,8 @@ menu_t *new_menu(const char *title, uint8_t num_options, vec2 center) {
     ret->coffset = 0;
 
     ret->cb = NULL;
+    ret->it_flag = M_DEFAULT;
+    ret->draw_flag = M_DEFAULT;
 
     return ret;
 }
@@ -72,23 +74,4 @@ int m_set_interact(menu_t *m, int it_flag) {
 
     return 0;
 }
-
-int m_test_touch(TSPoint t, menu_t *m) {
-    if (!m) return -1;
-    vec2 a = A_COLUMN, b = B_COLUMN;
-    vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + 80 };
-
-    for (int i = 0; i < m->nopts - 1; i += 2) {
-        if (TEST_POINT(t.x, t.y, a.x, tpos.y, COLUMN_W, COLUMN_H)) {   // CURRENT A OPTION
-            return i;
-        } else if (TEST_POINT(t.x, t.y, b.x, tpos.y, COLUMN_W, COLUMN_H)) {    // CURRENT B OPTION
-            return i + 1;
-        }
-
-        tpos.y += m->opt_div;
-    }
-
-    return -1;
-}
-
 
