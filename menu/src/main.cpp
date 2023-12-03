@@ -29,33 +29,215 @@ struct ui {
 	menu_t *active;
 } ui;
 
-menu_t *main_menu, *presets, *config, *alarms, *pid;
-menu_t *pick_preset, *pick_param, *pick_mode, *pick_pid;
+menu_t *main_menu, *presets, *config, *alarms, *pressures, *timers, *delay_timers, *safety_timers;
+menu_t *pick_preset, *pick_param, *pick_mode, *pick_pid, *pick_circuit;
 menu_t *set_param;
 
 void init_menus() {
+	init_menu_options();
+}
+
+//MAIN MENU
+void init_menu_options() {
 	main_menu = new_menu("MAIN", 8, (vec2){160,120});
 	m_set_size(main_menu, 320, 220);
 	m_set_draw(main_menu, M_DEFAULT);
 	main_menu->cur_color = 0x05A0;
-
-	init_menu_options();
-}
-
-void init_menu_options() {
 	option_t opts[8];
 
-	// MAIN MENU
-	opts[0] = (option_t) {"Presets", 	NULL,    0};
-	opts[1] = (option_t) {"Times", 		NULL, 	 0};
-	opts[2] = (option_t) {"PID",  		NULL,  	 0};
-	opts[3] = (option_t) {"Pressures", 	NULL,    0};
-	opts[4] = (option_t) {"Alarms", 	NULL,    0};
-	opts[5] = (option_t) {"Mode", 		NULL,    0};
-	opts[6] = (option_t) {"BACK", 		NULL,    0};
-	opts[7] = (option_t) {"EXIT", 		NULL,    0};
-	m_set_options(main_menu, main_menu->nopts, opts);
+	opts[0] = (option_t) {"Presets", 	NULL,    0};	//SUBMENU (PRESETS MENU)
+	opts[1] = (option_t) {"Times", 		NULL, 	 0};	//SUBMENU (TIMERS MENU)
+	opts[2] = (option_t) {"PID",  		NULL,  	 0};	//SUBMENU (PID MENU)
+	opts[3] = (option_t) {"Pressures", 	NULL,    0};	//SUBMENU (PRESSURES MENU)
+	opts[4] = (option_t) {"Alarms", 	NULL,    0};	//SUBMENU (ALARM CONFIG)
+	opts[5] = (option_t) {"Mode", 		NULL,    0};	//FUNCTION, Might not be used
+	opts[6] = (option_t) {"Reclaimer", 	NULL,    0};	//SUBMENU (RECLAIMER MENU)
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//Not necessary on MAIN
+	
+	//m_set_options(main_menu, main_menu->nopts, opts);
 }
+
+//PRESETS MENU
+void init_presets_options() {
+	presets = new_menu("PRESETS", 8, (vec2){160,120});
+	m_set_size(presets, 320, 220);
+	m_set_draw(presets, M_DEFAULT);
+	presets->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"Save Preset", 	NULL,    0};	//SUBMENU, FUNCTION
+	opts[1] = (option_t) {"Load Preset", 	NULL, 	 0};	//SUBMENU, FUNCTION
+	opts[2] = (option_t) {"Delete Preset",  NULL,  	 0};	//SUBMENU, FUNCTION
+	opts[3] = (option_t) {"", 		NULL,    0};
+	opts[4] = (option_t) {"", 		NULL,    0};
+	opts[5] = (option_t) {"", 		NULL,    0};
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To MAIN
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(presets, presets->nopts, opts);
+}
+
+//PRESETS SUBMENU
+void init_pick_presets_options() {
+	pick_preset = new_menu("SELECT PRESET", 8, (vec2){160,120});
+	m_set_size(pick_preset, 320, 220);
+	m_set_draw(pick_preset, M_DEFAULT);
+	pick_preset->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"Preset 1", 	NULL,    0};	//FUNCTION
+	opts[1] = (option_t) {"Preset 2", 	NULL, 	 0};	//FUNCTION
+	opts[2] = (option_t) {"Preset 3",  	NULL,  	 0};	//FUNCTION
+	opts[3] = (option_t) {"Preset 4", 	NULL,    0};	//FUNCTION
+	opts[4] = (option_t) {"Preset 5", 	NULL,    0};	//FUNCTION
+	opts[5] = (option_t) {"Preset 6", 	NULL,    0};	//FUNCTION
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To PRESETS
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(pick_preset, pick_preset->nopts, opts);
+}
+
+//PRESSURES MENU
+void init_pressures_options() {
+	pressures = new_menu("SET PRESSURES", 8, (vec2){160,120});
+	m_set_size(pressures, 320, 220);
+	m_set_draw(pressures, M_DEFAULT);
+	pressures->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"Set MARX", 	NULL,    0};	//FUNCTION
+	opts[1] = (option_t) {"Set MARX TG70", 	NULL, 	 0};	//FUNCTION
+	opts[2] = (option_t) {"Set MTG",  	NULL,  	 0};	//FUNCTION
+	opts[3] = (option_t) {"Set SWITCH", 	NULL,    0};	//FUNCTION
+	opts[4] = (option_t) {"Set SWITCH TG70", NULL,    0};	//FUNCTION
+	opts[5] = (option_t) {"", 		NULL,    0};
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To MAIN
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(pressures, pressures->nopts, opts);
+}
+
+//RECLAIMER MENU
+void init_reclaimer_options() {
+	reclaimer_config = new_menu("RECLAIMER CONFIG", 8, (vec2){160,120});
+	m_set_size(reclaimer_config, 320, 220);
+	m_set_draw(reclaimer_config, M_DEFAULT);
+	reclaimer_config->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"Set RECL. ON", 	NULL,    0};	//FUNCTION
+	opts[1] = (option_t) {"Set RECL. OFF", 	NULL,    0};	//FUNCTION
+	opts[2] = (option_t) {"Set MIN SUPPLY", NULL,    0};	//FUNCTION
+	opts[3] = (option_t) {"Set Safety Delay", NULL,    0};	//FUNCTION
+	opts[4] = (option_t) {"", 		NULL,    0};
+	opts[5] = (option_t) {"BACK", 		NULL,    0};	//To MAIN
+	opts[6] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(reclaimer_config, reclaimer_config->nopts, opts);
+}
+
+
+//ALARM MENU
+void init_alarms_options() {
+	alarms = new_menu("ALARM CONFIG", 8, (vec2){160,120});
+	m_set_size(alarms, 320, 220);
+	m_set_draw(alarms, M_DEFAULT);
+	alarms->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"Sound ON/OFF", 	NULL,    0};	//FUNCTION
+	opts[1] = (option_t) {"MARX Alarm", 	NULL,    0};	//FUNCTION
+	opts[2] = (option_t) {"MARX TG70 Alarm", NULL, 	 0};	//FUNCTION
+	opts[3] = (option_t) {"MTG Alarm",  	NULL,  	 0};	//FUNCTION
+	opts[4] = (option_t) {"SWITCH Alarm", 	NULL,    0};	//FUNCTION
+	opts[5] = (option_t) {"SWITCH TG70 Alarm", NULL,    0};	//FUNCTION
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To MAIN
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(alarms, alarms->nopts, opts);
+}
+
+//TIMERS MENU
+void init_timers_options() {
+	timers = new_menu("TIMERS CONFIG", 8, (vec2){160,120});
+	m_set_size(timers, 320, 220);
+	m_set_draw(timers, M_DEFAULT);
+	timers->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"Set Purge Times", NULL,   0};	//SUBMENU (TIMERS MENU)
+	opts[1] = (option_t) {"Set Circuit Delay", NULL, 0};	//SUBMENU (TIMERS MENU)
+	opts[2] = (option_t) {"", 		NULL,  	 0};
+	opts[3] = (option_t) {"", 		NULL,    0};
+	opts[4] = (option_t) {"", 		NULL,    0};
+	opts[5] = (option_t) {"", 		NULL,    0};
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To MAIN
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(timers, timers->nopts, opts);
+}
+
+//PURGE TIMERS SUBMENU
+void init_purge_timers_options() {
+	timers = new_menu("SET PURGE TIMES", 8, (vec2){160,120});
+	m_set_size(timers, 320, 220);
+	m_set_draw(timers, M_DEFAULT);
+	timers->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"MARX Purge", 	NULL,    0};	//FUNCTION
+	opts[1] = (option_t) {"MARX TG70 Purge", NULL, 	 0};	//FUNCTION
+	opts[2] = (option_t) {"MTG Purge",  	NULL,  	 0};	//FUNCTION
+	opts[3] = (option_t) {"SWITCH Purge", 	NULL,    0};	//FUNCTION
+	opts[4] = (option_t) {"SWITCH TG70 Purge", NULL,    0};	//FUNCTION
+	opts[5] = (option_t) {"",		NULL,    0};
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To TIMERS 
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(timers, timers->nopts, opts);
+}
+
+//CIRCUIT DELAY TIMERS SUBMENU
+void init_delay_timers_options() {
+	delay_timers = new_menu("SET CIRCUIT DELAY", 8, (vec2){160,120});
+	m_set_size(delay_timers, 320, 220);
+	m_set_draw(delay_timers, M_DEFAULT);
+	delay_timers->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"MARX Delay", 	NULL,    0};	//FUNCTION
+	opts[1] = (option_t) {"MARX TG70 Delay", NULL, 	 0};	//FUNCTION
+	opts[2] = (option_t) {"MTG Delay",  	NULL,  	 0};	//FUNCTION
+	opts[3] = (option_t) {"SWITCH Delay", 	NULL,    0};	//FUNCTION
+	opts[4] = (option_t) {"SWITCH TG70 Delay", NULL,    0};	//FUNCTION
+	opts[5] = (option_t) {"",		NULL,    0};
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To TIMERS 
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(delay_timers, delay_timers->nopts, opts);
+}
+
+//PID MENU
+void init_pid_options() {
+	pick_pid = new_menu("PID CONFIG", 8, (vec2){160,120});
+	m_set_size(pick_pid, 320, 220);
+	m_set_draw(pick_pid, M_DEFAULT);
+	pick_pid->cur_color = 0x05A0;
+	option_t opts[8];
+
+	opts[0] = (option_t) {"MARX PID", 	NULL,    0};	//FUNCTION
+	opts[1] = (option_t) {"MARX TG70 PID", NULL, 	 0};	//FUNCTION
+	opts[2] = (option_t) {"MTG PID",  	NULL,  	 0};	//FUNCTION
+	opts[3] = (option_t) {"SWITCH PID", 	NULL,    0};	//FUNCTION
+	opts[4] = (option_t) {"SWITCH TG70 PID", NULL,    0};	//FUNCTION
+	opts[5] = (option_t) {"", 		NULL,    0};
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//To MAIN
+	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//To MAIN
+	
+	//m_set_options(pick_pid, pick_pid->nopts, opts);
+}
+
+
 
 // void interact_menu(menu_t *m) {
 //   TSPoint p = ts.getPoint();
