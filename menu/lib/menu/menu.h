@@ -8,7 +8,7 @@
 #include "util.h"
 
 #define OPTION_LEN  16
-#define TITLE_LEN   16
+#define TITLE_LEN   32
 #define MAX_VIS_OPT 4
 
 // MENU INTERACTIONS
@@ -25,11 +25,11 @@
 #define M_TOGGLE    2
 #define M_PRINT     3
 
-// MENU INTERACT FUNCTIONS
-#define I_DEFAULT   0
-#define I_SET       1
-#define I_TOGGLE    2
-#define I_PRINT     3
+// SET MENU SPACING/FORMATTING
+#define S_BTN_WIDTH     35
+#define S_BTN_SPACING   10
+#define S_NEW_VALUE     -1
+#define S_NO_CHANGE     -2
 
 #define ORIGIN (vec2){0,0}
 #define CENTER (vec2){160,120}
@@ -40,19 +40,7 @@
 #define B_COLUMN (vec2){20 + COLUMN_W, 80}
 #define C_COLUMN (vec2){300, 80}
 
-#define TEST_POINT(x,y,x1,y1,w,h) (((x > x1) && (x < w + x1) && (y > y1) && (y < h + y1)))
-
-/*
-TODO:
-    option abstraction
-    menu hierarchy abstraction
-    menu hierarchy configuration
-    menu hierarchy traversal
-    2D menu option traversal?
-        array of option lists/pairs
-    better color formatting?
-    menu draw clearing
-*/
+#define TEST_RECT(x,y,x1,y1,w,h) (((x > x1) && (x < w + x1) && (y > y1) && (y < h + y1)))
 
 typedef struct vec2 {
     int x,y;
@@ -68,7 +56,7 @@ typedef struct option_t {
 
 typedef int (*MenuCallback)(menu_t *m, option_t *o);
 typedef int (*MenuDrawCallback)(Adafruit_ILI9341 *disp, menu_t *m, int clear);
-typedef int (*MenuInteractCallback)(menu_t *m, int it);
+typedef int (*MenuInteractCallback)(menu_t *m, TSPoint p);
 
 typedef struct menu_t {
     char title[TITLE_LEN];
@@ -100,11 +88,11 @@ int m_set_size(menu_t *m, int width, int height);
 int m_set_draw(menu_t *m, int draw_flag);
 int m_set_interact(menu_t *m, int it_flag);
 
-int m_interact(menu_t *m, int it);
+int m_interact(menu_t *m, TSPoint p);
 
-int m_interact_default(menu_t *m, int it);
-int m_interact_set(menu_t *m, int it);
-int m_interact_toggle(menu_t *m, int it);
+int m_interact_default(menu_t *m, TSPoint p);
+int m_interact_set(menu_t *m, TSPoint p);
+int m_interact_toggle(menu_t *m, TSPoint p);
 
 int m_draw(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 
