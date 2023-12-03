@@ -50,8 +50,8 @@ void init_menu_options() {
 	opts[2] = (option_t) {"PID",  		NULL,  	 0};	//SUBMENU (PID MENU)
 	opts[3] = (option_t) {"Pressures", 	NULL,    0};	//SUBMENU (PRESSURES MENU)
 	opts[4] = (option_t) {"Alarms", 	NULL,    0};	//SUBMENU (ALARM CONFIG)
-	opts[5] = (option_t) {"Mode", 		NULL,    0};	//FUNCTION, Might not be used
-	opts[6] = (option_t) {"Reclaimer", 	NULL,    0};	//SUBMENU (RECLAIMER MENU)
+	opts[5] = (option_t) {"Reclaimer", 	NULL,    0};	//SUBMENU (RECLAIMER MENU)
+	opts[6] = (option_t) {"BACK", 		NULL,    0};	//Not necessary on MAIN
 	opts[7] = (option_t) {"EXIT", 		NULL,    0};	//Not necessary on MAIN
 	
 	//m_set_options(main_menu, main_menu->nopts, opts);
