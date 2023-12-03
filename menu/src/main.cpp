@@ -10,12 +10,12 @@
 #define TS_MAXX 900
 #define TS_MAXY 900
 
-#define XPOS    A0
+#define XPOS    A2
 #define YPOS    A3
-#define YMIN    A2
-#define XMIN    A1
+#define YMIN    A1
+#define XMIN    A0
 
-TouchScreen ts = TouchScreen(XPOS, YPOS, XMIN, YMIN, 300);
+TouchScreen ts = TouchScreen(YPOS, XPOS, YMIN, XMIN, 300);
 #define TFT_CS 37
 #define TFT_DC 36
 Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, 22, 35, 36, 37, 33, 34);
@@ -81,16 +81,18 @@ void setup(void)
   m_draw(&tft, main_menu, 0);
 }
 
+int pidx = 0;
 void loop()
 {
   TSPoint p = ts.getPoint();
-  p.x = map(p.y, TS_MINY, TS_MAXY, 0, tft.width());
-  p.y = map(p.x, TS_MINX, TS_MAXX, 0, tft.height());
+  p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
+  p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
   int idx = m_test_touch(p, main_menu);
-  Serial.print("( "); Serial.print(p.x); Serial.print(", "); 
-  Serial.print(p.y); Serial.print(" )  \n");
-  if (idx >= 0) {
+  if (idx >= 0 && p.z > 70 && pidx != idx) {
 	Serial.println(main_menu->options[idx].name);
+	main_menu->cursor = idx;
+	m_draw(&tft, main_menu, 0);
+	pidx = idx;
   }
 }
 
