@@ -28,8 +28,14 @@
 // SET MENU SPACING/FORMATTING
 #define S_BTN_WIDTH     35
 #define S_BTN_SPACING   10
-#define S_NEW_VALUE     -1
-#define S_NO_CHANGE     -2
+
+// MENU INTERACT CODES
+#define M_NOP           0
+#define M_SELECT        1
+#define M_BACK          2
+#define M_EXIT          3
+#define M_CONFIRM       4
+#define M_UPDATED       5
 
 #define ORIGIN (vec2){0,0}
 #define CENTER (vec2){160,120}
@@ -55,8 +61,8 @@ typedef struct option_t {
 } option_t;
 
 typedef int (*MenuCallback)(menu_t *m, option_t *o);
-typedef int (*MenuDrawCallback)(Adafruit_ILI9341 *disp, menu_t *m, int clear);
-typedef int (*MenuInteractCallback)(menu_t *m, TSPoint p);
+typedef int (*MenuDraw)(Adafruit_ILI9341 *disp, menu_t *m, int clear);
+typedef int (*MenuInteract)(menu_t *m, TSPoint p);
 
 typedef struct menu_t {
     char title[TITLE_LEN];
@@ -103,7 +109,7 @@ int m_print_value(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 
 int m_test_touch(TSPoint t, menu_t *m);
 
-extern MenuDrawCallback MENU_DRAW[4];
-extern MenuInteractCallback MENU_INTERACT[4];
+extern MenuDraw MENU_DRAW[4];
+extern MenuInteract MENU_INTERACT[4];
 
 #endif // MENU_H
