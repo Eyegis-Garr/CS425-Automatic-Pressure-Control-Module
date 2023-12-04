@@ -29,20 +29,20 @@ int get_input();
 menu_t *main_menu, *presets, *config, *alarms, *pressures, *timers, *purge_timers, *delay_timers, *safety_timers;
 menu_t *pick_preset, *pick_param, *pick_mode, *pick_pid, *pick_circuit;
 menu_t *set_param, *reclaimer_config;
-menu_t *active, *previous;
 
-int set_callback(menu_t *m, option_t *o) {
-	int value = o->value;
-	// value gets saved to system
-	// save value to disk
-}
+struct ui { 
+	menu_t *active;
+	menu_t *previous;
+
+	int pidx;
+	menu_t *path[8];
+} ui;
 
 void create_menus() {
 	set_param = new_menu("SET PARAMETER", 8, CENTER);
 	m_set_size(set_param, 320, 220);
 	m_set_draw(set_param, M_SET);
 	m_set_interact(set_param, M_SET);
-	set_param->cb = set_callback;
 	set_param->cur_color = 0x05A0;
 
 	main_menu = new_menu("MAIN", 8, CENTER);
@@ -196,40 +196,6 @@ void init_options() {
 	m_set_options(pick_pid, pick_pid->nopts, opts);	
 }
 
-void interact_menu(menu_t *m) {
-  static int pidx = 0;
-  TSPoint p = ts.getPoint();
-  p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
-  p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
-  int idx = m_test_touch(p, active);
-  if (idx >= 0 && p.z > 70 && pidx != idx) {
-	active->cursor = idx;
-	if (active->options[idx].target) {
-		menu_t *parent = active;
-		m_draw(&tft, active, 1);
-		active = active->options[idx].target;
-		if (active->it_flag == M_SET) {
-			active->options[6].target = parent; // cancel
-			active->options[7].target = parent; // confirm	
-		}
-		m_draw(&tft, active, 0);
-		pidx = idx;
-	}	
-  }
-}
-
-// void interact_set(menu_t *m) {
-//   static int pidx = 0;
-//   TSPoint p = ts.getPoint();
-//   p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
-//   p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
-//   int idx = m_test_touch(p, active);
-//   if (idx >= 0 && p.z > 70 && pidx != idx) {
-// 	active->cursor = idx;
-    
-//   }
-// }
-
 void init_menus() {
 	create_menus();
 	init_options();
@@ -243,9 +209,12 @@ void setup(void)
   tft.fillScreen(ILI9341_BLACK);
   init_menus();
 
-  active = main_menu;
+  ui.active = main_menu;
+  ui.previous = NULL;
+  ui.path[0] = ui.active;
+  ui.pidx = 0;
 
-  m_draw(&tft, active, 0);
+  m_draw(&tft, ui.active, 0);
 }
 
 void loop()
@@ -257,23 +226,42 @@ void loop()
 	p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
   }
 
-  if (p.z > 80) {
-	int ret = m_interact(active, p);
-	if (ret >= 0) {
-		m_draw(&tft, active, 1);
-		previous = active;
-		active = active->options[ret].target;
-		if (active) {
-			if (active->it_flag == M_SET) {
-				active->options[6].target = previous;
-				active->options[7].target = previous;
-			}
-			m_draw(&tft, active, 0);
-		}
-	} else if (ret == S_NEW_VALUE) {
-		Serial.println(set_param->options[0].value);
-		m_draw(&tft, set_param, 1);
-		m_draw(&tft, set_param, 0);
+  if (p.z > 80) {		// if pressure is above threshold
+	int code = m_interact(ui.active, p);	// make interact-call with touch point
+	switch (code) {
+		case M_UPDATED:
+			// triggers redraw/refresh
+			m_draw(&tft, ui.active, 1);
+			m_draw(&tft, ui.active, 0);
+			break;
+		case M_SELECT:
+			m_draw(&tft, ui.active, 1);		// clear current menu
+			ui.pidx += 1;					// increment stack
+			ui.active = ui.active->options[ui.active->cursor].target;	// swap active menu
+			ui.path[ui.pidx] = ui.active;	// update path
+			m_draw(&tft, ui.active, 0);		// draw new active menu
+			break;
+		case M_CONFIRM:
+			// grab previous menu
+			ui.previous = ui.path[ui.pidx - 1];
+			// copy over the value from the active menu, to the value in the selected option of previous
+			ui.previous->options[ui.previous->cursor].value = ui.active->options[ui.active->cursor].value;
+			// CONFIRM falls through to M_BACK, swapping to previous menu
+		case M_BACK:
+			m_draw(&tft, ui.active, 1);
+			ui.active = ui.path[ui.pidx - 1];
+			ui.pidx -= 1;
+			m_draw(&tft, ui.active, 0);
+			break;
+		case M_EXIT:
+			m_draw(&tft, ui.active, 1);
+			ui.active = ui.path[0];
+			ui.pidx = 0;
+			m_draw(&tft, ui.active, 0);
+			break;
+		case M_NOP:
+		default:
+			break;
 	}
   }
 }
