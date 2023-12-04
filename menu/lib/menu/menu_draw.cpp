@@ -1,6 +1,6 @@
 #include "menu.h"
 
-MenuDrawCallback MENU_DRAW[4] = {
+MenuDraw MENU_DRAW[4] = {
     m_list_options,
     m_set_value,
     m_toggle_value,
@@ -14,7 +14,7 @@ int m_draw(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     uint16_t fc = (clear) ? 0 : 0xFFFF;
 
     // render menu frame
-    disp->drawRect(m->center.x - 160, m->center.y - 120, m->w, m->h, 0xFFFF);
+    disp->drawRect(0, 0, m->w, m->h, 0xFFFF);
 
     // render title
     disp->setCursor(20, 20);
