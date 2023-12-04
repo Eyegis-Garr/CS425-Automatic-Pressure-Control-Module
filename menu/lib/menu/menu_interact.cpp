@@ -1,6 +1,6 @@
 #include "menu.h"
 
-MenuInteractCallback MENU_INTERACT[4] = {
+MenuInteract MENU_INTERACT[4] = {
     m_interact_default,
     m_interact_set,
     NULL,
@@ -36,20 +36,21 @@ int m_test_touch_set(TSPoint t, menu_t *m) {
         centering = cx_offset + (S_BTN_WIDTH * i);
         if (TEST_RECT(t.x, t.y, centering + spacing, tpos.y,                        \
             S_BTN_WIDTH, S_BTN_WIDTH)) {  // positive
-            return i + 1;
+            m->cursor = i + 1;
+            return M_UPDATED;
         } else if (TEST_RECT(t.x, t.y, centering + spacing, tpos.y + (2 * m->opt_div), \
             S_BTN_WIDTH, S_BTN_WIDTH)) {  // negative
-            return -1 * (i + 1);
+            m->cursor = -1 * (i + 1);
+            return M_UPDATED;
         }
     }
 
     tpos.y += 3 * m->opt_div;
 
-    // test for cancel
-    if (TEST_RECT(t.x, t.y, A_COLUMN.x, tpos.y, COLUMN_W, COLUMN_H)) {
-        return 6;
-    } else if (TEST_RECT(t.x, t.y, B_COLUMN.x, tpos.y, COLUMN_W, COLUMN_H)) {
-        return 7;
+    if (TEST_RECT(t.x, t.y, A_COLUMN.x, tpos.y, COLUMN_W, COLUMN_H)) {          // cancel button
+        return M_BACK;
+    } else if (TEST_RECT(t.x, t.y, B_COLUMN.x, tpos.y, COLUMN_W, COLUMN_H)) {   // confirm button
+        return M_CONFIRM;
     }
 
     return 0;
@@ -64,40 +65,36 @@ int m_interact(menu_t *m, TSPoint p) {
 int m_interact_default(menu_t *m, TSPoint p) {
   int idx = m_test_touch(p, m);
   if (idx >= 0 && p.z > 70) {
-	return idx;
+    m->cursor = idx;
+    if (m->cb) m->cb(m, &m->options[m->cursor]);
+	return M_SELECT;
   }
 
-  return -1;
+  return M_NOP;
 }
 
 int m_interact_set(menu_t *m, TSPoint p) {
+    int idx = m_test_touch_set(p, m), d;
     int vbuf[4] = {
         m->options[0].value / 1000 % 10,
         m->options[0].value / 100  % 10,
         m->options[0].value / 10   % 10,
         m->options[0].value % 10
     };
-    int idx = m_test_touch_set(p, m);
 
-    if (idx < 0) {  // decrement
-        vbuf[abs(idx) - 1] = mod(vbuf[abs(idx) - 1] - 1, 10);
+    if (idx == M_UPDATED) {
+        d = (m->cursor > 0) ? 1 : -1;
+        vbuf[abs(m->cursor) - 1] = mod(vbuf[abs(m->cursor) - 1] + d, 10);
         m->options[0].value = 1000 * vbuf[0] + 100 * vbuf[1] + 10 * vbuf[2] + vbuf[3];
-        return S_NEW_VALUE;
-    } if (idx > 0 && idx < 6) {    // increment
-        vbuf[idx - 1] = mod(vbuf[idx - 1] + 1, 10);
-        m->options[0].value = 1000 * vbuf[0] + 100 * vbuf[1] + 10 * vbuf[2] + vbuf[3];
-        return S_NEW_VALUE;
-    } if (idx == 6) {  // cancel
-        m->cb(m, &m->options[idx]);
-        return idx;
-    } if (idx == 7) {  // confirm
-        // format value
-        m->options[0].value = 1000 * vbuf[0] + 100 * vbuf[1] + 10 * vbuf[2] + vbuf[3];
-        m->cb(m, &m->options[idx]);
-        return idx;
+        return M_UPDATED;
+    } if (idx == M_BACK) {  // cancel
+        return M_BACK;
+    } if (idx == M_CONFIRM) {  // confirm
+        if (m->cb) m->cb(m, &m->options[idx]);
+        return M_CONFIRM;
     }
 
-    return S_NO_CHANGE;
+    return M_NOP;
 }
 
 
