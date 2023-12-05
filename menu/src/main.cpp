@@ -2,6 +2,7 @@
 #include <Adafruit_ILI9341.h>
 #include <TouchScreen.h>
 #include <gfxfont.h>
+#include <avr8-stub.h>
 #include "menu.h"
 
 // This is calibration data for the raw touch data to the screen coordinates
@@ -20,6 +21,11 @@
 
 #define M_SIZE (vec2){320,240}
 
+#define NUM_PRESETS 6
+#define SAVE 		0
+#define LOAD 		1
+#define DEL  		2
+
 TouchScreen ts = TouchScreen(YPOS, XPOS, YMIN, XMIN, 300);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, 22, 35, 36, 37, 33, 34);
 
@@ -28,7 +34,15 @@ void init_input();
 int get_input();
 
 menu_t *set_param;
+menu_t *alert;
+menu_t *popup;
+
 menu_t *main_menu;
+menu_t *timers;
+menu_t *purge_timers;
+menu_t *delay_timers;
+menu_t *pressures;
+menu_t *alarms;
 menu_t *mode;
 menu_t *presets;
 menu_t *circuit_select;
@@ -45,74 +59,158 @@ struct ui {
 	menu_t *path[8];
 } ui;
 
+TSPoint get_press(TouchScreen *ts) {
+  TSPoint p = ts->getPoint();
+  while (ts->isTouching()) {
+	p = ts->getPoint();
+	p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
+	p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
+  }
+
+  return p;
+}
+
+int preset_cb(menu_t *m, option_t *o) {
+	// int selected_preset = m->options[m->cursor].value;
+	int op;
+	if (m->cursor == 0) { // save
+		// overwrite check
+		strcpy(alert->title, "SAVE ");
+		op = SAVE; 
+	} else if (m->cursor == 1) { // load
+		strcpy(alert->title, "LOAD "); 
+		op = LOAD;
+	} else if (m->cursor == 2) { // delete
+		strcpy(alert->title, "DELETE "); 
+		op = DEL;
+	}
+
+	menu_t *target = o->target;		// o->target is always pick_preset
+	for (int i = 0; i < target->nopts; i += 1) {
+		target->options[i].value = op;
+	}
+
+	return 0;
+}
+
+int pick_preset_cb(menu_t *m, option_t *o) {
+	int code = M_NOP;
+	TSPoint p;
+
+	strcat(alert->title, o->name);
+	
+	m_draw(&tft, m, M_CLEAR);		// clear preset selection menu
+	m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
+	while (code == M_NOP) {			// wait for selection
+		p = get_press(&ts);
+		if (p.z > 50) {
+			code = m_interact(alert, p);
+		}
+	}
+	m_draw(&tft, alert, M_CLEAR);	// clear alert
+
+	if (code == M_CONFIRM) {
+		switch (o->value) {
+			case SAVE:		// save preset
+				// compute checksum
+				// test save success
+				sprintf(popup->title, "%s success!", alert->title);
+				m_draw(&tft, popup, M_REFRESH);
+				break;
+			case LOAD:		// load preset
+				break;
+			case DEL:		// delete preset
+				break;
+			default:
+				break;
+		}
+	}
+
+	return 0;
+}
+
 void create_menus() {
+	alert = new_menu("", 0, CENTER, M_SIZE, M_MESSAGE);
+	popup = new_menu("", 0, CENTER, M_SIZE, M_POPUP);
 	set_param = new_menu("SET PARAMETER", 1, CENTER, M_SIZE, M_SET);
-	main_menu = new_menu("MAIN", 3, CENTER, M_SIZE, M_DEFAULT);
-	mode = new_menu("MODE SELECT", 3, CENTER, M_SIZE, M_DEFAULT);
-	presets = new_menu("PRESETS", 3, CENTER, M_SIZE, M_DEFAULT);
-	circuit_select = new_menu("PICK CIRCUIT", 7, CENTER, M_SIZE, M_DEFAULT);
+
+	main_menu = new_menu("MAIN", 6, CENTER, M_SIZE, M_DEFAULT);
+	pressures = new_menu("PRESSURES", 5, CENTER, M_SIZE, M_DEFAULT);
 	reclaimer_config = new_menu("RECLAIMER CONFIG", 4, CENTER, M_SIZE, M_DEFAULT);
-	pick_param = new_menu("PICK PARAM.", 5, CENTER, M_SIZE, DEFAULT);
-	pick_pid = new_menu("PID CONFIG", 3, CENTER, M_SIZE, M_DEFAULT);
-	pick_preset = new_menu("PICK PRESET", 4, CENTER, M_SIZE, M_PRINT);
+	alarms = new_menu("ALARMS", 6, CENTER, M_SIZE, M_DEFAULT);
+	timers = new_menu("TIMERS", 2, CENTER, M_SIZE, M_DEFAULT);
+	pick_pid = new_menu("PICK PID", 3, CENTER, M_SIZE, M_DEFAULT);
+	circuit_select = new_menu("PICK CIRCUIT", 6, CENTER, M_SIZE, M_DEFAULT);
+	
+	presets = new_menu("PRESETS", 3, CENTER, M_SIZE, M_DEFAULT);
+	presets->cb = preset_cb;
+	pick_preset = new_menu("PICK PRESET", NUM_PRESETS, CENTER, M_SIZE, M_DEFAULT);
+	pick_preset->cb = pick_preset_cb;
 }
 
 void init_options() {
 	option_t opts[8];
 
+	// SET MENU
 	opts[0] = (option_t) {"", 		NULL,    1234};
 	m_set_options(set_param, set_param->nopts, opts);
 	
-	opts[0] = (option_t) {"Mode", 	mode,     0};
-	opts[1] = (option_t) {"Preset", presets,  0};
-	opts[2] = (option_t) {"Config", pick_pid, 0};
+	// MAIN MENU
+	opts[0] = (option_t) {"Presets", 	presets,   			0};
+	opts[1] = (option_t) {"Times", 		timers,    			0};
+	opts[2] = (option_t) {"PID",  		pick_pid,  			0};
+	opts[3] = (option_t) {"Pressures", 	pressures, 			0};
+	opts[4] = (option_t) {"Alarms", 	alarms,    			0};
+	opts[5] = (option_t) {"Reclaimer", 	reclaimer_config,   0};
 	m_set_options(main_menu, main_menu->nopts, opts);
 
-	opts[0] = (option_t) {"Auto", 	 main_menu,    0};
-	opts[1] = (option_t) {"Manual",	 main_menu,    0};
-	opts[2] = (option_t) {"Standby", main_menu,    0};
-	m_set_options(mode, mode->nopts, opts);
-
-	opts[0] = (option_t) {"Save", 	pick_preset, 0};
-	opts[1] = (option_t) {"Load", 	pick_preset, 0};
-	opts[2] = (option_t) {"Delete", pick_preset, 0};
+	// PRESETS
+	opts[0] = (option_t) {"Save",	pick_preset,	0};
+	opts[1] = (option_t) {"Load",	pick_preset,	0};
+	opts[2] = (option_t) {"Delete",	pick_preset,	0};
 	m_set_options(presets, presets->nopts, opts);
 
-	// can create a circuit -> value map for each circuit
-	opts[0] = (option_t) {"MARX", 		pick_param, 0};
-	opts[1] = (option_t) {"MX-TG70", 	pick_param, 0};
-	opts[2] = (option_t) {"MTG", 		pick_param, 0};
-	opts[3] = (option_t) {"SWITCH", 	pick_param, 0};
-	opts[4] = (option_t) {"SW-TG70", 	pick_param, 0};
-	opts[5] = (option_t) {"RECLAIM", 	set_param, 	0};		// only has configurable pressure
-	opts[6] = (option_t) {"MIN SUPL", 	set_param, 	0};		// only has configurable pressure
+	// PICK PRESETS
+	for (int i = 0; i < NUM_PRESETS; i += 1) {
+		opts[i] = (option_t) { "", presets, 0 };
+		sprintf(opts[i].name, "Preset %d", i);
+	}
+	m_set_options(pick_preset, pick_preset->nopts, opts);
+
+	// CIRCUIT SELECT
+	opts[0] = (option_t) {"MARX", 		set_param, 0};
+	opts[1] = (option_t) {"MARXTG70", 	set_param, 0};
+	opts[2] = (option_t) {"MTG",  		set_param, 0};
+	opts[3] = (option_t) {"SWITCH", 	set_param, 0};
+	opts[4] = (option_t) {"SWTG70",     set_param, 0};
 	m_set_options(circuit_select, circuit_select->nopts, opts);
 
-	// could potentially swap these two in the hierarchy
-	// depending on whether it's more common to modify more params for a single circuit
-	// or the same param for multiple circuits
-	
-	opts[0] = (option_t) {"Pressure", 	set_param, 0};
-	opts[1] = (option_t) {"Purge", 		set_param, 0};
-	opts[2] = (option_t) {"Delay", 		set_param, 0};
-	opts[3] = (option_t) {"Alarm", 		set_param, 0};
-	opts[4] = (option_t) {"PID", 		pick_pid,  0};
-	m_set_options(pick_param, pick_param->nopts, opts);
-
-	opts[0] = (option_t) {"KP", set_param, 		0};
-	opts[1] = (option_t) {"KI", set_param, 		0};
-	opts[2] = (option_t) {"KD",	set_param, 		0};
-	m_set_options(pick_pid, pick_pid->nopts, opts);
-
-	opts[0] = (option_t) {"REC ON", 	NULL,    0};	//FUNCTION
-	opts[1] = (option_t) {"REC OFF", 	NULL,    0};	//FUNCTION
-	opts[2] = (option_t) {"MIN SPLY", 	NULL,    0};	//FUNCTION
-	opts[3] = (option_t) {"Safe Delay", NULL,    0};	//FUNCTION
+	// RECLAIMER CONFIG
+	opts[0] = (option_t) {"REC ON", 		NULL,    	0};	// displays popup
+	opts[1] = (option_t) {"REC OFF", 		NULL,    	0};	// displays popup
+	opts[2] = (option_t) {"MIN SPLY", 		set_param,  0};	
+	opts[3] = (option_t) {"Safe Delay",   	set_param,  0};
 	m_set_options(reclaimer_config, reclaimer_config->nopts, opts);
 
-	opts[0] = (option_t) {"Save",	NULL,	0}
-	opts[1] = (option_t) {"Load",	NULL,	0}
-	opts[2] = (option_t) {"Remove",	NULL,	0}
+	// ALARMS
+	opts[0] = (option_t) {"Sound ON/OFF", 	NULL,    	0}; // toggle menu or popup
+	opts[1] = (option_t) {"MARX", 			set_param,  0};
+	opts[2] = (option_t) {"MARXTG70", 		set_param, 	0};
+	opts[3] = (option_t) {"MTG",  			set_param,  0};
+	opts[4] = (option_t) {"SWITCH", 		set_param,  0};
+	opts[5] = (option_t) {"SWTG70", 		set_param,  0};
+	m_set_options(alarms, alarms->nopts, opts);
+
+	// TIMERS
+	opts[0] = (option_t) {"Purge", circuit_select,   0};
+	opts[1] = (option_t) {"Delay", circuit_select,   0};
+	m_set_options(timers, timers->nopts, opts);
+
+	// PICK PID
+	opts[0] = (option_t) {"KP",  circuit_select,    0};
+	opts[1] = (option_t) {"KI",	 circuit_select,    0};
+	opts[2] = (option_t) {"KD",  circuit_select,    0};
+	m_set_options(pick_pid, pick_pid->nopts, opts);
 }
 
 void init_menus() {
@@ -122,7 +220,6 @@ void init_menus() {
 
 void setup(void)
 {
-  Serial.begin(9600);
   tft.begin();
   tft.setRotation(1);
   tft.fillScreen(ILI9341_BLACK);
@@ -138,27 +235,21 @@ void setup(void)
 
 void loop()
 {
-  TSPoint p;
-  while (ts.isTouching()) {
-	p = ts.getPoint();
-	p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
-	p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
-  }
-
-  if (p.z > 80) {		// if pressure is above threshold
+  TSPoint p = get_press(&ts);
+  if (p.z > 50) {		// if pressure is above threshold
 	int code = m_interact(ui.active, p);	// make interact-call with touch point
 	switch (code) {
 		case M_UPDATED:
 			// triggers redraw/refresh
-			m_draw(&tft, ui.active, 1);
-			m_draw(&tft, ui.active, 0);
+			m_draw(&tft, ui.active, M_CLEAR);
+			m_draw(&tft, ui.active, M_DRAW);
 			break;
 		case M_SELECT:
-			m_draw(&tft, ui.active, 1);		// clear current menu
-			ui.pidx += 1;					// increment stack
+			// callbacks invoked
+			m_draw(&tft, ui.active, M_CLEAR);		// clear current menu
 			ui.active = ui.active->options[ui.active->cursor].target;	// swap active menu
-			ui.path[ui.pidx] = ui.active;	// update path
-			m_draw(&tft, ui.active, 0);		// draw new active menu
+			ui.path[++ui.pidx] = ui.active;	// update path
+			m_draw(&tft, ui.active, M_DRAW);		// draw new active menu
 			break;
 		case M_CONFIRM:
 			// grab previous menu
@@ -167,16 +258,15 @@ void loop()
 			ui.previous->options[ui.previous->cursor].value = ui.active->options[ui.active->cursor].value;
 			// CONFIRM falls through to M_BACK, swapping to previous menu
 		case M_BACK:
-			m_draw(&tft, ui.active, 1);
-			ui.active = ui.path[ui.pidx - 1];
-			ui.pidx -= 1;
-			m_draw(&tft, ui.active, 0);
+			m_draw(&tft, ui.active, M_CLEAR);
+			ui.active = ui.path[--ui.pidx];
+			m_draw(&tft, ui.active, M_DRAW);
 			break;
 		case M_EXIT:
-			m_draw(&tft, ui.active, 1);
+			m_draw(&tft, ui.active, M_CLEAR);
 			ui.active = ui.path[0];
 			ui.pidx = 0;
-			m_draw(&tft, ui.active, 0);
+			m_draw(&tft, ui.active, M_DRAW);
 			break;
 		case M_NOP:
 		default:
