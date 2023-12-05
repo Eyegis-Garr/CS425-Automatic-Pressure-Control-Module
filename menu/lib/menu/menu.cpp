@@ -25,7 +25,7 @@ menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size,
     ret->coffset = 0;
 
     ret->cb = NULL;
-    ret->m_type = (in_range(0, 3, type)) ? type : M_DEFAULT;
+    ret->m_type = (in_range(0, NUM_MTYPES - 1, type)) ? type : M_DEFAULT;
 
     return ret;
 }
