@@ -76,7 +76,7 @@ int mod(int a, int m) {
 }
 
 int in_range(int a, int b, int v) {
-    return (v > a && v < b) ? 1 : 0;
+    return (v >= a && v <= b) ? 1 : 0;
 }
 
 int clamp(int a, int b, int v) {

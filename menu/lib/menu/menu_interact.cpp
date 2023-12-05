@@ -26,7 +26,7 @@ int m_test_touch(TSPoint t, menu_t *m) {
 }
 
 int m_test_touch_set(TSPoint t, menu_t *m) {
-    if (!m) return 0;
+    if (!m) return M_NOP;
     vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + 80 };
     int cx_offset = CENTER.x - (S_BTN_WIDTH * 2);
     int spacing, centering;
@@ -34,12 +34,10 @@ int m_test_touch_set(TSPoint t, menu_t *m) {
     for (int i = 0; i < 4; i += 1) {
         spacing = S_BTN_SPACING * i;
         centering = cx_offset + (S_BTN_WIDTH * i);
-        if (TEST_RECT(t.x, t.y, centering + spacing, tpos.y,                        \
-            S_BTN_WIDTH, S_BTN_WIDTH)) {  // positive
+        if (TEST_RECT(t.x, t.y, centering + spacing, tpos.y, S_BTN_WIDTH, S_BTN_WIDTH)) {  // positive
             m->cursor = i + 1;
             return M_UPDATED;
-        } else if (TEST_RECT(t.x, t.y, centering + spacing, tpos.y + (2 * m->opt_div), \
-            S_BTN_WIDTH, S_BTN_WIDTH)) {  // negative
+        } else if (TEST_RECT(t.x, t.y, centering + spacing, tpos.y + (2 * m->opt_div), S_BTN_WIDTH, S_BTN_WIDTH)) {  // negative
             m->cursor = -1 * (i + 1);
             return M_UPDATED;
         }
@@ -53,13 +51,19 @@ int m_test_touch_set(TSPoint t, menu_t *m) {
         return M_CONFIRM;
     }
 
-    return 0;
+    return M_NOP;
 }
 
 int m_interact(menu_t *m, TSPoint p) {
-    if (!m) return -1;
+    if (!m) return M_NOP;
 
-    return MENU_INTERACT[m->it_flag](m, p);
+    return MENU_INTERACT[m->m_type](m, p);
+}
+
+int m_interact(menu_t *m, int command) {
+    if (!m) return M_NOP;
+
+    
 }
 
 int m_interact_default(menu_t *m, TSPoint p) {

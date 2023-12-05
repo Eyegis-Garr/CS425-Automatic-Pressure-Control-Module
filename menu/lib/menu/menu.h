@@ -11,6 +11,11 @@
 #define TITLE_LEN   32
 #define MAX_VIS_OPT 4
 
+// MENU DRAW CODES
+#define M_DRAW      0
+#define M_CLEAR     1
+#define M_REFRESH   2
+
 // MENU INTERACTIONS
 #define CURS_UP     0
 #define CURS_DOWN   1
@@ -19,7 +24,7 @@
 #define CURS_SELECT 4
 #define CURS_BACK   5
 
-// MENU DRAW FUNCTIONS
+// MENU TYPE FLAGS
 #define M_DEFAULT   0
 #define M_SET       1
 #define M_TOGGLE    2
@@ -46,23 +51,26 @@
 #define B_COLUMN (vec2){20 + COLUMN_W, 80}
 #define C_COLUMN (vec2){300, 80}
 
+#define A_BTN    (vec2){A_COLUMN.x, 235 - COLUMN_H}   
+#define B_BTN    (vec2){B_COLUMN.x, 235 - COLUMN_H}
+
 #define TEST_RECT(x,y,x1,y1,w,h) (((x > x1) && (x < w + x1) && (y > y1) && (y < h + y1)))
+
+typedef struct menu_t menu_t;
+typedef struct option_t option_t;
+typedef int (*MenuCallback)(menu_t *m, option_t *o);
+typedef int (*MenuDraw)(Adafruit_ILI9341 *disp, menu_t *m, int clear);
+typedef int (*MenuInteract)(menu_t *m, TSPoint p);
 
 typedef struct vec2 {
     int x,y;
 } vec2;
-
-typedef struct menu_t menu_t;
 
 typedef struct option_t {
     char name[OPTION_LEN];
     menu_t *target;
     int value;
 } option_t;
-
-typedef int (*MenuCallback)(menu_t *m, option_t *o);
-typedef int (*MenuDraw)(Adafruit_ILI9341 *disp, menu_t *m, int clear);
-typedef int (*MenuInteract)(menu_t *m, TSPoint p);
 
 typedef struct menu_t {
     char title[TITLE_LEN];
@@ -82,19 +90,17 @@ typedef struct menu_t {
     int cursor;
     uint16_t cur_color;
 
-    uint8_t draw_flag;
-    uint8_t it_flag;
+    uint8_t m_type;
 
     MenuCallback cb;
 } menu_t;
 
-menu_t *new_menu(const char *title, uint8_t num_options, vec2 center);
+menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size, int type);
 int m_set_options(menu_t *m, int num_options, option_t *options);
 int m_set_size(menu_t *m, int width, int height);
-int m_set_draw(menu_t *m, int draw_flag);
-int m_set_interact(menu_t *m, int it_flag);
 
 int m_interact(menu_t *m, TSPoint p);
+int m_interact(menu_t *m, int command);
 
 int m_interact_default(menu_t *m, TSPoint p);
 int m_interact_set(menu_t *m, TSPoint p);

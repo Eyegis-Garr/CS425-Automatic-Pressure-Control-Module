@@ -1,6 +1,6 @@
 #include "menu.h"
 
-menu_t *new_menu(const char *title, uint8_t num_options, vec2 center) {
+menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size, int type) {
     menu_t *ret = (menu_t*) malloc(sizeof(menu_t));
 
     if (title) {
@@ -10,8 +10,13 @@ menu_t *new_menu(const char *title, uint8_t num_options, vec2 center) {
     ret->nopts = num_options;
     ret->options = NULL;
     ret->center = center;
-    ret->w = 0;
-    ret->h = 0;
+    ret->w = size.x;
+    ret->h = size.y;
+
+    ret->opt_offset = (ret->h - ret->opt_sp) / 2;
+    ret->opt_div = (ret->h - ret->opt_sp) / 6;
+    ret->vis_items = fmin((ret->h / ret->opt_div) - 1, ret->nopts);
+
     ret->cursor = 0;
     ret->cur_color = 0x1234;
 
@@ -20,8 +25,7 @@ menu_t *new_menu(const char *title, uint8_t num_options, vec2 center) {
     ret->coffset = 0;
 
     ret->cb = NULL;
-    ret->it_flag = M_DEFAULT;
-    ret->draw_flag = M_DEFAULT;
+    ret->m_type = (in_range(0, 3, type)) ? type : M_DEFAULT;
 
     return ret;
 }
@@ -58,20 +62,3 @@ int m_set_size(menu_t *m, int width, int height) {
 
     return 0;
 }
-
-int m_set_draw(menu_t *m, int draw_flag) {
-    if (!m || draw_flag < 0 || draw_flag >= 4) return -1;
-
-    m->draw_flag = draw_flag;
-
-    return 0;
-}
-
-int m_set_interact(menu_t *m, int it_flag) {
-    if (!m || it_flag < 0 || it_flag >= 4) return -1;
-
-    m->it_flag = it_flag;
-
-    return 0;
-}
-
