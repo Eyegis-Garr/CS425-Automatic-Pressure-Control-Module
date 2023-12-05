@@ -109,6 +109,10 @@ void init_options() {
 	opts[2] = (option_t) {"MIN SPLY", 	NULL,    0};	//FUNCTION
 	opts[3] = (option_t) {"Safe Delay", NULL,    0};	//FUNCTION
 	m_set_options(reclaimer_config, reclaimer_config->nopts, opts);
+
+	opts[0] = (option_t) {"Save",	NULL,	0}
+	opts[1] = (option_t) {"Load",	NULL,	0}
+	opts[2] = (option_t) {"Remove",	NULL,	0}
 }
 
 void init_menus() {
