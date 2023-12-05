@@ -28,12 +28,15 @@
 #define M_DEFAULT   0
 #define M_SET       1
 #define M_TOGGLE    2
-#define M_PRINT     3
+#define M_POPUP     3
+#define M_COMBO     4
+#define M_MESSAGE   5
 
 // SET MENU SPACING/FORMATTING
 #define S_BTN_WIDTH     35
 #define S_BTN_SPACING   10
 
+#define NUM_MTYPES      6
 // MENU INTERACT CODES
 #define M_NOP           0
 #define M_SELECT        1
@@ -51,8 +54,10 @@
 #define B_COLUMN (vec2){20 + COLUMN_W, 80}
 #define C_COLUMN (vec2){300, 80}
 
-#define A_BTN    (vec2){A_COLUMN.x, 235 - COLUMN_H}   
-#define B_BTN    (vec2){B_COLUMN.x, 235 - COLUMN_H}
+#define A_BTN    (vec2){A_COLUMN.x, 225 - COLUMN_H}
+#define B_BTN    (vec2){B_COLUMN.x + 10, 225 - COLUMN_H}
+
+#define M_POPDELAY 3000
 
 #define TEST_RECT(x,y,x1,y1,w,h) (((x > x1) && (x < w + x1) && (y > y1) && (y < h + y1)))
 
@@ -93,6 +98,7 @@ typedef struct menu_t {
     uint8_t m_type;
 
     MenuCallback cb;
+    menu_t *parent;
 } menu_t;
 
 menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size, int type);
@@ -105,17 +111,19 @@ int m_interact(menu_t *m, int command);
 int m_interact_default(menu_t *m, TSPoint p);
 int m_interact_set(menu_t *m, TSPoint p);
 int m_interact_toggle(menu_t *m, TSPoint p);
+int m_interact_message(menu_t *m, TSPoint p);
 
 int m_draw(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 
-int m_list_options(Adafruit_ILI9341 *disp, menu_t *m, int clear);
-int m_set_value(Adafruit_ILI9341 *disp, menu_t *m, int clear);
+int m_draw_default(Adafruit_ILI9341 *disp, menu_t *m, int clear);
+int m_draw_set(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 int m_toggle_value(Adafruit_ILI9341 *disp, menu_t *m, int clear);
-int m_print_value(Adafruit_ILI9341 *disp, menu_t *m, int clear);
+int m_draw_popup(Adafruit_ILI9341 *disp, menu_t *m, int clear);
+int m_draw_alert(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 
 int m_test_touch(TSPoint t, menu_t *m);
 
-extern MenuDraw MENU_DRAW[4];
-extern MenuInteract MENU_INTERACT[4];
+extern MenuDraw MENU_DRAW[NUM_MTYPES];
+extern MenuInteract MENU_INTERACT[NUM_MTYPES];
 
 #endif // MENU_H
