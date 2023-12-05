@@ -1,10 +1,12 @@
 #include "menu.h"
 
-MenuDraw MENU_DRAW[4] = {
-    m_list_options,
-    m_set_value,
+MenuDraw MENU_DRAW[NUM_MTYPES] = {
+    m_draw_default,
+    m_draw_set,
     m_toggle_value,
-    m_print_value
+    m_draw_popup,
+    NULL,
+    m_draw_message
 };
 
 // draw routine entry point
@@ -17,19 +19,64 @@ int m_draw(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     disp->drawRect(0, 0, m->w, m->h, c);
 
     // render title
-    disp->setCursor(20, 20);
-    disp->setTextColor(c);
-    disp->setTextSize(3);
-    disp->print(m->title);
-    disp->setTextSize(1);
+    if (clear != M_REFRESH) {
+        disp->setCursor(20, 20);
+        disp->setTextColor(c);
+        disp->setTextSize(3);
+        disp->print(m->title);
+        disp->setTextSize(1);
+    }    
 
     MENU_DRAW[m->m_type](disp, m, clear);
 
     return 0;
 }
 
+int m_draw_popup(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
+    if (!m) return -1;
+    uint16_t w;
+    disp->getTextBounds(m->title, 15, CENTER.y, NULL, NULL, &w, NULL);
+
+    disp->fillRect(10, CENTER.y - 50, 300, 100, 0);
+    disp->drawRect(10, CENTER.y - 50, 300, 100, 0xFFFF);
+    
+    disp->setTextSize(2);
+    disp->setTextColor(0xFFFF);
+    disp->setCursor(CENTER.x - (w >> 1), CENTER.y);
+    disp->print(m->title);
+
+    _delay_ms(M_POPDELAY);
+
+    disp->drawRect(10, CENTER.y - 50, 300, 100, 0);
+    disp->setTextSize(2);
+    disp->setCursor(CENTER.x - (w >> 1), CENTER.y);
+    disp->setTextColor(0);
+    disp->print(m->title);
+
+    return 0;
+}
+
+int m_draw_message(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
+    if (!m) return -1;
+    uint16_t c = (clear) ? 0 : 0xFFFF;
+
+    disp->setTextSize(2);
+
+    // BACK
+    disp->drawRect(A_BTN.x, A_BTN.y - 100, COLUMN_W, COLUMN_H, c);
+    disp->setCursor(A_BTN.x + 5, A_BTN.y + 5 - 100);
+    disp->print("CONFIRM");
+
+    // EXIT
+    disp->drawRect(B_BTN.x, B_BTN.y - 100, COLUMN_W, COLUMN_H, c);
+    disp->setCursor(B_BTN.x + 5, B_BTN.y + 5 - 100);
+    disp->print("CANCEL");
+
+    return 0;
+}
+
 // draws options as a list/grid
-int m_list_options(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
+int m_draw_default(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     if (!m) return -1;
 
     vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + 80 };
@@ -37,7 +84,7 @@ int m_list_options(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
 
     disp->setTextSize(2);
     disp->setTextColor(c);
-    for (int i = 0; i < m->nopts - 1; i += 2) {
+    for (int i = 0; i < m->nopts; i += 2) {
         if (clear) c = 0;
         else c = 0xFFFF;
 
@@ -47,11 +94,13 @@ int m_list_options(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
         disp->setCursor(A_COLUMN.x + 5, tpos.y + 5);
         disp->print(m->options[i].name);
 
-        // draw B frame
-        disp->drawRect(B_COLUMN.x + 10, tpos.y, COLUMN_W, COLUMN_H, (!clear && i + 1 == m->cursor) ? m->cur_color : c);
-        // draw option
-        disp->setCursor(B_COLUMN.x + 10 + 5, tpos.y + 5);
-        disp->print(m->options[i + 1].name);
+        if (i + 1 < m->nopts) {
+            // draw B frame
+            disp->drawRect(B_COLUMN.x + 10, tpos.y, COLUMN_W, COLUMN_H, (!clear && i + 1 == m->cursor) ? m->cur_color : c);
+            // draw option
+            disp->setCursor(B_COLUMN.x + 10 + 5, tpos.y + 5);
+            disp->print(m->options[i + 1].name);
+        }
 
         tpos.y += m->opt_div;
     }
@@ -62,15 +111,15 @@ int m_list_options(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     disp->print("BACK");
 
     // EXIT
-    disp->drawRect(B_BTN.x + 10, tpos.y + 10, COLUMN_W, COLUMN_H, c);
-    disp->setCursor(B_BTN.x + 10 + 5, B_BTN.y + 5);
+    disp->drawRect(B_BTN.x, B_BTN.y, COLUMN_W, COLUMN_H, c);
+    disp->setCursor(B_BTN.x + 5, B_BTN.y + 5);
     disp->print("EXIT");
 
     return 0;
 }
 
 // draws menu for changing values
-int m_set_value(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
+int m_draw_set(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     if (!m) return -1;
 
     vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + 80 };
@@ -121,13 +170,11 @@ int m_set_value(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     // cancel
     disp->drawRect(CENTER.x - COLUMN_W, tpos.y + 10, COLUMN_W, COLUMN_H, c);
     disp->setCursor(CENTER.x - COLUMN_W + 5, tpos.y + 10 + 5);
-    // disp->print(m->options[m->nopts - 2].name);
     disp->print("CANCEL");
 
     // confirm
     disp->drawRect(CENTER.x + 10, tpos.y + 10, COLUMN_W, COLUMN_H, c);
     disp->setCursor(CENTER.x + 10 + 5, tpos.y + 10 + 5);
-    // disp->print(m->options[m->nopts - 1].name);
     disp->print("CONFIRM");
 
     disp->setTextSize(1);
@@ -137,15 +184,6 @@ int m_set_value(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
 
 // draws menu for toggling values
 int m_toggle_value(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
-    if (!m) return -1;
-
-
-
-    return 0;
-}
-
-// draws menu for printing option values
-int m_print_value(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     if (!m) return -1;
 
 
