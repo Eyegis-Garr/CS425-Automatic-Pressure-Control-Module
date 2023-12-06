@@ -13,11 +13,11 @@ int m_test_touch(TSPoint t, menu_t *m) {
     if (!m) return M_NOP;
     vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + 80 };
 
-    for (int i = 0; i < m->nopts - 1; i += 2) {
+    for (int i = 0; i < m->nopts; i += 2) {
         if (TEST_RECT(t.x, t.y, A_COLUMN.x, tpos.y, COLUMN_W, COLUMN_H)) {        // CURRENT A OPTION
             m->cursor = i;
             return M_SELECT;
-        } else if (i + 1 < m->nopts && TEST_RECT(t.x, t.y, B_COLUMN.x, tpos.y, COLUMN_W, COLUMN_H)) { // CURRENT B OPTION
+        } else if (i + 1 < m->nopts && TEST_RECT(t.x, t.y, B_COLUMN.x + 10, tpos.y, COLUMN_W, COLUMN_H)) { // CURRENT B OPTION
             m->cursor = i + 1;
             return M_SELECT;
         }
@@ -95,7 +95,7 @@ int m_interact_msg(menu_t *m, TSPoint p) {
 int m_interact_default(menu_t *m, TSPoint p) {
   int code = m_test_touch(p, m);
   if (code == M_SELECT) {
-    if (m->cb) m->cb(m, &m->options[m->cursor]);
+    if (m->cb) return m->cb(m, &m->options[m->cursor]);
   }
 
   return code;
