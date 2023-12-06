@@ -91,8 +91,8 @@ void loop() {
 		case M_SELECT:
 			// callbacks invoked
 			m_draw(&tft, ui.active, M_CLEAR);		// clear current menu
+			ui.path[ui.pidx++] = ui.active;			// update path
 			ui.active = ui.active->options[ui.active->cursor].target;	// swap active menu
-			ui.path[++ui.pidx] = ui.active;	// update path
 			m_draw(&tft, ui.active, M_DRAW);		// draw new active menu
 			break;
 		case M_CONFIRM:
@@ -152,7 +152,7 @@ int preset_cb(menu_t *m, option_t *o) {
 		target->options[i].value = op;
 	}
 
-	return 0;
+	return M_SELECT;
 }
 
 int pick_preset_cb(menu_t *m, option_t *o) {
@@ -165,9 +165,7 @@ int pick_preset_cb(menu_t *m, option_t *o) {
 	m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
 	while (code == M_NOP) {			// wait for selection
 		p = get_press(&ts);
-		if (p.z > 50) {
-			code = m_interact(alert, p);
-		}
+		if (p.z > 50) code = m_interact(alert, p);
 	}
 	m_draw(&tft, alert, M_CLEAR);	// clear alert
 
@@ -176,19 +174,25 @@ int pick_preset_cb(menu_t *m, option_t *o) {
 			case SAVE:		// save preset
 				// compute checksum
 				// test save success
-				sprintf(popup->title, "%s success!", alert->title);
-				m_draw(&tft, popup, M_REFRESH);
+				sprintf(popup->title, "%s success.", alert->title);
 				break;
 			case LOAD:		// load preset
+				sprintf(popup->title, "%s failed!", alert->title);
 				break;
 			case DEL:		// delete preset
+				sprintf(popup->title, "%s is done.", alert->title);
 				break;
 			default:
 				break;
 		}
+
+		m_draw(&tft, popup, M_REFRESH);
+		popup->title[0] = '\0';
+
+		return M_CONFIRM;
 	}
 
-	return 0;
+	return M_BACK;
 }
 
 int alarms_cb(menu_t *m, option_t *o) {
@@ -218,15 +222,16 @@ int alarms_cb(menu_t *m, option_t *o) {
 			o->value += dir;
 			sprintf(popup->title, "Sound is %s.", (o->value) ? "ON" : "OFF");
 			m_draw(&tft, popup, M_REFRESH);
+			return M_CONFIRM;
 		}
 	}
 
-	return 0;
+	return M_SELECT;
 }
 
 void create_menus() {
 	alert = new_menu("", 0, CENTER, M_SIZE, M_MESSAGE, 0);
-	popup = new_menu("", 0, CENTER, M_SIZE, M_POPUP, 0);
+	popup = new_menu("", 0, CENTER, M_SIZE, M_POPUP, M_NOTITLE);
 	set_param = new_menu("SET PARAMETER", 1, CENTER, M_SIZE, M_SET, 0);
 
 	main_menu = new_menu("MAIN", 6, CENTER, M_SIZE, M_DEFAULT, M_NOBACK | M_NOEXIT);
