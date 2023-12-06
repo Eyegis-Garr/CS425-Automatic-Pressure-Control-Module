@@ -6,18 +6,19 @@
 #include "menu.h"
 
 // This is calibration data for the raw touch data to the screen coordinates
-#define TS_MINX 80
-#define TS_MINY 80
+#define TS_MINX 100
+#define TS_MINY 100
 #define TS_MAXX 900
 #define TS_MAXY 900
+#define PRESSURE_THRESH 40
 
 #define XPOS    A2
 #define YPOS    A3
 #define YMIN    A1
 #define XMIN    A0
 
-#define TFT_CS 37
-#define TFT_DC 36
+#define TFT_CS 	37
+#define TFT_DC 	36
 
 #define M_SIZE (vec2){320,240}
 
@@ -29,10 +30,6 @@
 TouchScreen ts = TouchScreen(YPOS, XPOS, YMIN, XMIN, 300);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, 22, 35, 36, 37, 33, 34);
 
-void init_menus();
-void init_input();
-int get_input();
-
 menu_t *set_param;
 menu_t *alert;
 menu_t *popup;
@@ -41,7 +38,6 @@ menu_t *main_menu;
 menu_t *timers;
 menu_t *purge_timers;
 menu_t *delay_timers;
-menu_t *pressures;
 menu_t *alarms;
 menu_t *mode;
 menu_t *presets;
@@ -58,6 +54,72 @@ struct ui {
 	int pidx;
 	menu_t *path[8];
 } ui;
+
+TSPoint get_press(TouchScreen *ts);
+int preset_cb(menu_t *m, option_t *o);
+int pick_preset_cb(menu_t *m, option_t *o);
+int alarms_cb(menu_t *m, option_t *o);
+void create_menus();
+void init_options();
+void init_menus();
+int get_input();
+
+void setup(void) {
+  tft.begin();
+  tft.setRotation(1);
+  tft.fillScreen(ILI9341_BLACK);
+  init_menus();
+
+  ui.active = main_menu;
+  ui.previous = NULL;
+  ui.path[0] = ui.active;
+  ui.pidx = 0;
+
+  m_draw(&tft, ui.active, 0);
+}
+
+void loop() {
+  TSPoint p = get_press(&ts);
+  if (p.z > PRESSURE_THRESH) {		// if pressure is above threshold
+	int code = m_interact(ui.active, p);	// make interact-call with touch point
+	switch (code) {
+		case M_UPDATED:
+			// triggers redraw/refresh
+			m_draw(&tft, ui.active, M_CLEAR);
+			m_draw(&tft, ui.active, M_DRAW);
+			break;
+		case M_SELECT:
+			// callbacks invoked
+			m_draw(&tft, ui.active, M_CLEAR);		// clear current menu
+			ui.active = ui.active->options[ui.active->cursor].target;	// swap active menu
+			ui.path[++ui.pidx] = ui.active;	// update path
+			m_draw(&tft, ui.active, M_DRAW);		// draw new active menu
+			break;
+		case M_CONFIRM:
+			// grab previous menu
+			ui.previous = ui.path[ui.pidx - 1];
+			// copy over the value from the active menu, to the value in the selected option of previous
+			ui.previous->options[ui.previous->cursor].value = ui.active->options[ui.active->cursor].value;
+			// CONFIRM falls through to M_BACK, swapping to previous menu
+		case M_BACK:
+			if (ui.pidx) {
+				m_draw(&tft, ui.active, M_CLEAR);
+				ui.active = ui.path[--ui.pidx];
+				m_draw(&tft, ui.active, M_DRAW);
+			}			
+			break;
+		case M_EXIT:
+			m_draw(&tft, ui.active, M_CLEAR);
+			ui.active = ui.path[0];
+			ui.pidx = 0;
+			m_draw(&tft, ui.active, M_DRAW);
+			break;
+		case M_NOP:
+		default:
+			break;
+	}
+  }
+}
 
 TSPoint get_press(TouchScreen *ts) {
   TSPoint p = ts->getPoint();
@@ -129,22 +191,55 @@ int pick_preset_cb(menu_t *m, option_t *o) {
 	return 0;
 }
 
-void create_menus() {
-	alert = new_menu("", 0, CENTER, M_SIZE, M_MESSAGE);
-	popup = new_menu("", 0, CENTER, M_SIZE, M_POPUP);
-	set_param = new_menu("SET PARAMETER", 1, CENTER, M_SIZE, M_SET);
+int alarms_cb(menu_t *m, option_t *o) {
+	if (m->cursor == 0) {
+		int code = M_NOP, dir;
+		TSPoint p;
 
-	main_menu = new_menu("MAIN", 6, CENTER, M_SIZE, M_DEFAULT);
-	pressures = new_menu("PRESSURES", 5, CENTER, M_SIZE, M_DEFAULT);
-	reclaimer_config = new_menu("RECLAIMER CONFIG", 4, CENTER, M_SIZE, M_DEFAULT);
-	alarms = new_menu("ALARMS", 6, CENTER, M_SIZE, M_DEFAULT);
-	timers = new_menu("TIMERS", 2, CENTER, M_SIZE, M_DEFAULT);
-	pick_pid = new_menu("PICK PID", 3, CENTER, M_SIZE, M_DEFAULT);
-	circuit_select = new_menu("PICK CIRCUIT", 6, CENTER, M_SIZE, M_DEFAULT);
-	
-	presets = new_menu("PRESETS", 3, CENTER, M_SIZE, M_DEFAULT);
+		if (o->value == 0) {  			// off, turn on
+			strcpy(alert->title, "Set Sound ON?");
+			dir = 1;
+		} else if (o->value == 1) { 	// on, turn off
+			strcpy(alert->title, "Set Sound OFF?");
+			dir = -1;
+		}
+		
+		m_draw(&tft, m, M_CLEAR);		// clear preset selection menu
+		m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
+		while (code == M_NOP) {			// wait for selection
+			p = get_press(&ts);
+			if (p.z > 50) {
+				code = m_interact(alert, p);
+			}
+		}
+		m_draw(&tft, alert, M_CLEAR);	// clear alert
+
+		if (code == M_CONFIRM) {
+			o->value += dir;
+			sprintf(popup->title, "Sound is %s.", (o->value) ? "ON" : "OFF");
+			m_draw(&tft, popup, M_REFRESH);
+		}
+	}
+
+	return 0;
+}
+
+void create_menus() {
+	alert = new_menu("", 0, CENTER, M_SIZE, M_MESSAGE, 0);
+	popup = new_menu("", 0, CENTER, M_SIZE, M_POPUP, 0);
+	set_param = new_menu("SET PARAMETER", 1, CENTER, M_SIZE, M_SET, 0);
+
+	main_menu = new_menu("MAIN", 6, CENTER, M_SIZE, M_DEFAULT, M_NOBACK | M_NOEXIT);
+	reclaimer_config = new_menu("RECLAIMER CONFIG", 4, CENTER, M_SIZE, M_DEFAULT, 0);
+	timers = new_menu("TIMERS", 2, CENTER, M_SIZE, M_DEFAULT, 0);
+	pick_pid = new_menu("PICK PID", 3, CENTER, M_SIZE, M_DEFAULT, 0);
+	circuit_select = new_menu("PICK CIRCUIT", 7, CENTER, M_SIZE, M_DEFAULT, 0);
+
+	alarms = new_menu("ALARMS", 6, CENTER, M_SIZE, M_DEFAULT, 0);
+	alarms->cb = alarms_cb;
+	presets = new_menu("PRESETS", 3, CENTER, M_SIZE, M_DEFAULT, 0);
 	presets->cb = preset_cb;
-	pick_preset = new_menu("PICK PRESET", NUM_PRESETS, CENTER, M_SIZE, M_DEFAULT);
+	pick_preset = new_menu("PICK PRESET", NUM_PRESETS, CENTER, M_SIZE, M_DEFAULT, 0);
 	pick_preset->cb = pick_preset_cb;
 }
 
@@ -159,7 +254,7 @@ void init_options() {
 	opts[0] = (option_t) {"Presets", 	presets,   			0};
 	opts[1] = (option_t) {"Times", 		timers,    			0};
 	opts[2] = (option_t) {"PID",  		pick_pid,  			0};
-	opts[3] = (option_t) {"Pressures", 	pressures, 			0};
+	opts[3] = (option_t) {"Pressures", 	circuit_select,		0};
 	opts[4] = (option_t) {"Alarms", 	alarms,    			0};
 	opts[5] = (option_t) {"Reclaimer", 	reclaimer_config,   0};
 	m_set_options(main_menu, main_menu->nopts, opts);
@@ -183,17 +278,19 @@ void init_options() {
 	opts[2] = (option_t) {"MTG",  		set_param, 0};
 	opts[3] = (option_t) {"SWITCH", 	set_param, 0};
 	opts[4] = (option_t) {"SWTG70",     set_param, 0};
+	opts[5] = (option_t) {"Reclaim",   set_param, 0};
+	opts[6] = (option_t) {"Min SUPLY", set_param, 0};
 	m_set_options(circuit_select, circuit_select->nopts, opts);
 
 	// RECLAIMER CONFIG
-	opts[0] = (option_t) {"REC ON", 		NULL,    	0};	// displays popup
-	opts[1] = (option_t) {"REC OFF", 		NULL,    	0};	// displays popup
+	opts[0] = (option_t) {"REC ON", 		set_param,  0};	// displays popup
+	opts[1] = (option_t) {"REC OFF", 		set_param,  0};	// displays popup
 	opts[2] = (option_t) {"MIN SPLY", 		set_param,  0};	
-	opts[3] = (option_t) {"Safe Delay",   	set_param,  0};
+	opts[3] = (option_t) {"REC Delay",   	set_param,  0};
 	m_set_options(reclaimer_config, reclaimer_config->nopts, opts);
 
 	// ALARMS
-	opts[0] = (option_t) {"Sound ON/OFF", 	NULL,    	0}; // toggle menu or popup
+	opts[0] = (option_t) {"Sound",		 	alarms,    	0}; // toggle menu or popup
 	opts[1] = (option_t) {"MARX", 			set_param,  0};
 	opts[2] = (option_t) {"MARXTG70", 		set_param, 	0};
 	opts[3] = (option_t) {"MTG",  			set_param,  0};
@@ -216,63 +313,6 @@ void init_options() {
 void init_menus() {
 	create_menus();
 	init_options();
-}
-
-void setup(void)
-{
-  tft.begin();
-  tft.setRotation(1);
-  tft.fillScreen(ILI9341_BLACK);
-  init_menus();
-
-  ui.active = main_menu;
-  ui.previous = NULL;
-  ui.path[0] = ui.active;
-  ui.pidx = 0;
-
-  m_draw(&tft, ui.active, 0);
-}
-
-void loop()
-{
-  TSPoint p = get_press(&ts);
-  if (p.z > 50) {		// if pressure is above threshold
-	int code = m_interact(ui.active, p);	// make interact-call with touch point
-	switch (code) {
-		case M_UPDATED:
-			// triggers redraw/refresh
-			m_draw(&tft, ui.active, M_CLEAR);
-			m_draw(&tft, ui.active, M_DRAW);
-			break;
-		case M_SELECT:
-			// callbacks invoked
-			m_draw(&tft, ui.active, M_CLEAR);		// clear current menu
-			ui.active = ui.active->options[ui.active->cursor].target;	// swap active menu
-			ui.path[++ui.pidx] = ui.active;	// update path
-			m_draw(&tft, ui.active, M_DRAW);		// draw new active menu
-			break;
-		case M_CONFIRM:
-			// grab previous menu
-			ui.previous = ui.path[ui.pidx - 1];
-			// copy over the value from the active menu, to the value in the selected option of previous
-			ui.previous->options[ui.previous->cursor].value = ui.active->options[ui.active->cursor].value;
-			// CONFIRM falls through to M_BACK, swapping to previous menu
-		case M_BACK:
-			m_draw(&tft, ui.active, M_CLEAR);
-			ui.active = ui.path[--ui.pidx];
-			m_draw(&tft, ui.active, M_DRAW);
-			break;
-		case M_EXIT:
-			m_draw(&tft, ui.active, M_CLEAR);
-			ui.active = ui.path[0];
-			ui.pidx = 0;
-			m_draw(&tft, ui.active, M_DRAW);
-			break;
-		case M_NOP:
-		default:
-			break;
-	}
-  }
 }
 
 
