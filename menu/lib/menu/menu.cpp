@@ -1,26 +1,26 @@
 #include "menu.h"
 
-menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size, int type) {
+menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size, int type, uint8_t flags) {
     menu_t *ret = (menu_t*) malloc(sizeof(menu_t));
 
     if (title) {
         strncpy(ret->title, title, TITLE_LEN);
     }
     
+    ret->flags = flags;
     ret->nopts = num_options;
     ret->options = NULL;
     ret->center = center;
     ret->w = size.x;
     ret->h = size.y;
 
+    ret->opt_sp = 10;
     ret->opt_offset = (ret->h - ret->opt_sp) / 2;
     ret->opt_div = (ret->h - ret->opt_sp) / 6;
     ret->vis_items = fmin((ret->h / ret->opt_div) - 1, ret->nopts);
 
     ret->cursor = 0;
     ret->cur_color = 0x1234;
-
-    ret->opt_sp = 10;
 
     ret->coffset = 0;
 
