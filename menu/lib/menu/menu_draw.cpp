@@ -19,7 +19,7 @@ int m_draw(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     disp->drawRect(0, 0, m->w, m->h, c);
 
     // render title
-    if (clear != M_REFRESH) {
+    if (~m->flags & M_NOTITLE) {
         disp->setCursor(20, 20);
         disp->setTextColor(c);
         disp->setTextSize(3);
