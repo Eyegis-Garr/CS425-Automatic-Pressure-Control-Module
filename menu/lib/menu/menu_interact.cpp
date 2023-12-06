@@ -6,7 +6,7 @@ MenuInteract MENU_INTERACT[NUM_MTYPES] = {
     NULL,
     NULL,
     NULL,
-    m_interact_message
+    m_interact_msg
 };
 
 int m_test_touch(TSPoint t, menu_t *m) {
@@ -25,9 +25,9 @@ int m_test_touch(TSPoint t, menu_t *m) {
         tpos.y += m->opt_div;
     }
 
-    if (TEST_RECT(t.x, t.y, A_BTN.x, A_BTN.y, COLUMN_W, COLUMN_H)) {   
+    if (TEST_RECT(t.x, t.y, A_BTN.x, A_BTN.y, COLUMN_W, COLUMN_H) && ~m->flags & M_NOBACK) {   
         return M_BACK;
-    } else if (TEST_RECT(t.x, t.y, B_BTN.x, B_BTN.y, COLUMN_W, COLUMN_H)) {
+    } else if (TEST_RECT(t.x, t.y, B_BTN.x, B_BTN.y, COLUMN_W, COLUMN_H) && ~m->flags & M_NOEXIT) {
         return M_EXIT;
     }
 
@@ -88,7 +88,7 @@ int m_interact(menu_t *m, int command) {
     return M_NOP;
 }
 
-int m_interact_message(menu_t *m, TSPoint p) {
+int m_interact_msg(menu_t *m, TSPoint p) {
     return m_test_touch_msg(p, m);
 }
 
@@ -115,7 +115,7 @@ int m_interact_set(menu_t *m, TSPoint p) {
         vbuf[abs(m->cursor) - 1] = mod(vbuf[abs(m->cursor) - 1] + d, 10);
         m->options[0].value = 1000 * vbuf[0] + 100 * vbuf[1] + 10 * vbuf[2] + vbuf[3];
         return M_UPDATED;
-    } if (code == M_BACK) {  // cancel
+    } if (code == M_BACK) {     // cancel
         return M_BACK;
     } if (code == M_CONFIRM) {  // confirm
         if (m->cb) m->cb(m, &m->options[code]);
