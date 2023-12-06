@@ -32,6 +32,11 @@
 #define M_COMBO     4
 #define M_MESSAGE   5
 
+// MENU FLAGS
+#define M_NOTITLE   1
+#define M_NOBACK    (1 << 1)
+#define M_NOEXIT    (1 << 2)
+
 // SET MENU SPACING/FORMATTING
 #define S_BTN_WIDTH     35
 #define S_BTN_SPACING   10
@@ -78,6 +83,7 @@ typedef struct option_t {
 } option_t;
 
 typedef struct menu_t {
+    uint8_t flags;
     char title[TITLE_LEN];
     uint8_t nopts;
     option_t *options;
@@ -98,10 +104,9 @@ typedef struct menu_t {
     uint8_t m_type;
 
     MenuCallback cb;
-    menu_t *parent;
 } menu_t;
 
-menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size, int type);
+menu_t *new_menu(const char *title, uint8_t num_options, vec2 center, vec2 size, int type, uint8_t flags);
 int m_set_options(menu_t *m, int num_options, option_t *options);
 int m_set_size(menu_t *m, int width, int height);
 
@@ -111,7 +116,7 @@ int m_interact(menu_t *m, int command);
 int m_interact_default(menu_t *m, TSPoint p);
 int m_interact_set(menu_t *m, TSPoint p);
 int m_interact_toggle(menu_t *m, TSPoint p);
-int m_interact_message(menu_t *m, TSPoint p);
+int m_interact_msg(menu_t *m, TSPoint p);
 
 int m_draw(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 
