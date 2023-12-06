@@ -105,15 +105,17 @@ int m_draw_default(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
         tpos.y += m->opt_div;
     }
 
-    // BACK
-    disp->drawRect(A_BTN.x, A_BTN.y, COLUMN_W, COLUMN_H, c);
-    disp->setCursor(A_BTN.x + 5, A_BTN.y + 5);
-    disp->print("BACK");
-
-    // EXIT
-    disp->drawRect(B_BTN.x, B_BTN.y, COLUMN_W, COLUMN_H, c);
-    disp->setCursor(B_BTN.x + 5, B_BTN.y + 5);
-    disp->print("EXIT");
+    if (~m->flags & M_NOBACK) {
+        // BACK
+        disp->drawRect(A_BTN.x, A_BTN.y, COLUMN_W, COLUMN_H, c);
+        disp->setCursor(A_BTN.x + 5, A_BTN.y + 5);
+        disp->print("BACK");
+    } if (~m->flags & M_NOEXIT) {
+        // EXIT
+        disp->drawRect(B_BTN.x, B_BTN.y, COLUMN_W, COLUMN_H, c);
+        disp->setCursor(B_BTN.x + 5, B_BTN.y + 5);
+        disp->print("EXIT");
+    }
 
     return 0;
 }
