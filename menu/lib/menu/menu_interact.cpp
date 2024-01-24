@@ -1,6 +1,6 @@
 #include "menu.h"
 
-MenuInteract MENU_INTERACT[NUM_MTYPES] = {
+static MenuInteract MENU_INTERACT[NUM_MTYPES] = {
     m_interact_default,
     m_interact_set,
     NULL,
@@ -36,8 +36,8 @@ int m_test_touch(TSPoint t, menu_t *m) {
 
 int m_test_touch_set(TSPoint t, menu_t *m) {
     if (!m) return M_NOP;
-    vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + 80 };
-    int cx_offset = CENTER.x - (S_BTN_WIDTH * 2);
+    vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + S_VERT_SPACING };
+    int cx_offset = CENTER.x - ((2 * S_BTN_WIDTH) + S_BTN_SPACING);
     int spacing, centering;
 
     for (int i = 0; i < 4; i += 1) {

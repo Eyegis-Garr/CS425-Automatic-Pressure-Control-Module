@@ -38,6 +38,7 @@
 #define M_NOEXIT    (1 << 2)
 
 // SET MENU SPACING/FORMATTING
+#define S_VERT_SPACING  100
 #define S_BTN_WIDTH     35
 #define S_BTN_SPACING   10
 
@@ -59,10 +60,10 @@
 #define B_COLUMN (vec2){20 + COLUMN_W, 80}
 #define C_COLUMN (vec2){300, 80}
 
-#define A_BTN    (vec2){A_COLUMN.x, 225 - COLUMN_H}
-#define B_BTN    (vec2){B_COLUMN.x + 10, 225 - COLUMN_H}
+#define A_BTN    (vec2){A_COLUMN.x, 230 - COLUMN_H}
+#define B_BTN    (vec2){B_COLUMN.x + 10, 230 - COLUMN_H}
 
-#define M_POPDELAY 3000
+#define M_POPDELAY 2500
 
 #define TEST_RECT(x,y,x1,y1,w,h) (((x > x1) && (x < w + x1) && (y > y1) && (y < h + y1)))
 
@@ -130,5 +131,6 @@ int m_test_touch(TSPoint t, menu_t *m);
 
 extern MenuDraw MENU_DRAW[NUM_MTYPES];
 extern MenuInteract MENU_INTERACT[NUM_MTYPES];
+
 
 #endif // MENU_H

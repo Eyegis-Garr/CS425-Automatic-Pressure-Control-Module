@@ -34,23 +34,16 @@ int m_draw(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
 
 int m_draw_popup(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     if (!m) return -1;
+    uint16_t c = (clear) ? 0 : 0xFFFF;
     uint16_t w;
     disp->getTextBounds(m->title, 15, CENTER.y, NULL, NULL, &w, NULL);
 
     disp->fillRect(10, CENTER.y - 50, 300, 100, 0);
-    disp->drawRect(10, CENTER.y - 50, 300, 100, 0xFFFF);
+    disp->drawRect(10, CENTER.y - 50, 300, 100, c);
     
     disp->setTextSize(2);
-    disp->setTextColor(0xFFFF);
+    disp->setTextColor(c);
     disp->setCursor(CENTER.x - (w >> 1), CENTER.y);
-    disp->print(m->title);
-
-    _delay_ms(M_POPDELAY);
-
-    disp->drawRect(10, CENTER.y - 50, 300, 100, 0);
-    disp->setTextSize(2);
-    disp->setCursor(CENTER.x - (w >> 1), CENTER.y);
-    disp->setTextColor(0);
     disp->print(m->title);
 
     return 0;
@@ -124,10 +117,10 @@ int m_draw_default(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
 int m_draw_set(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     if (!m) return -1;
 
-    vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + 80 };
+    vec2 tpos = (vec2) { m->center.x, m->center.y - m->opt_offset - m->opt_div + S_VERT_SPACING };
     uint16_t c = (clear) ? 0 : 0xFFFF;
     int q, r, s, t;
-    int cx_offset = CENTER.x - (S_BTN_WIDTH * 2);
+    int cx_offset = CENTER.x - ((2 * S_BTN_WIDTH) + S_BTN_SPACING);
     int spacing, centering;
 
     disp->setTextSize(3);
