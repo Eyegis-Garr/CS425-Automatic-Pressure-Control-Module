@@ -36,6 +36,7 @@
 #define M_NOTITLE   1
 #define M_NOBACK    (1 << 1)
 #define M_NOEXIT    (1 << 2)
+#define M_FPARAM    (1 << 3)
 
 // SET MENU SPACING/FORMATTING
 #define S_VERT_SPACING  100
