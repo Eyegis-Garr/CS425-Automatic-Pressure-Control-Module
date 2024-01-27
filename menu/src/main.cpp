@@ -1,33 +1,65 @@
+#include <Arduino.h>
+#include <stdlib.h>
+#include <inttypes.h>
+
+#include <PID_v1.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 #include <TouchScreen.h>
-#include <Talkie.h>
-#include <avr8-stub.h>
+#include <gfxfont.h>
+#include <TM1637Display.h>
 #include "menu.h"
 
+#include <avr8-stub.h>
+
 /*
+CIRCUIT
+outpin
+in
+analog pin
+analog out (?)
+enable pin
+enable led pin
+kp,ki,kd
+enable state (??)
+prev enable state (??)
 
-	set menus return value to prev-menu's selection value
-	once value is set (if confirmed), set is popped and ui returns to circuit/param select
-
-	need to keep system informed of ui state
-
+max time
+delay
+check time
+purge time
+set point
 */
 
-const uint8_t spt_SAVE[]              PROGMEM ={0x0A,0x78,0x46,0xD4,0x02,0x16,0x90,0x40,0x4B,0x7C,0xF2,0x50,0xEF,0x26,0x3B,0x39,0x49,0xEC,0x11,0x22,0xD5,0xF4,0x24,0xB1,0xB8,0x8B,0x4D,0x93,0x95,0xA6,0xAC,0xA6,0xB6,0x4D,0x76,0x36,0xF2,0x5C,0x44,0xD5,0xB7,0xF1,0xAA,0x72,0x15,0x55,0x9F,0x25,0xA3,0xCE,0x59,0x58,0xB3,0x6E,0x8F,0x26,0x67,0x61,0x8D,0x7C,0xDC,0x9A,0x9C,0x85,0x34,0x73,0xF6,0x68,0x4A,0x77,0x22,0xB3,0xA7,0xA3,0x29,0x31,0x98,0xC2,0xD6,0x94,0x36,0x06,0x55,0x73,0x69,0x12,0x3A,0x1F,0xC5,0x8D,0xB5,0x8D,0xEA,0x8C,0x34,0x09,0x33,0x37,0x66,0xE8,0x31,0xDD,0x58,0x69,0x33,0x20,0x84,0x14,0x04,0xE8,0xE8,0x81,0x00,0xED,0x5C,0x1F,0x00,0x00};
-const uint8_t spt_COMPLETE[]          PROGMEM ={0x06,0x08,0xB9,0x65,0xE4,0xB6,0x54,0xB8,0x78,0x92,0x5D,0xED,0xAA,0xD4,0x2E,0x70,0x0B,0x9B,0x9A,0xDC,0x86,0xD6,0x7B,0x6C,0xA5,0xD4,0xEA,0x3A,0xE1,0xDD,0x13,0xCA,0x8E,0xE9,0x8D,0x32,0x0F,0x35,0x27,0x00,0x06,0xF0,0xD6,0xDC,0x02,0x25,0xF1,0xB2,0x3C,0xD4,0x16,0xEF,0x64,0x65,0x4E,0x87,0x56,0xC4,0xAC,0x51,0x04,0x2B,0xDC,0x99,0x75,0x5A,0x15,0x0C,0x6B,0x6D,0x26,0xEC,0x8D,0xEB,0xAD,0xC1,0xEE,0x28,0x2B,0xB2,0xC7,0x33,0x00,0x30,0xA0,0xB1,0x34,0x0D,0x70,0x80,0x02,0xF0};
-const uint8_t spt_LOAD[]              PROGMEM ={0x21,0x37,0xCA,0x63,0xC1,0xBC,0xB5,0xDE,0x1B,0x9A,0x46,0xF3,0xD6,0xDA,0xE4,0xA0,0x87,0x32,0xDF,0xAA,0xA2,0x95,0x3D,0xCA,0x7C,0xAB,0x32,0xC6,0x7F,0x20,0xF3,0x8D,0x42,0x85,0xDE,0x02,0xC9,0x36,0x0A,0x1D,0x7B,0x0A,0xD1,0x7F,0xAB,0x94,0xEF,0x29,0x42,0xFF,0xAD,0x52,0xA6,0xA7,0x08,0xBB,0xB6,0x46,0x9B,0xD8,0x44,0xCC,0x57,0x3A,0xAB,0x7D,0xDD,0xA0,0x4F,0xEA,0xAD,0x8C,0x63,0x87,0xDE,0x69,0x74,0xCA,0x26,0x12,0xFA,0xA4,0xC9,0x5A,0x9E,0x71,0xF1,0x1C,0x26,0x6F,0xA8,0x2A,0x31,0x15,0x9B,0xA8,0x8A,0x6C,0xCB,0x54,0x6A,0xA2,0xB2,0xCA,0x7C,0x14,0xB1,0x89,0xCA,0xC8,0x74,0x75,0x12,0xA6,0xEE,0xC2,0x45,0x25,0xA9,0xED,0x44,0x9B,0x83,0xB9,0x73,0xA6,0x42,0x7D,0xB6,0x6E,0x06,0xA4,0xE4,0x01,0x00,0x00};
-const uint8_t spt_ERROR[]             PROGMEM ={0x2B,0xAF,0xC9,0x9C,0xDC,0x97,0x9E,0xBC,0xE5,0x34,0x72,0x5F,0x77,0xF2,0x58,0x4D,0x35,0xA3,0xEB,0xCD,0x5A,0x6A,0x07,0x7B,0x27,0xAD,0xEA,0x59,0xCF,0x5B,0xE5,0xB6,0x89,0x37,0x6E,0xED,0x55,0xAF,0x7B,0xD7,0xFB,0x3A,0xF4,0xA1,0x8D,0xB6,0xB9,0xE8,0xD3,0x56,0x37,0xB9,0xA9,0x1A,0x43,0x5B,0xCC,0xEC,0x16,0x66,0xAB,0xA5,0x72,0x8B,0xAB,0x66,0xC6,0xA3,0xE4,0x01,0x00,0x00};
-const uint8_t spt_DATA[]              PROGMEM ={0xAC,0x85,0x6E,0x22,0x2A,0x24,0xB3,0x96,0xA8,0xCC,0x4C,0x77,0x30,0x9A,0x99,0xCA,0x99,0x3D,0xC9,0xC9,0x63,0x52,0x93,0xD8,0xB9,0xB7,0x5A,0x79,0x1E,0x2C,0xE6,0xD3,0x66,0xE7,0x3B,0x37,0x00,0x33,0x9A,0x0E,0x28,0x3E,0xB9,0xD5,0xD1,0x3B,0x1B,0xE6,0x8C,0xD1,0xB8,0x6C,0x29,0x31,0x49,0x66,0x3B,0x7A,0xE7,0xB3,0xDC,0xE3,0x6E,0x19,0x5D,0x0F,0xD3,0xE8,0x2A,0x71,0xF2,0xB3,0x19,0xA3,0xB3,0x30,0x28,0xCB,0xAC,0x0B,0xB7,0x58,0xC9,0x9D,0xC0,0x03,0x00,0x00};
-const uint8_t spa_RESET[]     PROGMEM = {0xAA,0xF0,0x4D,0x54,0x22,0x5B,0xFB,0xAC,0xC5,0x49,0x53,0x66,0x5A,0xCB,0x15,0x76,0xCB,0xA8,0x1B,0xAD,0x56,0x70,0x8C,0x21,0xCF,0x34,0xDA,0xC1,0x76,0x9B,0xBB,0xAC,0x83,0xCC,0x34,0x72,0x7E,0x93,0x42,0x39,0x3D,0x4B,0x01,0x17,0xBB,0x69,0x40,0x00,0x8F,0x85,0x09,0xE0,0xCA,0x0C,0x01,0x5C,0x16,0x29,0x80,0x2B,0x23,0x0C,0xB0,0x69,0x7A,0x2B,0xAA,0x16,0x1B,0xA9,0xD8,0xAB,0x6F,0x56,0x75,0xDC,0x67,0xAF,0xA1,0x7B,0x93,0x4A,0x5B,0x3C,0xC6,0x91,0x42,0xD3,0x74,0x71,0x9A,0xAA,0x93,0x68,0xEB,0x29,0x6C,0x11,0xCA,0xDD,0x45,0x64,0x03,0x28,0x60,0x28,0x77,0x01,0x3C,0x23,0x29,0x80,0x6B,0xD4,0x09,0xB0,0x98,0x27,0x02,0x0A,0x2D,0xFB,0x39,0x25,0x55,0x15,0x51,0x25};
-const uint8_t spt_OFF[]               PROGMEM ={0x2B,0xD5,0xF5,0xC2,0xD4,0xEB,0x9E,0xCA,0x99,0x6B,0x53,0x5D,0x7A,0x2A,0x53,0x66,0x94,0x33,0xCD,0xAD,0x6E,0x75,0xAB,0xDB,0xB4,0x4E,0xFB,0x1C,0x65,0x4B,0x68,0x80,0x6A,0x33,0x3C,0x60,0x01,0x0F,0x38,0x20,0xDB,0x0C,0x03,0xE4,0x98,0xF6};
-const uint8_t spt_ON[]                PROGMEM ={0xA7,0x36,0x7E,0xC6,0xD9,0x97,0x9E,0xC2,0xA4,0x2D,0xA5,0x4E,0x7A,0xAB,0x5B,0xED,0x6A,0x57,0xBB,0x9E,0xCD,0x68,0x75,0x4F,0x37,0x2F,0xBB,0xBD,0x2B,0x9D,0x6E,0x91,0xE6,0xE5,0xD8,0xF4,0xD2,0x49,0xB1,0x8D,0x1B,0xDB,0x99,0x4E,0x3A,0x69,0xB1,0x71,0xAC,0x3A,0x1E,0xB4,0x42,0xC7,0x76,0xE8,0x02,0x77,0x35,0xD7,0xC6,0xAE,0x0B,0x29,0x0C,0x31,0x5D,0x22,0x40,0x57,0xE2,0x07,0x00,0x00};
-const uint8_t sp2_FAIL[] PROGMEM = {0x04,0x98,0x3E,0x8D,0x03,0x1C,0xD0,0x80,0x07,0x4A,0xBF,0x54,0x9B,0x3A,0x79,0x9C,0xCD,0xAA,0x9B,0x0F,0x31,0x8F,0x37,0xB7,0xBE,0xCD,0x6A,0x47,0x2A,0x66,0xB3,0xB7,0xB3,0xDB,0x6B,0x5F,0xC7,0x56,0x44,0x58,0x8E,0x76,0xAA,0x7B,0xD8,0x33,0xB9,0x32,0xD7,0x3C,0xF9,0x0C,0x67,0xD4,0x13,0x9E,0x98,0xC7,0x5F,0xEE,0x49,0x7C,0xAA,0x8D,0xF3,0xF9,0xF7,0xFF,0x01};
-const uint8_t sp3_CLEAR[] PROGMEM = {0x0C,0xC8,0xA3,0x39,0x00,0xC5,0x96,0x3B,0xA0,0x73,0x4F,0x03,0x4C,0xAD,0xD5,0xB2,0xCC,0x6C,0x42,0xB8,0xCB,0xCA,0x1A,0xE7,0xAC,0xE4,0xB6,0x2B,0x9F,0x46,0xC2,0x82,0xB6,0xAD,0x62,0x5A,0x37,0x0A,0xDE,0xB6,0x8A,0x19,0xDA,0xC1,0x69,0xDB,0x2A,0xA6,0x2B,0x85,0x90,0xAD,0xAB,0x9C,0xAE,0x04,0x53,0xB6,0xAC,0x72,0xD8,0x12,0x2C,0xD9,0x32,0xAA,0xE6,0x9A,0xB8,0x65,0xCB,0xA8,0xAA,0x6D,0xD4,0x95,0x2E,0xA5,0x2A,0xB6,0x51,0x4F,0xB2,0xA5,0xAA,0xA4,0x45,0x59,0xF1,0xFA,0xFF};
+#define C_NUM_IO 5
+#define I_PRESSURE_READ 0
+#define I_PRESSURE_IN   1
+#define I_PRESSURE_OUT  2
+#define I_ENABLE        3
+#define I_LED           4
 
-// #define SOUND_ENABLED
+#define C_MAX_DEFAULT   	5000
+#define C_DELAY_DEFAULT		1000
+#define C_PURGE_DEFAULT		120000
+#define C_RECLAIM_TIME		30000
 
-// This is calibration data for the raw touch data to the screen coordinates
+// system circuit indices
+#define C_NUM_CIRCUITS 1
+#define C_MARX        0
+#define C_MTG         1
+#define C_SWITCH      2
+#define C_MTG70       3
+#define C_SWTG70      4
+#define C_RECLAIMER   5
+#define C_BOTTLE      6
+
+#define NUM_PRESETS 6
+#define SAVE 		0
+#define LOAD 		1
+#define DEL  		2
+
+#define M_SIZE (vec2){320,240}
+
 #define TS_MINX 100
 #define TS_MINY 100
 #define TS_MAXX 900
@@ -38,29 +70,138 @@ const uint8_t sp3_CLEAR[] PROGMEM = {0x0C,0xC8,0xA3,0x39,0x00,0xC5,0x96,0x3B,0xA
 #define YPOS    A3
 #define YMIN    A1
 #define XMIN    A0
-volatile uint8_t *PORT_F = (uint8_t*)0x31;
-volatile uint8_t *DDR_F = (uint8_t*)0x30;
-#define CLIPP   4
 
-#define TFT_CS 	37
-#define TFT_DC 	36
+#define IN_RANGE(v, min, max) ((v >= min && v <= max))
 
-#define M_SIZE (vec2){320,240}
+#define S_SHOT    1
+#define S_ABORT   (1 << 1)
+#define S_PURGE   (1 << 2)
+#define S_ALARM   (1 << 3)
+#define S_AUTOREC (1 << 4)
+#define S_RECLAIM (1 << 5)
 
-#define NUM_PRESETS 6
-#define SAVE 		0
-#define LOAD 		1
-#define DEL  		2
+/*
 
-static int sound_en;
-TouchScreen ts = TouchScreen(YPOS, XPOS, YMIN, XMIN, 300);
-Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, 22, 35, 36, 37, 33, 34);
-Talkie q;
+reclaim start/stop pin (relays)
+shotmode purge  alarm  automate reclaimer  abort  pins (buttons)
+alarm sound pin (buzzer/speaker)
+led pins (alarm, abort, shotmode, purge, start/stop, auto reclaim)
+serial sd card pins
+
+* menu stuff *
+
+alarm en (bool)
+error state (bool)
+prev time
+min bottle pressure
+standby mode (bool)
+auto mode (bool)
+reclaim running (bool)
+reclaim safety time
+prev safety time
+min reclaim pressure
+max reclaim pressure
+is couple (?)
+
+BUTTON STATES
+alarm state
+auto reclaim state
+purge state
+shot state
+reclaim start/stop state
+abort state
+
+* previous ^ state vars *
+
+*/
+
+typedef struct circuit_t {
+	double kp, ki, kd;
+	bool en, prev_en, set;
+	uint32_t max_time;
+	uint32_t delay;
+	uint32_t check_time;
+	uint32_t purge_time;
+
+	double set_point;
+
+  uint8_t pins[C_NUM_IO];
+} circuit_t;
+
+typedef struct line_t {
+  double pressure;
+  double roc;
+  int aout;
+} line_t;
+
+typedef struct system_t {
+  /*
+    stores system state/mode
+      alarm state
+      auto reclaim state
+      purge state
+      shot mode
+      reclaimer state (start/stop)
+      abort state
+
+      bool alarmState = false;
+      bool automatereclaimerState = true;
+      bool purgeState = false;
+      bool shotmodeState = false;
+      bool startreclaimerState = false;
+      bool stopreclaimerState = false;
+      bool abortState = false;
+  */
+  uint8_t s_flags;
+
+  /*
+    stores set-context (active edit circuit) (modified in circuit_select cb)
+      marx
+      mtg
+      switch
+      swtg70
+      mxtg70
+      reclaimer
+      bottle
+  */
+  uint8_t c_flags;
+  
+  /*
+    stores parameter-context (active set param(s)) (modified in pick_param cb)
+      pressure set
+      pressure min
+      pressure max
+      timeout
+      delay time
+      check time
+      purge time
+  */
+  uint8_t p_flags;
+
+  /*
+    button io state & pins
+      alarm
+      auto reclaim
+      purge
+      shot mode
+      abort
+      reclaimer start/stop
+  */
+  int buttons[6];
+
+  circuit_t *circuits;
+
+  line_t *lines;
+
+  int pid_window_size;
+} system_t;
+
+system_t sys;
+circuit_t marx, mtg, sw, swtg70, marxtg70;
 
 menu_t *set_param;
 menu_t *alert;
 menu_t *popup;
-
 menu_t *main_menu;
 menu_t *timers;
 menu_t *purge_timers;
@@ -82,83 +223,9 @@ struct ui {
 	menu_t *path[8];
 } ui;
 
-static inline void click();
-TSPoint get_press(TouchScreen *ts);
-int preset_cb(menu_t *m, option_t *o);
-int pick_preset_cb(menu_t *m, option_t *o);
-int alarms_cb(menu_t *m, option_t *o);
-void create_menus();
-void init_options();
-void init_menus();
-int get_input();
-
-void setup(void) {
-  q.beginPWM(A4);
-  tft.begin();
-  tft.setRotation(1);
-  tft.fillScreen(ILI9341_BLACK);
-  init_menus();
-
-  sound_en = 0;
-
-  *DDR_F |= 1 << CLIPP;
-  *PORT_F &= ~(1 << CLIPP);
-
-  ui.active = main_menu;
-  ui.previous = NULL;
-  ui.path[0] = ui.active;
-  ui.pidx = 0;
-
-  m_draw(&tft, ui.active, 0);
-}
-
-void loop() {
-  TSPoint p = get_press(&ts);
-  if (p.z > PRESSURE_THRESH) {		// if pressure is above threshold
-	int code = m_interact(ui.active, p);	// make interact-call with touch point
-	if (code) click();
-	switch (code) {
-		case M_UPDATED:
-			// triggers redraw/refresh
-			m_draw(&tft, ui.active, M_CLEAR);
-			m_draw(&tft, ui.active, M_DRAW);
-			break;
-		case M_SELECT:
-			m_draw(&tft, ui.active, M_CLEAR);		// clear current menu
-			ui.path[ui.pidx++] = ui.active;			// update path
-			ui.active = ui.active->options[ui.active->cursor].target;	// swap active menu
-			m_draw(&tft, ui.active, M_DRAW);		// draw new active menu
-			break;
-		case M_CONFIRM:
-			// grab previous menu
-			ui.previous = ui.path[ui.pidx - 1];
-			// copy over the value from the active menu, to the value in the selected option of previous
-			ui.previous->options[ui.previous->cursor].value = ui.active->options[ui.active->cursor].value;
-			// CONFIRM falls through to M_BACK, swapping to previous menu
-		case M_BACK:
-			if (ui.pidx) {
-				m_draw(&tft, ui.active, M_CLEAR);
-				ui.active = ui.path[--ui.pidx];
-				m_draw(&tft, ui.active, M_DRAW);
-			}			
-			break;
-		case M_EXIT:
-			m_draw(&tft, ui.active, M_CLEAR);
-			ui.active = ui.path[0];
-			ui.pidx = 0;
-			m_draw(&tft, ui.active, M_DRAW);
-			break;
-		case M_NOP:
-		default:
-			break;
-	}
-	if (code) click();
-  }
-}
-
-static inline void click() {
-	*PORT_F ^= 1 << CLIPP;
-}
+TouchScreen ts = TouchScreen(YPOS, XPOS, YMIN, XMIN, 300);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, 22, 35, 36, 37, 33, 34);
+TM1637Display pdisp(10, 11);
 
 TSPoint get_press(TouchScreen *ts) {
   TSPoint p = ts->getPoint();
@@ -200,17 +267,17 @@ int pick_preset_cb(menu_t *m, option_t *o) {
 
 	strcat(alert->title, o->name);
 	
-	click();
+	// click();
 	m_draw(&tft, m, M_CLEAR);		// clear preset selection menu
-	click();
+	// click();
 	m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
 	while (code == M_NOP) {			// wait for selection
 		p = get_press(&ts);
 		if (p.z > 50) code = m_interact(alert, p);
 	}
-	click();
+	// click();
 	m_draw(&tft, alert, M_CLEAR);	// clear alert
-	click();
+	// click();
 
 	if (code == M_CONFIRM) {
 		switch (o->value) {
@@ -219,22 +286,19 @@ int pick_preset_cb(menu_t *m, option_t *o) {
 				// test save success
 				sprintf(popup->title, "%s success.", alert->title);
 				m_draw(&tft, popup, M_DRAW);
-				if (sound_en) { q.say(spt_SAVE); q.say(spt_COMPLETE); } 
-				else _delay_ms(M_POPDELAY);
+				_delay_ms(M_POPDELAY);
 				m_draw(&tft, popup, M_CLEAR);
 				break;
 			case LOAD:		// load preset
 				sprintf(popup->title, "%s failed!", alert->title);
 				m_draw(&tft, popup, M_DRAW);
-				if (sound_en) { q.say(spt_LOAD); q.say(sp2_FAIL); } 
-				else _delay_ms(M_POPDELAY);
+				_delay_ms(M_POPDELAY);
 				m_draw(&tft, popup, M_CLEAR);
 				break;
 			case DEL:		// delete preset
 				sprintf(popup->title, "%s is done.", alert->title);
 				m_draw(&tft, popup, M_DRAW);
-				if (sound_en) { q.say(spt_DATA); q.say(sp3_CLEAR); } 
-				else _delay_ms(M_POPDELAY);
+				_delay_ms(M_POPDELAY);
 				m_draw(&tft, popup, M_CLEAR);
 				break;
 			default:
@@ -253,7 +317,7 @@ int alarms_cb(menu_t *m, option_t *o) {
 		int code = M_NOP, dir;
 		TSPoint p;
 		
-		click();
+		// click();
 		if (o->value == 0) {  			// off, turn on
 			strcpy(alert->title, "Set Sound ON?");
 			dir = 1;
@@ -263,7 +327,7 @@ int alarms_cb(menu_t *m, option_t *o) {
 		}
 		
 		m_draw(&tft, m, M_CLEAR);		// clear preset selection menu
-		click();
+		// // click();
 		m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
 		while (code == M_NOP) {			// wait for selection
 			p = get_press(&ts);
@@ -275,12 +339,9 @@ int alarms_cb(menu_t *m, option_t *o) {
 
 		if (code == M_CONFIRM) {
 			o->value += dir;
-			sound_en = o->value;
 			sprintf(popup->title, "Sound is %s.", (o->value) ? "ON" : "OFF");
 			m_draw(&tft, popup, M_DRAW);
-			if (sound_en && o->value) { q.say(spt_ON); }
-			else if (sound_en && !o->value) { q.say(spt_OFF); }
-			else _delay_ms(M_POPDELAY);
+			_delay_ms(M_POPDELAY);
 			m_draw(&tft, popup, M_CLEAR);
 			return M_CONFIRM;
 		}
@@ -380,4 +441,283 @@ void init_menus() {
 	init_options();
 }
 
+void init_system() {
 
+  sys.s_flags = S_SHOT;
+
+  sys.circuits = (circuit_t*) malloc(sizeof(circuit_t) * C_NUM_CIRCUITS);
+  sys.lines = (line_t*) malloc(sizeof(line_t) * C_NUM_CIRCUITS);
+
+  // load default circuit settings
+  sys.circuits[C_MARX] = (circuit_t) {
+    50, 0, 25,              // PID tuning params
+    true, false, false,    // enable, prev enable, is_set
+    C_MAX_DEFAULT,          // max time
+    C_DELAY_DEFAULT,        // delay time
+    0,                      // check time
+    C_PURGE_DEFAULT,        // purge time
+    13.0,                      // set point
+    { A7, 7, 8, 6, 9 }  // pins
+  };
+
+  sys.lines[C_MARX] = (line_t) {
+    25,
+    0.01,
+    A6
+  };
+
+  /* sys.circuits[C_MTG] = (circuit_t) {
+    15, 0, 10,              // PID tuning params
+    false, false, false,    // enable, prev enable, is_set
+    C_MAX_DEFAULT,          // max time
+    C_DELAY_DEFAULT,        // delay time
+    0,                      // check time
+    C_PURGE_DEFAULT,        // purge time
+    0,                      // set point
+    { A2, 25, 24, 18, 39 }  // pins
+  };
+
+  sys.circuits[C_SWITCH] = (circuit_t) {
+    50, 0, 25,              // PID tuning params
+    false, false, false,    // enable, prev enable, is_set
+    C_MAX_DEFAULT,          // max time
+    C_DELAY_DEFAULT,        // delay time
+    0,                      // check time
+    C_PURGE_DEFAULT,        // purge time
+    0,                      // set point
+    { A1, 27, 26, 19, 40 }  // pins
+  };
+
+  sys.circuits[C_MTG70] = (circuit_t) {
+    15, 0, 10,              // PID tuning params
+    false, false, false,    // enable, prev enable, is_set
+    C_MAX_DEFAULT,          // max time
+    C_DELAY_DEFAULT,        // delay time
+    0,                      // check time
+    C_PURGE_DEFAULT,        // purge time
+    0,                      // set point
+    { A3, 31, 30, 21, 42 }  // pins
+  };
+
+  sys.circuits[C_SWTG70] = (circuit_t) {
+    15, 0, 10,              // PID tuning params
+    false, false, false,    // enable, prev enable, is_set
+    C_MAX_DEFAULT,          // max time
+    C_DELAY_DEFAULT,        // delay time
+    0,                      // check time
+    C_PURGE_DEFAULT,        // purge time
+    0,                      // set point
+    { A4, 29, 28, 20, 41 }  // pins
+  }; */
+}
+
+void update_ui() {
+  TSPoint p = get_press(&ts);
+  if (p.z > PRESSURE_THRESH) {		// if pressure is above threshold
+    int code = m_interact(ui.active, p);	// make interact-call with touch point
+    switch (code) {
+      case M_UPDATED:
+        // triggers redraw/refresh
+        m_draw(&tft, ui.active, M_CLEAR);
+        m_draw(&tft, ui.active, M_DRAW);
+        break;
+      case M_SELECT:
+        m_draw(&tft, ui.active, M_CLEAR);		// clear current menu
+        ui.path[ui.pidx++] = ui.active;			// update path
+        ui.active = ui.active->options[ui.active->cursor].target;	// swap active menu
+        m_draw(&tft, ui.active, M_DRAW);		// draw new active menu
+        break;
+      case M_CONFIRM:
+        // grab previous menu
+        ui.previous = ui.path[ui.pidx - 1];
+        // copy over the value from the active menu, to the value in the selected option of previous
+        ui.previous->options[ui.previous->cursor].value = ui.active->options[ui.active->cursor].value;
+        // CONFIRM falls through to M_BACK, swapping to previous menu
+      case M_BACK:
+        if (ui.pidx) {
+          m_draw(&tft, ui.active, M_CLEAR);
+          ui.active = ui.path[--ui.pidx];
+          m_draw(&tft, ui.active, M_DRAW);
+        }			
+        break;
+      case M_EXIT:
+        m_draw(&tft, ui.active, M_CLEAR);
+        ui.active = ui.path[0];
+        ui.pidx = 0;
+        m_draw(&tft, ui.active, M_DRAW);
+        break;
+      case M_NOP:
+      default:
+        break;
+    }
+  }
+}
+
+void simulate_lines() {
+  int ri, ro;
+  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+    ri = digitalRead(sys.circuits[i].pins[I_PRESSURE_IN]);
+    ro = digitalRead(sys.circuits[i].pins[I_PRESSURE_OUT]);
+
+    // pressurized pipes are hardly as random when it comes to flow (probably)
+    // can write a flow rate sampler to more accurately model flow
+    randomSeed(millis());
+    if (ri) {
+      if (!ro) {
+        sys.lines[i].pressure += sys.lines[i].roc + ((double)(rand() % 10) / 100);
+      } else {
+        sys.lines[i].pressure -= sys.lines[i].roc + ((double)(rand() % 10) / 100);
+      }
+    } else {
+      if (ro) {
+        sys.lines[i].pressure -= sys.lines[i].roc + ((double)(rand() % 10) / 100);
+      }
+    }
+
+    if (sys.circuits[i].en) {
+      digitalWrite(sys.circuits[i].pins[I_ENABLE], HIGH);
+    } else {
+      digitalWrite(sys.circuits[i].pins[I_ENABLE], LOW);
+    }
+
+    analogWrite(sys.lines[i].aout, sys.lines[i].pressure);
+  }
+  
+  pdisp.showNumberDecEx(sys.lines[0].pressure, 0b01000000, false, 2, 0);
+  pdisp.showNumberDecEx((sys.lines[0].pressure - (int)sys.lines[0].pressure) * 100, 0b01000000, true, 2, 2);
+}
+
+void purge() {
+  unsigned long int itime = millis();
+  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {    // loop system circuits
+    itime = millis();
+    if (sys.circuits[i].en) {
+      // open exhaust, close intake
+      digitalWrite(sys.circuits[i].pins[I_PRESSURE_IN], LOW);
+      digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], HIGH);
+      while (millis() - itime <= sys.circuits[i].purge_time && sys.lines[i].pressure > 0) { simulate_lines(); }    // loop to purge timer expiration
+      // close exhaust
+      digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], LOW);
+    }    
+  }
+
+  sys.s_flags = S_SHOT;
+}
+
+void set_pressure(circuit_t *c, double var, int half) {
+  unsigned long t;
+  double pread, out;
+  double set_point = (half) ? c->set_point / 2 : c->set_point;
+  int dir = (sys.lines[0].pressure > set_point + var) ? REVERSE : DIRECT;
+  PID pressure(&sys.lines[0].pressure, &out, &set_point, c->kp, c->ki, c->kd, dir);
+
+  pressure.SetOutputLimits(0, sys.pid_window_size);
+  pressure.SetMode(AUTOMATIC);
+
+  unsigned long wstart = millis();    // base time offset
+  while (!IN_RANGE(sys.lines[0].pressure, (set_point - var), (set_point + var))) {
+    /*
+      can check UI at the top of this loop if we want the UI to be responsive
+      while pressures are being set. will require some system state locking
+      to ensure safe mode transitions.
+    */
+    t = millis();
+
+    // pick PID direction (inc or dec)
+    dir = (sys.lines[0].pressure > set_point + var) ? REVERSE : DIRECT;
+    pressure.SetControllerDirection(dir);
+    pressure.Compute();   // compute solenoid PID-window (stored @ out)
+    // pread = analogRead(c->pins[I_PRESSURE_READ]);   // get circuit pressure @ inlet
+
+    if (t - wstart >= c->max_time) {   // set pressure timeout (possible leak or obstruction)
+      // close intake
+      digitalWrite(c->pins[I_PRESSURE_IN], LOW);
+      // close exhaust
+      digitalWrite(c->pins[I_PRESSURE_OUT], LOW);
+      
+      // set error state
+
+      break;
+    }
+
+    if (out > t - wstart) {    // time remains in PID-window
+      if (dir == REVERSE) {         // exhaust
+        digitalWrite(c->pins[I_PRESSURE_OUT], HIGH);
+        digitalWrite(c->pins[I_PRESSURE_IN], LOW);
+      } else if (dir == DIRECT) {   // intake
+        digitalWrite(c->pins[I_PRESSURE_OUT], LOW);
+        digitalWrite(c->pins[I_PRESSURE_IN], HIGH);
+      }
+    } else {                   // PID-window expired & close intake/exhaust
+      digitalWrite((dir == REVERSE) ? c->pins[I_PRESSURE_OUT] : c->pins[I_PRESSURE_IN], LOW);
+      break;
+    }
+
+    simulate_lines();
+  }
+
+  // close circuit solenoids
+  digitalWrite(c->pins[I_PRESSURE_IN], LOW);
+  digitalWrite(c->pins[I_PRESSURE_OUT], LOW);
+}
+
+void shot_pressure(bool half) {
+  double var = 0.05;
+  circuit_t *c;
+
+  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {  // loop system circuits
+    if (sys.circuits[i].en) {   // if enabled
+      c = &sys.circuits[i];
+      if (millis() - c->check_time >= c->delay) {   // check time expired
+        set_pressure(c, var, half);
+        c->check_time = millis();
+      }
+    }
+  }
+}
+
+void init_io() {
+  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+    pinMode(sys.circuits[i].pins[I_PRESSURE_IN], OUTPUT);
+    pinMode(sys.circuits[i].pins[I_PRESSURE_OUT], OUTPUT);
+    pinMode(sys.circuits[i].pins[I_ENABLE], OUTPUT);
+    pinMode(sys.circuits[i].pins[I_PRESSURE_READ], INPUT);
+
+    pinMode(sys.lines[i].aout, OUTPUT);
+  }
+}
+
+void setup() {
+  tft.begin();
+  tft.setRotation(1);
+  tft.fillScreen(ILI9341_BLACK);
+  init_menus();
+  init_system();
+  init_io();
+
+  pdisp.setBrightness(3);
+
+  sys.pid_window_size = 5000;
+  sys.s_flags = S_PURGE;
+
+  ui.active = main_menu;
+  ui.previous = NULL;
+  ui.path[0] = ui.active;
+  ui.pidx = 0;
+
+  m_draw(&tft, ui.active, 0);
+}
+
+void loop() {
+  // update_ui();
+  if (sys.s_flags & S_SHOT) {   // continuously checks pressures, keeping within setpoint range
+    shot_pressure(false);
+  } else if (sys.s_flags & S_PURGE) {
+    purge();
+  } 
+  // else if (sys.s_flags & S_ABORT) {
+  //   shot_pressure(true);
+  // }
+
+  // simulate_lines();
+}
