@@ -46,12 +46,22 @@ set point
 // system circuit indices
 #define C_NUM_CIRCUITS 1
 #define C_MARX        0
-#define C_MTG         1
-#define C_SWITCH      2
-#define C_MTG70       3
+#define C_MTG70       1
+#define C_MTG         2
+#define C_SWITCH      3
 #define C_SWTG70      4
 #define C_RECLAIMER   5
 #define C_BOTTLE      6
+
+// system parameter indices
+#define P_SET_POINT   0
+#define P_MAX_TIME    1
+#define P_CHECK_TIME  2
+#define P_PURGE_TIME  3
+#define P_DELAY_TIME  4
+#define P_KP          5
+#define P_KI          6
+#define P_KD          7
 
 #define NUM_PRESETS 6
 #define SAVE 		0
@@ -77,8 +87,8 @@ set point
 #define S_ABORT   (1 << 1)
 #define S_PURGE   (1 << 2)
 #define S_ALARM   (1 << 3)
-#define S_AUTOREC (1 << 4)
-#define S_RECLAIM (1 << 5)
+#define S_RECLAIM (1 << 4)
+#define S_STANDBY (1 << 5)
 
 /*
 
@@ -116,41 +126,33 @@ abort state
 */
 
 typedef struct circuit_t {
-	double kp, ki, kd;
-	bool en, prev_en, set;
-	uint32_t max_time;
-	uint32_t delay;
-	uint32_t check_time;
-	uint32_t purge_time;
+  bool en, prev_en, set;
+  double params[8];
+	
+  // double set_point;
+	
+	// uint32_t max_time;
+	// uint32_t check_time;
+	// uint32_t purge_time;
+  // uint32_t delay;
 
-	double set_point;
+  // double kp, ki, kd;
+	
+  double pressure;
+  double roc;
 
   uint8_t pins[C_NUM_IO];
 } circuit_t;
 
-typedef struct line_t {
-  double pressure;
-  double roc;
-  int aout;
-} line_t;
-
 typedef struct system_t {
   /*
     stores system state/mode
-      alarm state
-      auto reclaim state
-      purge state
-      shot mode
-      reclaimer state (start/stop)
-      abort state
-
-      bool alarmState = false;
-      bool automatereclaimerState = true;
-      bool purgeState = false;
-      bool shotmodeState = false;
-      bool startreclaimerState = false;
-      bool stopreclaimerState = false;
-      bool abortState = false;
+      shot
+      abort
+      purge
+      alarm
+      reclaim
+      standby
   */
   uint8_t s_flags;
 
@@ -168,36 +170,23 @@ typedef struct system_t {
   
   /*
     stores parameter-context (active set param(s)) (modified in pick_param cb)
-      pressure set
-      pressure min
-      pressure max
-      timeout
-      delay time
+      set point
+      max time
       check time
       purge time
+      delay
+      kp
+      ki
+      kd
   */
   uint8_t p_flags;
 
-  /*
-    button io state & pins
-      alarm
-      auto reclaim
-      purge
-      shot mode
-      abort
-      reclaimer start/stop
-  */
-  int buttons[6];
-
-  circuit_t *circuits;
-
-  line_t *lines;
+  circuit_t circuits[C_NUM_CIRCUITS];
 
   int pid_window_size;
 } system_t;
 
 system_t sys;
-circuit_t marx, mtg, sw, swtg70, marxtg70;
 
 menu_t *set_param;
 menu_t *alert;
@@ -230,9 +219,9 @@ TM1637Display pdisp(10, 11);
 TSPoint get_press(TouchScreen *ts) {
   TSPoint p = ts->getPoint();
   while (ts->isTouching()) {
-	p = ts->getPoint();
-	p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
-	p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
+    p = ts->getPoint();
+    p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
+    p.y = 240 - map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
   }
 
   return p;
@@ -327,18 +316,17 @@ int alarms_cb(menu_t *m, option_t *o) {
 		}
 		
 		m_draw(&tft, m, M_CLEAR);		// clear preset selection menu
-		// // click();
+		// click();
 		m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
 		while (code == M_NOP) {			// wait for selection
 			p = get_press(&ts);
-			if (p.z > 50) {
-				code = m_interact(alert, p);
-			}
+			if (p.z > 100) code = m_interact(alert, p);
 		}
 		m_draw(&tft, alert, M_CLEAR);	// clear alert
 
 		if (code == M_CONFIRM) {
 			o->value += dir;
+
 			sprintf(popup->title, "Sound is %s.", (o->value) ? "ON" : "OFF");
 			m_draw(&tft, popup, M_DRAW);
 			_delay_ms(M_POPDELAY);
@@ -350,23 +338,113 @@ int alarms_cb(menu_t *m, option_t *o) {
 	return M_SELECT;
 }
 
+int set_param_cb(menu_t *m, option_t *o) {
+  if (sys.c_flags && sys.p_flags) {  // if circuit was selected to be modified
+    for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+      if (1 & sys.c_flags) {
+        for (int k = 0; k < 8; k += 1) {
+          if (1 & sys.p_flags) {
+            // need floating point + precision info when storing parameter value
+            sys.circuits[i].params[k] = o->value;
+            if (m->flags & M_FPARAM) {
+              // could use a precision modifier for divisor?
+              sys.circuits[i].params[k] /= 100;
+            }
+          }
+          sys.p_flags >>= 1;
+        }
+      }
+      sys.c_flags >>= 1;
+    }
+  } else {
+    // reclaimer and min supply stuff (only if they can't be treated the same as normal circuits?)
+  }
+
+  return M_BACK;
+}
+
+int pick_pid_cb(menu_t *m, option_t *o) {
+  sys.p_flags |= (1 << (P_KP + m->cursor));
+  o->target->flags |= M_FPARAM;
+
+  return M_SELECT;
+}
+
+int timers_cb(menu_t *m, option_t *o) {
+  sys.p_flags |= (1 << (P_PURGE_TIME + m->cursor));
+  o->target->flags &= ~M_FPARAM;
+
+  return M_SELECT;
+}
+
+int main_cb(menu_t *m, option_t *o) {
+  if (m->cursor == 3) {   // pressures
+    sys.p_flags |= (1 << P_SET_POINT);
+    set_param->flags |= M_FPARAM;
+  }
+
+  return M_SELECT;
+}
+
+int circuit_select_cb(menu_t *m, option_t *o) {
+  sys.c_flags |= (1 << m->cursor);
+
+  return M_SELECT;
+}
+
+int mode_cb(menu_t *m, option_t *o) {
+  int code;
+  TSPoint p;
+
+  sprintf(alert->title, "%s mode?", o->name);
+
+  m_draw(&tft, m, M_CLEAR);
+
+
+  // this shit is very similar to how we handle sound on/off process
+  // maybe push popups into alert callback and modify m_interact_msg ?
+  m_draw(&tft, alert, M_DRAW);
+  while (code == M_NOP) {
+    p = get_press(&ts);
+    if (p.z > 100) code = m_interact(alert, p);
+  }
+  m_draw(&tft, alert, M_CLEAR);
+
+  if (code == M_CONFIRM) {
+    sys.s_flags = 1 << m->cursor;
+
+    sprintf(popup->title, "Entered %s mode", o->name);
+    m_draw(&tft, popup, M_DRAW);
+    _delay_ms(M_POPDELAY);
+    m_draw(&tft, popup, M_CLEAR);
+    return M_CONFIRM;
+  }
+
+  return M_SELECT;
+}
+
 void create_menus() {
 	alert = new_menu("", 0, CENTER, M_SIZE, M_MESSAGE, 0);
 	popup = new_menu("", 0, CENTER, M_SIZE, M_POPUP, M_NOTITLE);
 	set_param = new_menu("SET PARAMETER", 1, CENTER, M_SIZE, M_SET, 0);
 
-	main_menu = new_menu("MAIN", 6, CENTER, M_SIZE, M_DEFAULT, M_NOBACK | M_NOEXIT);
+	main_menu = new_menu("MAIN", 7, CENTER, M_SIZE, M_DEFAULT, M_NOBACK | M_NOEXIT);
+  mode = new_menu("MODE", 6, CENTER, M_SIZE, M_DEFAULT, 0);
 	reclaimer_config = new_menu("RECLAIMER CONFIG", 4, CENTER, M_SIZE, M_DEFAULT, 0);
 	timers = new_menu("TIMERS", 2, CENTER, M_SIZE, M_DEFAULT, 0);
 	pick_pid = new_menu("PICK PID", 3, CENTER, M_SIZE, M_DEFAULT, 0);
 	circuit_select = new_menu("PICK CIRCUIT", 7, CENTER, M_SIZE, M_DEFAULT, 0);
-
 	alarms = new_menu("ALARMS", 6, CENTER, M_SIZE, M_DEFAULT, 0);
-	alarms->cb = alarms_cb;
 	presets = new_menu("PRESETS", 3, CENTER, M_SIZE, M_DEFAULT, 0);
-	presets->cb = preset_cb;
 	pick_preset = new_menu("PICK PRESET", NUM_PRESETS, CENTER, M_SIZE, M_DEFAULT, 0);
+
+  alarms->cb = alarms_cb;
+  presets->cb = preset_cb;
+  main_menu->cb = main_cb;
 	pick_preset->cb = pick_preset_cb;
+  circuit_select->cb = circuit_select_cb;
+  set_param->cb = set_param_cb;
+  mode->cb = mode_cb;
 }
 
 void init_options() {
@@ -377,17 +455,26 @@ void init_options() {
 	m_set_options(set_param, set_param->nopts, opts);
 	
 	// MAIN MENU
-	opts[0] = (option_t) {"Presets", 	presets,   			0};
-	opts[1] = (option_t) {"Times", 		timers,    			0};
-	opts[2] = (option_t) {"PID",  		pick_pid,  			0};
-	opts[3] = (option_t) {"Pressures", 	circuit_select,		0};
-	opts[4] = (option_t) {"Alarms", 	alarms,    			0};
-	opts[5] = (option_t) {"Reclaimer", 	reclaimer_config,   0};
+	opts[0] = (option_t) {"Presets", 	  presets,          0};
+	opts[1] = (option_t) {"Times", 		  timers,           0};
+	opts[2] = (option_t) {"PID",  		  pick_pid,         0};
+	opts[3] = (option_t) {"Pressures", 	circuit_select,   0};
+	opts[4] = (option_t) {"Alarms", 	  alarms,           0};
+	opts[5] = (option_t) {"Reclaimer", 	reclaimer_config, 0};
+  opts[6] = (option_t) {"Mode", 	mode, 0};
 	m_set_options(main_menu, main_menu->nopts, opts);
 
+  opts[0] = (option_t) {"SHOT",     main_menu, 0};
+	opts[1] = (option_t) {"ABORT", 		main_menu, 0};
+	opts[2] = (option_t) {"PURGE",  	main_menu, 0};
+	opts[3] = (option_t) {"ALARM", 	  main_menu, 0};
+	opts[4] = (option_t) {"RECLAIM", 	main_menu, 0};
+  opts[5] = (option_t) {"STANDBY", 	main_menu, 0};
+	m_set_options(mode, mode->nopts, opts);
+
 	// PRESETS
-	opts[0] = (option_t) {"Save",	pick_preset,	0};
-	opts[1] = (option_t) {"Load",	pick_preset,	0};
+	opts[0] = (option_t) {"Save",	  pick_preset,	0};
+	opts[1] = (option_t) {"Load",	  pick_preset,	0};
 	opts[2] = (option_t) {"Delete",	pick_preset,	0};
 	m_set_options(presets, presets->nopts, opts);
 
@@ -442,28 +529,22 @@ void init_menus() {
 }
 
 void init_system() {
-
   sys.s_flags = S_SHOT;
-
-  sys.circuits = (circuit_t*) malloc(sizeof(circuit_t) * C_NUM_CIRCUITS);
-  sys.lines = (line_t*) malloc(sizeof(line_t) * C_NUM_CIRCUITS);
 
   // load default circuit settings
   sys.circuits[C_MARX] = (circuit_t) {
-    50, 0, 25,              // PID tuning params
-    true, false, false,    // enable, prev enable, is_set
-    C_MAX_DEFAULT,          // max time
-    C_DELAY_DEFAULT,        // delay time
-    0,                      // check time
-    C_PURGE_DEFAULT,        // purge time
-    13.0,                      // set point
-    { A7, 7, 8, 6, 9 }  // pins
-  };
-
-  sys.lines[C_MARX] = (line_t) {
-    25,
-    0.01,
-    A6
+    true, false, false,       // enable, prev enable, is_set
+    {
+      13.0,                   // set point
+      C_MAX_DEFAULT,          // max time
+      0,                      // check time
+      C_PURGE_DEFAULT,        // purge time
+      C_DELAY_DEFAULT,        // delay time
+      50, 0, 25              // PID tuning params
+    },
+    0,                        // pressure
+    0.01,                     // pressure rate-of-change
+    { A7, 7, 8, 9, 6 }        // pins
   };
 
   /* sys.circuits[C_MTG] = (circuit_t) {
@@ -564,27 +645,25 @@ void simulate_lines() {
     randomSeed(millis());
     if (ri) {
       if (!ro) {
-        sys.lines[i].pressure += sys.lines[i].roc + ((double)(rand() % 10) / 100);
+        sys.circuits[i].pressure += sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       } else {
-        sys.lines[i].pressure -= sys.lines[i].roc + ((double)(rand() % 10) / 100);
+        sys.circuits[i].pressure -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       }
     } else {
       if (ro) {
-        sys.lines[i].pressure -= sys.lines[i].roc + ((double)(rand() % 10) / 100);
+        sys.circuits[i].pressure -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       }
     }
 
-    if (sys.circuits[i].en) {
-      digitalWrite(sys.circuits[i].pins[I_ENABLE], HIGH);
-    } else {
-      digitalWrite(sys.circuits[i].pins[I_ENABLE], LOW);
-    }
-
-    analogWrite(sys.lines[i].aout, sys.lines[i].pressure);
+    // if (sys.circuits[i].en) {
+    //   digitalWrite(sys.circuits[i].pins[I_ENABLE], HIGH);
+    // } else {
+    //   digitalWrite(sys.circuits[i].pins[I_ENABLE], LOW);
+    // }
   }
   
-  pdisp.showNumberDecEx(sys.lines[0].pressure, 0b01000000, false, 2, 0);
-  pdisp.showNumberDecEx((sys.lines[0].pressure - (int)sys.lines[0].pressure) * 100, 0b01000000, true, 2, 2);
+  pdisp.showNumberDecEx(sys.circuits[0].pressure, 0b01000000, false, 2, 0);
+  pdisp.showNumberDecEx((sys.circuits[0].pressure - (int)sys.circuits[0].pressure) * 100, 0b01000000, true, 2, 2);
 }
 
 void purge() {
@@ -595,27 +674,27 @@ void purge() {
       // open exhaust, close intake
       digitalWrite(sys.circuits[i].pins[I_PRESSURE_IN], LOW);
       digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], HIGH);
-      while (millis() - itime <= sys.circuits[i].purge_time && sys.lines[i].pressure > 0) { simulate_lines(); }    // loop to purge timer expiration
+      while (millis() - itime <= sys.circuits[i].params[P_PURGE_TIME] && sys.circuits[i].pressure > 0) { simulate_lines(); }    // loop to purge timer expiration
       // close exhaust
       digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], LOW);
     }    
   }
 
-  sys.s_flags = S_SHOT;
+  sys.s_flags = S_STANDBY;
 }
 
 void set_pressure(circuit_t *c, double var, int half) {
   unsigned long t;
-  double pread, out;
-  double set_point = (half) ? c->set_point / 2 : c->set_point;
-  int dir = (sys.lines[0].pressure > set_point + var) ? REVERSE : DIRECT;
-  PID pressure(&sys.lines[0].pressure, &out, &set_point, c->kp, c->ki, c->kd, dir);
+  double out;
+  double set_point = (half) ? c->params[P_SET_POINT] / 2 : c->params[P_SET_POINT];
+  int dir;
+  PID pressure(&c->pressure, &out, &set_point, c->params[P_KP], c->params[P_KI], c->params[P_KP], 0);
 
   pressure.SetOutputLimits(0, sys.pid_window_size);
   pressure.SetMode(AUTOMATIC);
 
   unsigned long wstart = millis();    // base time offset
-  while (!IN_RANGE(sys.lines[0].pressure, (set_point - var), (set_point + var))) {
+  while (!IN_RANGE(c->pressure, (set_point - var), (set_point + var))) {
     /*
       can check UI at the top of this loop if we want the UI to be responsive
       while pressures are being set. will require some system state locking
@@ -624,12 +703,12 @@ void set_pressure(circuit_t *c, double var, int half) {
     t = millis();
 
     // pick PID direction (inc or dec)
-    dir = (sys.lines[0].pressure > set_point + var) ? REVERSE : DIRECT;
+    dir = (c->pressure > set_point + var) ? REVERSE : DIRECT;
     pressure.SetControllerDirection(dir);
     pressure.Compute();   // compute solenoid PID-window (stored @ out)
     // pread = analogRead(c->pins[I_PRESSURE_READ]);   // get circuit pressure @ inlet
 
-    if (t - wstart >= c->max_time) {   // set pressure timeout (possible leak or obstruction)
+    if (t - wstart >= c->params[P_MAX_TIME]) {   // set pressure timeout (possible leak or obstruction)
       // close intake
       digitalWrite(c->pins[I_PRESSURE_IN], LOW);
       // close exhaust
@@ -668,9 +747,9 @@ void shot_pressure(bool half) {
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {  // loop system circuits
     if (sys.circuits[i].en) {   // if enabled
       c = &sys.circuits[i];
-      if (millis() - c->check_time >= c->delay) {   // check time expired
+      if (millis() - c->params[P_CHECK_TIME] >= c->params[P_DELAY_TIME]) {   // check time expired
         set_pressure(c, var, half);
-        c->check_time = millis();
+        c->params[P_CHECK_TIME] = millis();
       }
     }
   }
@@ -682,8 +761,6 @@ void init_io() {
     pinMode(sys.circuits[i].pins[I_PRESSURE_OUT], OUTPUT);
     pinMode(sys.circuits[i].pins[I_ENABLE], OUTPUT);
     pinMode(sys.circuits[i].pins[I_PRESSURE_READ], INPUT);
-
-    pinMode(sys.lines[i].aout, OUTPUT);
   }
 }
 
@@ -696,9 +773,10 @@ void setup() {
   init_io();
 
   pdisp.setBrightness(3);
+  pdisp.clear();
 
   sys.pid_window_size = 5000;
-  sys.s_flags = S_PURGE;
+  sys.s_flags = S_STANDBY;
 
   ui.active = main_menu;
   ui.previous = NULL;
@@ -709,15 +787,14 @@ void setup() {
 }
 
 void loop() {
-  // update_ui();
-  if (sys.s_flags & S_SHOT) {   // continuously checks pressures, keeping within setpoint range
+  update_ui();
+  if (sys.s_flags & S_SHOT) {           // continuously checks pressures, keeping within setpoint range
     shot_pressure(false);
-  } else if (sys.s_flags & S_PURGE) {
+  } else if (sys.s_flags & S_PURGE) {   // bleed all circuits to 0 pressure
     purge();
-  } 
-  // else if (sys.s_flags & S_ABORT) {
-  //   shot_pressure(true);
-  // }
+  } else if (sys.s_flags & S_ABORT) {   // reduce all circuits to half-pressure
+    shot_pressure(true);
+  }
 
-  // simulate_lines();
+  digitalWrite(sys.circuits[0].pins[I_ENABLE], sys.s_flags & S_STANDBY);
 }
