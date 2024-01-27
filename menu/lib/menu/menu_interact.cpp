@@ -1,6 +1,6 @@
 #include "menu.h"
 
-static MenuInteract MENU_INTERACT[NUM_MTYPES] = {
+MenuInteract MENU_INTERACT[NUM_MTYPES] = {
     m_interact_default,
     m_interact_set,
     NULL,
@@ -118,8 +118,7 @@ int m_interact_set(menu_t *m, TSPoint p) {
     } if (code == M_BACK) {     // cancel
         return M_BACK;
     } if (code == M_CONFIRM) {  // confirm
-        if (m->cb) m->cb(m, &m->options[code]);
-        return M_CONFIRM;
+        if (m->cb) return m->cb(m, &m->options[0]);
     }
 
     return M_NOP;
