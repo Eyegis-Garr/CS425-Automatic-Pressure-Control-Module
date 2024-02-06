@@ -31,6 +31,7 @@ purge time
 set point
 */
 
+// system circuit IO indices
 #define C_NUM_IO 5
 #define I_PRESSURE_READ 0
 #define I_PRESSURE_IN   1
@@ -38,6 +39,7 @@ set point
 #define I_ENABLE        3
 #define I_LED           4
 
+// system circuit defaults
 #define C_MAX_DEFAULT   	5000
 #define C_DELAY_DEFAULT		1000
 #define C_PURGE_DEFAULT		120000
@@ -69,74 +71,31 @@ set point
 #define DEL  		2
 
 #define M_SIZE (vec2){320,240}
-
 #define TS_MINX 100
 #define TS_MINY 100
 #define TS_MAXX 900
 #define TS_MAXY 900
 #define PRESSURE_THRESH 40
-
 #define XPOS    A2
 #define YPOS    A3
 #define YMIN    A1
 #define XMIN    A0
 
-#define IN_RANGE(v, min, max) ((v >= min && v <= max))
-
+// system state bit positions
 #define S_SHOT    1
 #define S_ABORT   (1 << 1)
 #define S_PURGE   (1 << 2)
 #define S_ALARM   (1 << 3)
 #define S_RECLAIM (1 << 4)
 #define S_STANDBY (1 << 5)
+#define S_ERROR   (1 << 6)
+#define S_UPDATE  (1 << 7)
 
-/*
-
-reclaim start/stop pin (relays)
-shotmode purge  alarm  automate reclaimer  abort  pins (buttons)
-alarm sound pin (buzzer/speaker)
-led pins (alarm, abort, shotmode, purge, start/stop, auto reclaim)
-serial sd card pins
-
-* menu stuff *
-
-alarm en (bool)
-error state (bool)
-prev time
-min bottle pressure
-standby mode (bool)
-auto mode (bool)
-reclaim running (bool)
-reclaim safety time
-prev safety time
-min reclaim pressure
-max reclaim pressure
-is couple (?)
-
-BUTTON STATES
-alarm state
-auto reclaim state
-purge state
-shot state
-reclaim start/stop state
-abort state
-
-* previous ^ state vars *
-
-*/
+#define IN_RANGE(v, min, max) ((v >= min && v <= max))
 
 typedef struct circuit_t {
   bool en, prev_en, set;
   double params[8];
-	
-  // double set_point;
-	
-	// uint32_t max_time;
-	// uint32_t check_time;
-	// uint32_t purge_time;
-  // uint32_t delay;
-
-  // double kp, ki, kd;
 	
   double pressure;
   double roc;
@@ -186,6 +145,42 @@ typedef struct system_t {
   int pid_window_size;
 } system_t;
 
+/*
+  event types
+    errors
+      error type
+      error message
+      error severity (?)
+    state transitions
+      previous state
+      destination state
+    ui transitions
+      current menu
+      pathtrace (list of menu indices)
+    parameter modifications
+      system or circuit parameter
+      previous value
+      new value
+    circuit enable/disable
+      circuit index
+      prev state
+      current state
+    state save/load (preset stuff)
+      save/load (or delete for presets)
+      success/fail
+      data written in bytes?
+*/
+typedef struct event_t {
+  uint8_t type;
+  uint32_t time;    // pulls from system-start or RTC module
+  uint8_t msg[32];
+  
+  circuit_t *c;
+  uint8_t s_flags;
+  uint8_t c_flags;
+  uint8_t p_flags;
+} event_t;
+
 system_t sys;
 
 menu_t *set_param;
@@ -216,6 +211,14 @@ TouchScreen ts = TouchScreen(YPOS, XPOS, YMIN, XMIN, 300);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(tft8bitbus, 22, 35, 36, 37, 33, 34);
 TM1637Display pdisp(10, 11);
 
+volatile uint8_t *PORT_F = (uint8_t*)0x31;
+volatile uint8_t *DDR_F = (uint8_t*)0x30;
+#define CLIPP   4
+static inline void click() {
+  *DDR_F |= 1 << CLIPP;
+	*PORT_F ^= 1 << CLIPP;
+}
+
 TSPoint get_press(TouchScreen *ts) {
   TSPoint p = ts->getPoint();
   while (ts->isTouching()) {
@@ -242,9 +245,8 @@ int preset_cb(menu_t *m, option_t *o) {
 		op = DEL;
 	}
 
-	menu_t *target = o->target;		// o->target is always pick_preset
-	for (int i = 0; i < target->nopts; i += 1) {
-		target->options[i].value = op;
+	for (int i = 0; i < o->target->nopts; i += 1) {
+		o->target->options[i].value = op;
 	}
 
 	return M_SELECT;
@@ -256,17 +258,13 @@ int pick_preset_cb(menu_t *m, option_t *o) {
 
 	strcat(alert->title, o->name);
 	
-	// click();
 	m_draw(&tft, m, M_CLEAR);		// clear preset selection menu
-	// click();
 	m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
 	while (code == M_NOP) {			// wait for selection
 		p = get_press(&ts);
 		if (p.z > 50) code = m_interact(alert, p);
 	}
-	// click();
 	m_draw(&tft, alert, M_CLEAR);	// clear alert
-	// click();
 
 	if (code == M_CONFIRM) {
 		switch (o->value) {
@@ -274,25 +272,19 @@ int pick_preset_cb(menu_t *m, option_t *o) {
 				// compute checksum
 				// test save success
 				sprintf(popup->title, "%s success.", alert->title);
-				m_draw(&tft, popup, M_DRAW);
-				_delay_ms(M_POPDELAY);
-				m_draw(&tft, popup, M_CLEAR);
 				break;
 			case LOAD:		// load preset
 				sprintf(popup->title, "%s failed!", alert->title);
-				m_draw(&tft, popup, M_DRAW);
-				_delay_ms(M_POPDELAY);
-				m_draw(&tft, popup, M_CLEAR);
 				break;
 			case DEL:		// delete preset
 				sprintf(popup->title, "%s is done.", alert->title);
-				m_draw(&tft, popup, M_DRAW);
-				_delay_ms(M_POPDELAY);
-				m_draw(&tft, popup, M_CLEAR);
 				break;
 			default:
 				break;
 		}
+    m_draw(&tft, popup, M_DRAW);
+    _delay_ms(M_POPDELAY);
+    m_draw(&tft, popup, M_CLEAR);
 		popup->title[0] = '\0';
 
 		return M_CONFIRM;
@@ -306,7 +298,6 @@ int alarms_cb(menu_t *m, option_t *o) {
 		int code = M_NOP, dir;
 		TSPoint p;
 		
-		// click();
 		if (o->value == 0) {  			// off, turn on
 			strcpy(alert->title, "Set Sound ON?");
 			dir = 1;
@@ -316,7 +307,6 @@ int alarms_cb(menu_t *m, option_t *o) {
 		}
 		
 		m_draw(&tft, m, M_CLEAR);		// clear preset selection menu
-		// click();
 		m_draw(&tft, alert, M_DRAW);	// display alert (confirm/cancel)
 		while (code == M_NOP) {			// wait for selection
 			p = get_press(&ts);
@@ -372,7 +362,7 @@ int pick_pid_cb(menu_t *m, option_t *o) {
 
 int timers_cb(menu_t *m, option_t *o) {
   sys.p_flags |= (1 << (P_PURGE_TIME + m->cursor));
-  o->target->flags &= ~M_FPARAM;
+  o->target->flags &= ~(M_FPARAM);
 
   return M_SELECT;
 }
@@ -535,7 +525,7 @@ void init_system() {
   sys.circuits[C_MARX] = (circuit_t) {
     true, false, false,       // enable, prev enable, is_set
     {
-      13.0,                   // set point
+      25.75,                   // set point
       C_MAX_DEFAULT,          // max time
       0,                      // check time
       C_PURGE_DEFAULT,        // purge time
@@ -619,7 +609,7 @@ void update_ui() {
           m_draw(&tft, ui.active, M_CLEAR);
           ui.active = ui.path[--ui.pidx];
           m_draw(&tft, ui.active, M_DRAW);
-        }			
+        }
         break;
       case M_EXIT:
         m_draw(&tft, ui.active, M_CLEAR);
@@ -650,16 +640,10 @@ void simulate_lines() {
         sys.circuits[i].pressure -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       }
     } else {
-      if (ro) {
+      if (ro && sys.circuits[i].pressure >= 0) {
         sys.circuits[i].pressure -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       }
     }
-
-    // if (sys.circuits[i].en) {
-    //   digitalWrite(sys.circuits[i].pins[I_ENABLE], HIGH);
-    // } else {
-    //   digitalWrite(sys.circuits[i].pins[I_ENABLE], LOW);
-    // }
   }
   
   pdisp.showNumberDecEx(sys.circuits[0].pressure, 0b01000000, false, 2, 0);
@@ -667,7 +651,7 @@ void simulate_lines() {
 }
 
 void purge() {
-  unsigned long int itime = millis();
+  uint32_t itime;
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {    // loop system circuits
     itime = millis();
     if (sys.circuits[i].en) {
@@ -684,7 +668,7 @@ void purge() {
 }
 
 void set_pressure(circuit_t *c, double var, int half) {
-  unsigned long t;
+  uint32_t t;
   double out;
   double set_point = (half) ? c->params[P_SET_POINT] / 2 : c->params[P_SET_POINT];
   int dir;
@@ -693,7 +677,7 @@ void set_pressure(circuit_t *c, double var, int half) {
   pressure.SetOutputLimits(0, sys.pid_window_size);
   pressure.SetMode(AUTOMATIC);
 
-  unsigned long wstart = millis();    // base time offset
+  uint32_t wstart = millis();    // base time offset
   while (!IN_RANGE(c->pressure, (set_point - var), (set_point + var))) {
     /*
       can check UI at the top of this loop if we want the UI to be responsive
@@ -702,7 +686,7 @@ void set_pressure(circuit_t *c, double var, int half) {
     */
     t = millis();
 
-    // pick PID direction (inc or dec)
+    // pick PID direction
     dir = (c->pressure > set_point + var) ? REVERSE : DIRECT;
     pressure.SetControllerDirection(dir);
     pressure.Compute();   // compute solenoid PID-window (stored @ out)
