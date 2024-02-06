@@ -1,1 +1,187 @@
+<!DOCTYPE html>
 
+<!-- CS426 Project Website -->
+<!-- Vladislav Petrov -->
+<!-- 2/5/2024 -->
+
+<!-- Declaring character sets and viewports, standard HTML stuff -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team 17: Improvements To Automatic Gas Pressure Controller for 2TW Zebra Pulse-Power Generator</title>
+    
+    <!-- Basic CSS decorative items -->
+    <style>
+
+    /*The overall look of the website*/
+    body {
+        font-family: 'Arial', sans-serif; /*Character font for the entire website*/
+        text-align: center; /*Center the text*/
+        margin: 40px; /*Leave some space around the edges for better readability*/
+    background: linear-gradient(#c0c0c0, #001f3f); /*The two colors for the background. First is Silver, second is dark blue. UNR colors*/
+    }
+
+    /*Section headers and text*/
+    h1, h2, p { 
+        color: #fff; /*Text color is white*/
+        padding-left, padding-right: 60px; /*Leave some space around the edges for better readability*/
+    }
+    
+    /*Specific for header 1 style*/
+    h1{
+        margin-top: 40px; /*leave some space above each header.*/
+    }
+    
+    /*Specific for header w style*/
+    h2{
+        margin-top: 0px; /*leave some space above each header.*/
+    }
+    
+    /*Unordered list, used for displaying items in a group*/
+    ul {
+        list-style-type: none; /*No specific list type*/
+        padding: 0; /*keeps it centered*/
+    }
+    
+    /*List items*/
+    li {
+        margin-bottom: 10px; /*Keep some space below each item for readability*/
+        color: #fff; /*Text color is white*/
+    }
+    
+    /*Images*/    
+    img {
+        max-width: 100%; /*Uses the full size of the image width*/
+        height: auto; /*Height is automatic based on aspect ratio*/
+        margin-bottom: 20px; /*Leave some space below the image*/
+        margin-left, margin-right: 5px; /*Leave some space around the image*/
+    }
+    
+    /*List items for resources*/
+    ul.resources li {
+        margin-bottom: 15px; /*Leave some space below the list item*/
+    }
+    
+    /*Using this for resource names*/
+    strong {
+        color: #007bff; /*Color the resource names blue*/
+    }
+        
+    /*Defines the header at the top of the website*/
+    header{
+        margin-bottom: 20px; /*Leave some space underneath the header*/
+        margin-top: -40px; /*Keep the header at the top*/
+        background-color: #001f3f; /*Header background color*/
+        padding: 10px; /*Make the header a bit larger*/
+    }
+    
+    /*This is for the sections list in the header at the top*/
+    nav {
+        margin-bottom: 20px; /*Leave some space below the links*/
+    }
+    
+    /*Defines the Anchor tag for the header*/
+    a {
+        margin: 0 10px; /*Leave some space around each item*/
+        color: #fff; /*Text color is white*/
+        text-decoration: none; /*Removes the anchor tag underline*/
+        font-weight: bold; /*BOLD*/
+        transition: color 0.3s ease; /*Color changing animation*/
+    }
+    
+    /*Defines what color a link should be if we hover over it*/
+    a:hover {
+        color: #007bff; /*Why not blue?*/
+    }
+        
+    /*Defines the class for the instructors and advisors section*/
+    .instructors-advisor {
+        display: flex; /*Using a flexbox*/
+        justify-content: center; /*Keeps the items in the middle*/
+    }
+
+    /*Defines each section class*/
+    .advisors .instructors {
+        flex: 1; /*Used for flexbox*/
+        text-align: center; /*Keeps the items in the middle*/
+    }
+            
+    </style>
+</head>
+    
+<!-- The layout of the website -->  
+<body>
+    
+    <!-- Header at the top of the website with the links to jump to each section -->
+    <header>
+        <nav>
+            <a href="#instructors">Instructors and Advisors</a>
+            <a href="#team">Team Members</a>
+            <a href="#abstract">Abstract</a>
+            <a href="#gallery">Photo Gallery</a>
+            <a href="#resources">Project Resources</a>
+        </nav>
+    </header>
+
+    <!-- UNR logo because it looks nice here -->
+    <img src="Images/unrlogo.png" alt="University og Nevada, Reno Logo" style="max-width: 300px;">
+    
+    <!-- Project Title and Team requirement -->
+    <h1>Team 17: <br> Improvements To Automatic Gas Pressure Controller for 2TW Zebra Pulse-Power Generator</h1>
+    <h2>CS 426 Senior Project in Computer Science, Spring 2023, at UNR, CSE Department</h2>
+    
+    <br>
+    
+    
+    <!-- Instructors and advisors requirement -->
+    <h1 id="instructors">Instructors and Advisors</h1>
+    <section id="instructors-advisor" class="instructors-advisor">
+        <div class="instructors">
+            <h2>CS 426 Instructors:</h2>
+            <ul>
+                <li>Dave Feil-Seifer</li>
+                <li>Sarah Davis</li>
+                <li>Devrin Lee</li>
+                <li>Zach Estreito</li>
+                <li>Vinh Le</li>
+            </ul>
+        </div>
+        <div class="advisor">
+            <h2>Advisor:</h2>
+            <ul>
+                <li>Alexey Astanovitskiy</li>
+                <li>UNR Physics Department</li>
+            </ul>
+        </div>
+    </section>
+    
+    <!-- Team members requirement -->
+    <h1 id="team">Team Members:</h1>
+    <ul>
+        <li>Vladislav Petrov</li>
+        <li>Sean Rolandelli</li>
+        <li>Bradley Sullivan</li>
+    </ul>
+
+    <!-- Project description requirement. Using the abstract from our asignments. -->
+    <h1 id="abstract">Abstract:</h1>
+    <p>This project builds upon an existing application at the UNR Terawatt Facility. We are adding and improving various functionalities of an automatic gas pressure control system. This system monitors and maintains pressures of sulfur hexafluoride gas in the spark gaps for the Marx generators that supply power to a large pulse generator. The system is responsible for monitoring five circuits. We plan to implement and adapt a larger touchscreen UI, a remote monitoring functionality, robust data integrity checks, and system event logging. This document should serve as a general overview of the project, its impact/significance, and how we plan to manage the development of various subsystems and any associated risks.
+    </p>
+
+    <!-- Photo gallery for project. Need to add some photos here. Might change this to a slideshow if there are many photos. -->
+    <h1 id="gallery">Photo Gallery:</h1>
+    <img src="[Image 1]" alt="Description of Image 1">
+    <img src="[Image 2]" alt="Description of Image 2">
+    <img src="[Image 3]" alt="Description of Image 3">
+
+    <!-- Project resources requirement -->
+    <h1 id="resources">Project Resources:</h1>
+    <ul class="resources">
+        <li><strong>Resource 1:</strong> <a href="#URL">Link to Resource</a></li>
+        <li><strong>Resource 2:</strong> <a href="#URL">Link to Resource</a></li>
+        <li><strong>Resource 3:</strong> <a href="#URL">Link to Resource</a></li>
+    </ul>
+
+</body>
+</html>
