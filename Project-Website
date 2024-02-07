@@ -182,11 +182,11 @@
     <!-- Project description requirement. Using the abstract from our asignments. -->
     <h1 id="abstract">Abstract:</h1>
     <p>This project aims to extend and improve the functionalities of an automatic gas pressure control system which currently monitors spark gap pressures for a Marx generator. The current system automates the process of raising/lowering spark gap pressures to user-defined set points, allowing the user to save and load configuration presets. We see the potential to improve upon and extend the functionality of this system to the benefit of the operator. Mainly, we intend to implement a robust touchscreen UI, remote monitoring/interaction, data integrity validation, and system event logging.
-    <br>
+    <br><br>
     The intended users for this system are the operators at the facility tasked with configuring the larger system for firing/operation, maintenance, and testing. Making the task of setting pressures automatic allows the operator to focus their attention elsewhere during what is a rather boring and time-consuming process. This system will also provide configuration presets and remote monitoring/configuration, which improves the convenience of the process. In terms of public interest, this project is quite specialized and might not garner much attention from applications which would require a large amount of reconfiguration.
-    <br>
+    <br><br>
     The final system will be written in C and run on an ATMega250 Arduino. We will use a Nextion high-resolution touchscreen display which will deliver the UI (designed in the Nextion editor). Libraries will be used to interface with the display and for a simple PID controller implementation. 
-    <br>
+    <br><br>
     We expect the system to raise, lower, and purge each circuit reliably, providing descriptive error messages and detailed log information in the case of detected hardware failure or other physical interference. Any routine which will interact directly with external hardware will have a set of failure or exit conditions to check in order to detect potential misconfigurations or hardware failures. Major system events or configuration changes will be recorded and logged for later retrieval. This can help operators understand the state of the machine in the case of a failure, as well as assist in final testing and debugging. We plan to implement various safety checks regarding pressure thresholds, set point timeouts, circuit inspection intervals, and other functions.
     </p>
 
