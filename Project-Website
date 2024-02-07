@@ -55,9 +55,24 @@
         max-width: 100%; /*Uses the full size of the image width*/
         height: auto; /*Height is automatic based on aspect ratio*/
         margin-bottom: 20px; /*Leave some space below the image*/
-        margin-left, margin-right: 5px; /*Leave some space around the image*/
+        margin-left, margin-right: 10px; /*Leave some space around the image*/
     }
-    
+      
+    /*Specifications for images in the gallery*/
+    .gallery {
+        max-width: 200px; /*Gallery preview should be smallish*/
+        height: auto; /*Automatically set height based on image aspect ratio*/
+        margin: 10px; /*Leave some space between images*/
+        transition: all 1s ease; /*Size changing animation*/
+        position: relative; /*Required for positioning the tooltip*/
+        display: inline-block;
+    }
+        
+    /*Increase the size of the image if we hover over it*/
+    .gallery:hover, .gallery:active {
+        max-width: 500px; /*Enlarge the image*/
+    }
+            
     /*List items for resources*/
     ul.resources li {
         margin-bottom: 15px; /*Leave some space below the list item*/
@@ -69,7 +84,7 @@
     }
         
     /*Defines the header at the top of the website*/
-    header{
+    header {
         margin-bottom: 20px; /*Leave some space underneath the header*/
         margin-top: -40px; /*Keep the header at the top*/
         background-color: #001f3f; /*Header background color*/
@@ -91,7 +106,7 @@
     }
     
     /*Defines what color a link should be if we hover over it*/
-    a:hover {
+    a:hover, a:active {
         color: #007bff; /*Why not blue?*/
     }
         
@@ -171,16 +186,23 @@
 
     <!-- Photo gallery for project. Need to add some photos here. Might change this to a slideshow if there are many photos. -->
     <h1 id="gallery">Photo Gallery:</h1>
-    <img src="[Image 1]" alt="Description of Image 1">
-    <img src="[Image 2]" alt="Description of Image 2">
-    <img src="[Image 3]" alt="Description of Image 3">
+    <img class="gallery" src="Images/SystemContextModel.png" alt="System context model" title="System context model">
+    <img class="gallery" src="Images/ControlPanel.jpg" alt="Original System control panel" title="Original System control panel">
+    <img class="gallery" src="Images/MachineUI.jpg" alt="Original System UI" title="Original System UI">
+    <!-- <img class="gallery" src="[Image 3]" alt="Description of Image 4" title="Your tooltip text here"> -->
 
     <!-- Project resources requirement -->
     <h1 id="resources">Project Resources:</h1>
     <ul class="resources">
-        <li><strong>Resource 1:</strong> <a href="#URL">Link to Resource</a></li>
-        <li><strong>Resource 2:</strong> <a href="#URL">Link to Resource</a></li>
-        <li><strong>Resource 3:</strong> <a href="#URL">Link to Resource</a></li>
+        <li>
+            <a href="https://pdf1.alldatasheet.com/datasheet-pdf/view/107092/ATMEL/ATMEGA2560.html">ATMega2560 microcontroller datasheet</a>
+        </li>
+        <li>
+            <a href="https://www.techbriefs.com/component/content/article/tb/pub/features/articles/20013">Description of the function of PID controllers</a>
+        </li>
+        <li>
+            <a href="https://www.unr.edu/physics/research/zppl/facility/zebra">Equiptment used by the Nevada Terawatt Facility</a>
+        </li>
     </ul>
 
 </body>
