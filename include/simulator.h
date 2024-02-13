@@ -9,23 +9,19 @@
 
 #include "menu.h"
 #include "callbacks.h"
+#include "pid.h"
+#include "remote.h"
 
+// system state bit positions
+#define S_SHOT    1
+#define S_ABORT   (1 << 1)
+#define S_PURGE   (1 << 2)
+#define S_ALARM   (1 << 3)
+#define S_RECLAIM (1 << 4)
+#define S_STANDBY (1 << 5)
+#define S_ERROR   (1 << 6)
 
-// system circuit IO indices
-#define C_NUM_IO 5
-#define I_PRESSURE_READ 0
-#define I_PRESSURE_IN   1
-#define I_PRESSURE_OUT  2
-#define I_ENABLE_BTN    3
-#define I_LED           4
-
-// system circuit defaults (time values in seconds)
-#define C_MAX_DEFAULT   	5
-#define C_DELAY_DEFAULT		1
-#define C_PURGE_DEFAULT		120
-#define C_RECLAIM_TIME		30
-
-// system circuit indices
+// system circuit array/bit indices
 #define C_NUM_CIRCUITS 1
 #define C_MARX        0
 #define C_MTG70       1
@@ -35,16 +31,31 @@
 #define C_RECLAIMER   5
 #define C_BOTTLE      6
 
-// circuit parameter indices
-#define C_NUM_PARAM   8
-#define P_SET_POINT   0
-#define P_MAX_TIME    1
-#define P_CHECK_TIME  2
-#define P_PURGE_TIME  3
-#define P_DELAY_TIME  4
-#define P_KP          5
-#define P_KI          6
-#define P_KD          7
+// system circuit IO indices
+#define C_NUM_IO 5
+#define I_PRESSURE_READ 0
+#define I_PRESSURE_IN   1
+#define I_PRESSURE_OUT  2
+#define I_ENABLE_BTN    3
+#define I_LED           4
+
+// circuit parameter array/bit indices
+#define C_NUM_PARAM   9
+#define P_PRESSURE    0
+#define P_SET_POINT   1
+#define P_MAX_TIME    2
+#define P_CHECK_TIME  3
+#define P_PURGE_TIME  4
+#define P_DELAY_TIME  5
+#define P_KP          6
+#define P_KI          7
+#define P_KD          8
+
+// system circuit defaults (time values in seconds)
+#define C_MAX_DEFAULT   	5
+#define C_DELAY_DEFAULT		1
+#define C_PURGE_DEFAULT		120
+#define C_RECLAIM_TIME		30
 
 #define NUM_PRESETS 6
 #define SAVE 		0
@@ -62,114 +73,80 @@
 #define YMIN    A1
 #define XMIN    A0
 
-// system state bit positions
-#define S_SHOT    1
-#define S_ABORT   (1 << 1)
-#define S_PURGE   (1 << 2)
-#define S_ALARM   (1 << 3)
-#define S_RECLAIM (1 << 4)
-#define S_STANDBY (1 << 5)
-#define S_ERROR   (1 << 6)
-#define S_UPDATE  (1 << 7)
-
 #define IN_RANGE(v, min, max) ((v >= min && v <= max))
 
-#include "pid.h"
+/**
+ * @brief circuit model
+ * 
+ * @params: storage for per-circuit state/configuration.
+ * uses P_<PARAMETER> for array-indexing
+ * 
+ * @pressure: pressure reading in PSI for circuit
+ * 
+ * @roc: pressure rate-of-change or step value for 
+ * modifying pressure changes.
+ * 
+ * @pins: circuit digital pin IO assignments. uses
+ * I_<CONNECTION> (pressure in/out/read, enable, LED)
+ * for array-indexing
+ * 
+ * @pid: PID controller state for approaching set-point.
+ * 
+ */
 typedef struct circuit_t {
-  double params[8];
-	
-  double pressure;
+  double params[C_NUM_PARAM];
   double roc;
 
   uint8_t pins[C_NUM_IO];
   pid_t pid;
 } circuit_t;
 
+typedef int (*TimerCallback)(void);
+typedef struct timer_t {
+  uint32_t itime;
+  uint32_t etime;
+
+  TimerCallback cb;
+} timer_t;
+
+/**
+ * @brief system model
+ * 
+ * @s_flags: set bit-positions encode current state/mode
+ * macros S_<STATE/MODE> denote specific mode bit positions
+ * 
+ * @c_flags: set bit-positions encode selected circuit
+ * context used for assigning parameters. uses C_<CIRCUIT>
+ * macro for bit-indexing.
+ * 
+ * @p_flags: set bit-positions encode active parameters
+ * for modification. uses P_<PARAMETER> for bit-indexing.
+ * 
+ * @en_flags: encodes enabled/disabled circuits. uses 
+ * C_<CIRCUIT> macros for bit-indexing
+ * 
+ * @circuits: storage for individual circuit state. uses
+ * C_<CIRCUIT> for array-indexing.
+ * 
+ */
 typedef struct system_t {
-  /*
-    stores system state/mode
-      shot
-      abort
-      purge
-      alarm
-      reclaim
-      standby
-  */
-  uint8_t s_flags;
+  uint8_t s_flags;    // state
+  uint8_t c_flags;    // circuit select
+  uint16_t p_flags;   // parameter select
+  uint8_t en_flags;   // circuit enable/disable
 
-  /*
-    stores set-context (active edit circuit) (modified in circuit_select cb)
-      marx
-      mtg
-      switch
-      swtg70
-      mxtg70
-      reclaimer
-      bottle
-  */
-  uint8_t c_flags;
-  
-  /*
-    stores parameter-context (active set param(s)) (modified in pick_param cb)
-      set point
-      max time
-      check time
-      purge time
-      delay
-      kp
-      ki
-      kd
-  */
-  uint8_t p_flags;
+  int up_cycle;       // update period in ms
+  uint8_t up_types;   // updates to issue
+  timer_t up_timer;   // software update timer
 
-  /*
-    bit positions store circuit enable state
-    bitshifts follow sys.circuits indexing
-    i.e. MARX -> 0-bit, MTG_70 -> 1-bit, ...
-  */
-  uint8_t en_flags;
+  uint8_t pbuf[128];   // shared packet data buffer
+  packet_t p_tx, p_rx;  // transmit and receive packets
 
   circuit_t circuits[C_NUM_CIRCUITS];
 
   uint32_t uptime;
   int pid_window_size;
 } system_t;
-
-/*
-  event types
-    errors
-      error type
-      error message
-      error severity (?)
-    state transitions
-      previous state
-      destination state
-    ui transitions
-      current menu
-      pathtrace (list of menu indices)
-    parameter modifications
-      system or circuit parameter
-      previous value
-      new value
-    circuit enable/disable
-      circuit index
-      prev state
-      current state
-    state save/load (preset stuff)
-      save/load (or delete for presets)
-      success/fail
-      data written in bytes?
-*/
-typedef struct event_t {
-  uint8_t type;
-  uint32_t time;    // pulls from system-start or RTC module
-  uint8_t msg[32];
-  
-  circuit_t *c;
-  uint8_t s_flags;
-  uint8_t c_flags;
-  uint8_t p_flags;
-} event_t;
 
 extern Adafruit_ILI9341 tft;
 extern TouchScreen ts;
@@ -192,7 +169,16 @@ extern menu_t *pick_param;
 extern menu_t *pick_pid;
 extern menu_t *pick_preset;
 
+/**
+ * @brief initializes simulator. should be invoked on startup or reset
+ * 
+ */
 void sim_setup();
+
+/**
+ * @brief updates simulation. should be invoked per iteration.
+ * 
+ */
 void sim_tick();
 
 void init_system();
@@ -204,8 +190,32 @@ TSPoint get_press(TouchScreen *ts);
 void update_ui();
 void update_circuits();
 
+size_t packetize_circuits(circuit_t *c, uint8_t *bytes);
+size_t packetize_system(system_t *s, uint8_t *bytes);
+int issue_updates(HardwareSerial *s);
+
+/**
+ * @brief purges all enabled system circuits. currently lowers pressure to 0.
+ * can/should purge for each circuit's purge time.
+ * 
+ */
 void purge();
+
+/**
+ * @brief steps circuit pressure towards set-point.
+ * 
+ * @param c - circuit to set
+ * @param var - +/- pressure variance in PSI
+ * @param half - true -> set to half of set-point; false -> set to set-point
+ */
 void set_pressure(circuit_t *c, double var, int half);
+
+/**
+ * @brief invokes set_pressure for all enabled circuits.
+ * should be invoked iteratively until set-point is reached for all circuits.
+ * 
+ * @param half - true -> set to half of set-point; false -> set to set-point
+ */
 void shot_pressure(bool half);
 
 #endif // SIMULATOR_H
