@@ -169,6 +169,7 @@ void init_system() {
   // load default circuit settings
   sys.circuits[C_MARX] = (circuit_t) {
     {
+      50,                     // pressure
       25.75,                   // set point
       C_MAX_DEFAULT,          // max time
       0,                      // check time
@@ -176,7 +177,6 @@ void init_system() {
       C_DELAY_DEFAULT,        // delay time
       50, 0, 25              // PID tuning params
     },
-    50,                        // pressure
     0.01,                     // pressure rate-of-change
     { A7, 7, 8, 9, 6 }        // pins
   };
@@ -184,7 +184,7 @@ void init_system() {
   pid_t *p;
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
     p = &sys.circuits[i].pid;
-    pid_set_input(p, &sys.circuits[i].pressure);
+    pid_set_input(p, &sys.circuits[i].params[P_PRESSURE]);
     pid_set_param(p, sys.circuits[i].params[P_KP], sys.circuits[i].params[P_KI], sys.circuits[i].params[P_KD]);
   }
 }
@@ -262,19 +262,85 @@ void update_circuits() {
     randomSeed(millis());
     if (ri) {
       if (!ro) {
-        sys.circuits[i].pressure += sys.circuits[i].roc + ((double)(rand() % 10) / 100);
+        sys.circuits[i].params[P_PRESSURE] += sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       } else {
-        sys.circuits[i].pressure -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
+        sys.circuits[i].params[P_PRESSURE] -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       }
     } else {
-      if (ro && sys.circuits[i].pressure >= 0) {
-        sys.circuits[i].pressure -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
+      if (ro && sys.circuits[i].params[P_PRESSURE] >= 0) {
+        sys.circuits[i].params[P_PRESSURE] -= sys.circuits[i].roc + ((double)(rand() % 10) / 100);
       }
     }
   }
   
-  pdisp.showNumberDecEx(sys.circuits[0].pressure, 0b01000000, false, 2, 0);
-  pdisp.showNumberDecEx((sys.circuits[0].pressure - (int)sys.circuits[0].pressure) * 100, 0b01000000, true, 2, 2);
+  pdisp.showNumberDecEx(sys.circuits[0].params[P_PRESSURE], 0b01000000, false, 2, 0);
+  pdisp.showNumberDecEx((sys.circuits[0].params[P_PRESSURE] - (int)sys.circuits[0].params[P_PRESSURE]) * 100, 0b01000000, true, 2, 2);
+}
+
+int issue_updates(HardwareSerial *s) {
+  packet_t *p = &sys.p_tx;
+  p->bytes = sys.pbuf;
+  if (sys.up_types) {
+    p->type = PK_UPDATE;
+    p->flags = sys.up_types;
+    p->size = 0;
+    if (sys.up_types & UP_SYSTEM) {
+      p->size += packetize_system(&sys, p->bytes + p->size);
+    } if (sys.up_types & UP_CIRCUITS) {
+      p->size += packetize_circuits(sys.circuits, p->bytes + p->size);
+    } if (sys.up_types & UP_IFACE) {
+      // packetize UI state
+    } if (sys.up_types & UP_UPTIME) {
+      p->bytes[p->size++] = sizeof(sys.uptime);
+      p->bytes[p->size++] = (uint8_t) sys.uptime;
+      p->bytes[p->size++] = (uint8_t) (sys.uptime >> 8);
+      p->bytes[p->size++] = (uint8_t) (sys.uptime >> 16);
+      p->bytes[p->size++] = (uint8_t) (sys.uptime >> 24);
+    } if (sys.up_types & UP_LASTSAVE) {
+      // packetize time since last save
+    }
+  }
+
+  // send packet over configured serial device
+  return tx_packet(p, s);
+}
+
+size_t packetize_circuits(circuit_t *c, uint8_t *bytes) {
+  uint8_t *cbytes = bytes;
+
+  // set circuit double-type parameter byte-length
+  // use two bytes for every double type (integer + fractional parts) plus IO
+  *cbytes++ = 2 * C_NUM_PARAM + 1;
+
+  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+    for (uint8_t k = 0; k < C_NUM_PARAM; k += 1) {
+      *cbytes++ = (uint8_t) c[i].params[k];
+      *cbytes++ = (uint8_t) ((c[i].params[k] - ((uint8_t) c[i].params[k])) * 100);
+    }
+
+    // set circuit binary-state (solenoid io, en button, en LED)
+    *cbytes++ = (digitalRead(c[i].pins[I_PRESSURE_IN]) << I_PRESSURE_IN)    |
+                (digitalRead(c[i].pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT)  |
+                (digitalRead(c[i].pins[I_ENABLE_BTN]) << I_ENABLE_BTN)      |
+                (digitalRead(c[i].pins[I_LED]) << I_LED);
+  }
+  
+  return cbytes - bytes;
+}
+
+size_t packetize_system(system_t *s, uint8_t *bytes) {
+  uint8_t *sbytes = bytes;
+
+  // byte-length of system state
+  *sbytes++ = 4;
+
+  // store system flags
+  *sbytes++ = sys.s_flags;
+  *sbytes++ = sys.c_flags;
+  *sbytes++ = sys.p_flags;
+  *sbytes++ = sys.en_flags;
+
+  return sbytes - bytes;
 }
 
 void purge() {
@@ -285,7 +351,7 @@ void purge() {
       // open exhaust, close intake
       digitalWrite(sys.circuits[i].pins[I_PRESSURE_IN], LOW);
       digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], HIGH);
-      while (millis() - itime <= sys.circuits[i].params[P_PURGE_TIME] && sys.circuits[i].pressure > 0) { update_circuits(); }    // loop to purge timer expiration
+      while (millis() - itime <= sys.circuits[i].params[P_PURGE_TIME] && sys.circuits[i].params[P_PRESSURE] > 0) { update_circuits(); }    // loop to purge timer expiration
       // close exhaust
       digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], LOW);
     }    
@@ -301,9 +367,9 @@ void set_pressure(circuit_t *c, double var, int half) {
 
   pid_set_target(&c->pid, &set_point);
   
-  if (!IN_RANGE(c->pressure, (set_point - var), (set_point + var))) {
+  if (!IN_RANGE(c->params[P_PRESSURE], (set_point - var), (set_point + var))) {
     // pick PID direction
-    dir = (c->pressure > set_point + var) ? REVERSE : DIRECT;
+    dir = (c->params[P_PRESSURE] > set_point + var) ? REVERSE : DIRECT;
     pid_set_direction(&c->pid, dir);
     out = pid_compute(&c->pid);
     wstart = millis();    // base time offset
