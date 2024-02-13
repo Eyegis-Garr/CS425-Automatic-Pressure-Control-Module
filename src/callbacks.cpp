@@ -102,7 +102,7 @@ int set_param_cb(menu_t *m, option_t *o) {
   if (sys.c_flags && sys.p_flags) {  // if circuit was selected to be modified
     for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
       if (1 & sys.c_flags) {
-        for (int k = 0; k < 8; k += 1) {
+        for (int k = 0; k < C_NUM_PARAM; k += 1) {
           if (1 & sys.p_flags) {
             // need floating point + precision info when storing parameter value
             sys.circuits[i].params[k] = o->value;
