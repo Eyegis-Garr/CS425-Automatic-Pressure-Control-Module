@@ -1,28 +1,26 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include <PID_v1.h>
-#include <Adafruit_ILI9341.h>
-#include <TouchScreen.h>
+#include <Arduino.h>
 #include <TM1637Display.h>
 #include <avr8-stub.h>
 
-#include "menu.h"
-#include "callbacks.h"
+#include "ui.h"
 #include "pid.h"
 #include "remote.h"
 
 // system state bit positions
-#define S_SHOT    1
-#define S_ABORT   (1 << 1)
-#define S_PURGE   (1 << 2)
-#define S_ALARM   (1 << 3)
-#define S_RECLAIM (1 << 4)
-#define S_STANDBY (1 << 5)
-#define S_ERROR   (1 << 6)
+#define S_SHOT    0
+#define S_ABORT   1
+#define S_PURGE   2
+#define S_ALARM   3
+#define S_RECLAIM 4
+#define S_STANDBY 5
+#define S_ERROR   6
+#define S_REMOTE  7
 
 // system circuit array/bit indices
-#define C_NUM_CIRCUITS 1
+#define C_NUM_CIRCUITS 5
 #define C_MARX        0
 #define C_MTG70       1
 #define C_MTG         2
@@ -32,12 +30,14 @@
 #define C_BOTTLE      6
 
 // system circuit IO indices
-#define C_NUM_IO 5
+#define C_NUM_IO 7
 #define I_PRESSURE_READ 0
 #define I_PRESSURE_IN   1
 #define I_PRESSURE_OUT  2
 #define I_ENABLE_BTN    3
 #define I_LED           4
+#define I_DISP_CLK      5
+#define I_DISP_DIO      6
 
 // circuit parameter array/bit indices
 #define C_NUM_PARAM   9
@@ -57,23 +57,13 @@
 #define C_PURGE_DEFAULT		120
 #define C_RECLAIM_TIME		30
 
-#define NUM_PRESETS 6
-#define SAVE 		0
-#define LOAD 		1
-#define DEL  		2
-
-#define M_SIZE (vec2){320,240}
-#define TS_MINX 100
-#define TS_MINY 100
-#define TS_MAXX 900
-#define TS_MAXY 900
-#define PRESSURE_THRESH 40
-#define XPOS    A2
-#define YPOS    A3
-#define YMIN    A1
-#define XMIN    A0
-
 #define IN_RANGE(v, min, max) ((v >= min && v <= max))
+
+typedef struct io_t {
+  volatile uint8_t *pin;
+  volatile uint8_t *port;
+  volatile uint8_t *ddr;
+} io_t;
 
 /**
  * @brief circuit model
@@ -99,15 +89,9 @@ typedef struct circuit_t {
 
   uint8_t pins[C_NUM_IO];
   pid_t pid;
+
+  TM1637Display *disp;
 } circuit_t;
-
-typedef int (*TimerCallback)(void);
-typedef struct timer_t {
-  uint32_t itime;
-  uint32_t etime;
-
-  TimerCallback cb;
-} timer_t;
 
 /**
  * @brief system model
@@ -131,49 +115,45 @@ typedef struct timer_t {
  */
 typedef struct system_t {
   uint8_t s_flags;    // state
-  uint8_t c_flags;    // circuit select
-  uint16_t p_flags;   // parameter select
+  uint8_t c_flags;    // circuit mask
   uint8_t en_flags;   // circuit enable/disable
+  uint16_t p_flags;   // parameter mask
+  uint8_t r_flags;    // remote flags
 
-  int up_cycle;       // update period in ms
   uint8_t up_types;   // updates to issue
-  timer_t up_timer;   // software update timer
+  uint32_t uptime;    // system uptime in ms
 
-  uint8_t pbuf[128];   // shared packet data buffer
-  packet_t p_tx, p_rx;  // transmit and receive packets
-
+  uint8_t pbuf[256];   // shared packet data buffer
+  
   circuit_t circuits[C_NUM_CIRCUITS];
+  io_t c_button;
+  io_t c_led;
+  usart_t remote;
+  packet_t pkt;
 
-  uint32_t uptime;
   int pid_window_size;
+
+  ui_t ui;
 } system_t;
 
-extern Adafruit_ILI9341 tft;
-extern TouchScreen ts;
-extern TM1637Display pdisp;
 
+extern TM1637Display pdisp;
 extern system_t sys;
-extern menu_t *set_param;
-extern menu_t *alert;
-extern menu_t *popup;
-extern menu_t *main_menu;
-extern menu_t *timers;
-extern menu_t *purge_timers;
-extern menu_t *delay_timers;
-extern menu_t *alarms;
-extern menu_t *mode;
-extern menu_t *presets;
-extern menu_t *circuit_select;
-extern menu_t *reclaimer_config;
-extern menu_t *pick_param;
-extern menu_t *pick_pid;
-extern menu_t *pick_preset;
+
+extern volatile uint8_t *PORT_B;
+extern volatile uint8_t *DDR_B;
+extern volatile uint8_t *PIN_B;
+extern volatile uint8_t *PORT_L;
+extern volatile uint8_t *DDR_L;
+extern volatile uint8_t *PIN_L;
 
 /**
  * @brief initializes simulator. should be invoked on startup or reset
  * 
  */
 void sim_setup();
+void init_system();
+void init_io();
 
 /**
  * @brief updates simulation. should be invoked per iteration.
@@ -181,18 +161,13 @@ void sim_setup();
  */
 void sim_tick();
 
-void init_system();
-void init_io();
-void init_menus();
-void init_options();
+void modify_circuit(circuit_t *c, uint32_t dt);
 
-TSPoint get_press(TouchScreen *ts);
-void update_ui();
-void update_circuits();
-
-size_t packetize_circuits(circuit_t *c, uint8_t *bytes);
-size_t packetize_system(system_t *s, uint8_t *bytes);
-int issue_updates(HardwareSerial *s);
+int process_pkt();
+size_t parse_command(uint8_t flags, uint8_t *bytes);
+size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t dir);
+size_t packetize_system(uint8_t *bytes);
+int issue_updates(usart_t *u);
 
 /**
  * @brief purges all enabled system circuits. currently lowers pressure to 0.
