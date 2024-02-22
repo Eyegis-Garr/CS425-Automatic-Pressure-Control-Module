@@ -1,4 +1,5 @@
 #include "callbacks.h"
+#include "simulator.h"
 
 int preset_cb(menu_t *m, option_t *o) {
 	// int selected_preset = m->options[m->cursor].value;
@@ -99,11 +100,11 @@ int alarms_cb(menu_t *m, option_t *o) {
 }
 
 int set_param_cb(menu_t *m, option_t *o) {
-  if (sys.c_flags && sys.p_flags) {  // if circuit was selected to be modified
+  if (sys.ui.cmask && sys.ui.pmask) {  // if circuit was selected to be modified
     for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
-      if (1 & sys.c_flags) {
+      if (sys.ui.cmask & (1 << i)) {
         for (int k = 0; k < C_NUM_PARAM; k += 1) {
-          if (1 & sys.p_flags) {
+          if (sys.ui.pmask & (1 << k)) {
             // need floating point + precision info when storing parameter value
             sys.circuits[i].params[k] = o->value;
             if (m->flags & M_FPARAM) {
@@ -111,10 +112,8 @@ int set_param_cb(menu_t *m, option_t *o) {
               sys.circuits[i].params[k] /= 100;
             }
           }
-          sys.p_flags >>= 1;
         }
       }
-      sys.c_flags >>= 1;
     }
   } else {
     // reclaimer and min supply stuff (only if they can't be treated the same as normal circuits?)
@@ -124,14 +123,14 @@ int set_param_cb(menu_t *m, option_t *o) {
 }
 
 int pick_pid_cb(menu_t *m, option_t *o) {
-  sys.p_flags |= (1 << (P_KP + m->cursor));
+  sys.ui.pmask |= (1 << (P_KP + m->cursor));
   o->target->flags |= M_FPARAM;
 
   return M_SELECT;
 }
 
 int timers_cb(menu_t *m, option_t *o) {
-  sys.p_flags |= (1 << (P_PURGE_TIME + m->cursor));
+  sys.ui.pmask |= (1 << (P_PURGE_TIME + m->cursor));
   o->target->flags &= ~(M_FPARAM);
 
   return M_SELECT;
@@ -139,7 +138,7 @@ int timers_cb(menu_t *m, option_t *o) {
 
 int main_cb(menu_t *m, option_t *o) {
   if (m->cursor == 3) {   // pressures
-    sys.p_flags |= (1 << P_SET_POINT);
+    sys.ui.pmask = (1 << P_SET_POINT);
     set_param->flags |= M_FPARAM;
   }
 
@@ -147,7 +146,7 @@ int main_cb(menu_t *m, option_t *o) {
 }
 
 int circuit_select_cb(menu_t *m, option_t *o) {
-  sys.c_flags |= (1 << m->cursor);
+  sys.ui.cmask = (1 << m->cursor);
 
   return M_SELECT;
 }
@@ -160,9 +159,6 @@ int mode_cb(menu_t *m, option_t *o) {
 
   m_draw(&tft, m, M_CLEAR);
 
-
-  // this shit is very similar to how we handle sound on/off process
-  // maybe push popups into alert callback and modify m_interact_msg ?
   m_draw(&tft, alert, M_DRAW);
   while (code == M_NOP) {
     p = get_press(&ts);
@@ -181,14 +177,4 @@ int mode_cb(menu_t *m, option_t *o) {
   }
 
   return M_SELECT;
-}
-
-void setup_callbacks() {
-  alarms->cb = alarms_cb;
-  presets->cb = preset_cb;
-  main_menu->cb = main_cb;
-  pick_preset->cb = pick_preset_cb;
-  circuit_select->cb = circuit_select_cb;
-  set_param->cb = set_param_cb;
-  mode->cb = mode_cb;
 }
