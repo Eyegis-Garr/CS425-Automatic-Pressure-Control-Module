@@ -24,13 +24,13 @@
 #define CURS_SELECT 4
 #define CURS_BACK   5
 
+#define NUM_MTYPES  5
 // MENU TYPE FLAGS
 #define M_DEFAULT   0
 #define M_SET       1
-#define M_TOGGLE    2
+#define M_MESSAGE   2
 #define M_POPUP     3
-#define M_COMBO     4
-#define M_MESSAGE   5
+#define M_ALERT     4
 
 // MENU FLAGS
 #define M_NOTITLE   1
@@ -43,7 +43,6 @@
 #define S_BTN_WIDTH     35
 #define S_BTN_SPACING   10
 
-#define NUM_MTYPES      6
 // MENU INTERACT CODES
 #define M_NOP           0
 #define M_SELECT        1
@@ -126,7 +125,7 @@ int m_draw_default(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 int m_draw_set(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 int m_toggle_value(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 int m_draw_popup(Adafruit_ILI9341 *disp, menu_t *m, int clear);
-int m_draw_alert(Adafruit_ILI9341 *disp, menu_t *m, int clear);
+int m_draw_msg(Adafruit_ILI9341 *disp, menu_t *m, int clear);
 
 int m_test_touch(TSPoint t, menu_t *m);
 

@@ -3,10 +3,9 @@
 MenuInteract MENU_INTERACT[NUM_MTYPES] = {
     m_interact_default,
     m_interact_set,
+    m_interact_msg,
     NULL,
-    NULL,
-    NULL,
-    m_interact_msg
+    NULL
 };
 
 int m_test_touch(TSPoint t, menu_t *m) {

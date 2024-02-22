@@ -3,10 +3,9 @@
 MenuDraw MENU_DRAW[NUM_MTYPES] = {
     m_draw_default,
     m_draw_set,
-    m_toggle_value,
+    m_draw_msg,
     m_draw_popup,
-    NULL,
-    m_draw_alert
+    NULL
 };
 
 // draw routine entry point
@@ -49,7 +48,7 @@ int m_draw_popup(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     return 0;
 }
 
-int m_draw_alert(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
+int m_draw_msg(Adafruit_ILI9341 *disp, menu_t *m, int clear) {
     if (!m) return -1;
     uint16_t c = (clear) ? 0 : 0xFFFF;
 
