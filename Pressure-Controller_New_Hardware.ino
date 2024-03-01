@@ -15,11 +15,8 @@
 #include <PID_v1.h>             //used for PID Controller
 //#include <LiquidCrystal.h>    //Used for LCD (Depricated for CS426 project)
 
-
-//Start CS426 addition (Vladislav Petrov)
 #include <EasyNextionLibrary.h> //Used for touchscreen display
 #include <trigger.h>            //Used for reading input data from touchscreen display
-//End CS426 addition (Vladislav Petrov)
 
 
   //Set pins for controlling circuit solenoids, these are global
@@ -121,6 +118,9 @@
   unsigned long lcdResetTime = 0;
   */
 
+  //Touchscreen display
+  EasyNex touchscreen(Serial);
+
   //Menu Info. These are global
   int selection = 0;
 
@@ -219,9 +219,9 @@
   unsigned long int previousReclaimerSafetyTime = 0;
 
   //Setpoints
- double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
- double maxReclaimerPressure = 500.0;
- double minReclaimerPressure = 50.0;
+  double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
+  double maxReclaimerPressure = 500.0;
+  double minReclaimerPressure = 50.0;
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -229,7 +229,8 @@
 //-------------------------------------------------------------------------------------------------------------
 void setup() 
 {
-  Serial.begin(9600); //This is just for debugging
+    Serial.begin(9600); //This is just for debugging
+    touchscreen.begin(9600); //Setup the touchscreen display
   
     //lcd.print("  INITIALIZING  "); //Will be used for LOG FUNCTION
     
@@ -401,16 +402,9 @@ void loop()
   //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
   ControlButtonStateManager();
 
-  //Check if a user has pressed a button on the touchscreen, and send the user to the correct function. (Vladislav Petrov)
-//  switch(selection)
-//    {
-//      case 1:
-//        go to FUNCTION
-//        break;
-//     ...
-//    } 
+  //Check if a user has pressed a button on the touchscreen, and send the user to the correct function.
+  touchscreen.NextionListen();
   
- 
   //Start shotmode pressure setting sequence
   if(shotmodeState && automaticMode)
   {
@@ -426,7 +420,6 @@ void loop()
     {
       ControlButtonStateManager();
       //lcd.print("ENABLE CIRCUITS ");   //Will be used for LOG FUNCTION
-      //lcd.print("                ");   //Will be used for LOG FUNCTION
     }
 
     //Flags to check if an enabled circuit has been purged or not
