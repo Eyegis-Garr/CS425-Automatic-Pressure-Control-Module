@@ -1,4 +1,61 @@
+#include "CRC8.h"
+#include "CRC.h"
 
+
+CRC8 crc;
+
+void *getOldSettings(char *buf[]) {
+   
+  buf[0] = "hi";
+  buf[1] = "hello";
+  
+}
+
+void *getCurrentSettings(char *buf[]) {
+   
+  buf[0] = "hi";
+  buf[1] = "hello";
+  
+}
+
+void setup()
+{
+  Serial.begin(9600);
+
+  test();
+}
+
+
+void loop()
+{
+}
+
+
+void test()
+{
+
+  Serial.println("");
+
+  char *oldSettings[2], *currentSettings[2];
+
+  getOldSettings(oldSettings);
+  getCurrentSettings(currentSettings);
+
+  crc.reset();
+
+  int old = 0, current = 0, i = 0;
+
+  while(i < sizeof(oldSettings)/sizeof(int)) {
+    old = calcCRC8((uint8_t *)oldSettings[i], 9);
+    current = calcCRC8((uint8_t *)currentSettings[i], 9);
+    i++;
+
+    if(old != current) {
+      Serial.println("Error");
+      break;
+    }
+  }
+}
 
 /*
   alarmEnable = previousSettingFile.readStringUntil('\n').toInt();
