@@ -3371,3 +3371,226 @@ void alarmController(String errorString)
     delay(3000);
   }
 }
+
+
+//START OF TRIGGERS
+
+//PRESET TRIGGERS
+
+void trigger1() {   //Preset 1 Save
+  Serial.println("Preset 1 Save");
+}
+
+void trigger2() {   //Preset 1 Load
+  Serial.println("Preset 1 Load");
+}
+
+void trigger3() {   //Preset 1 Delete
+  Serial.println("Preset 1 Delete");
+}
+
+void trigger4() {   //Preset 2 Save
+  Serial.println("Preset 2 Save");
+}
+
+void trigger5() {   //Preset 2 Load
+  Serial.println("Preset 2 Load");
+}
+
+void trigger6() {   //Preset 2 Delete
+  Serial.println("Preset 2 Delete");
+}
+
+void trigger7() {   //Preset 3 Save
+  Serial.println("Preset 3 Save");
+}
+
+void trigger8() {   //Preset 3 Load
+  Serial.println("Preset 3 Load");
+}
+
+void trigger9() {   //Preset 3 Delete
+  Serial.println("Preset 3 Delete");
+}
+
+void trigger10() {   //Preset 4 Save
+  Serial.println("Preset 1 Save");
+}
+
+void trigger11() {   //Preset 4 Load
+  Serial.println("Preset 1 Load");
+}
+
+void trigger12() {   //Preset 4 Delete
+  Serial.println("Preset 1 Delete");
+}
+
+void trigger13() {   //Preset 5 Save
+  Serial.println("Preset 5 Save");
+}
+
+void trigger14() {   //Preset 5 Load
+  Serial.println("Preset 5 Load");
+}
+
+void trigger15() {   //Preset 5 Delete
+  Serial.println("Preset 5 Delete");
+}
+
+void trigger16() {   //Preset 6 Save
+  Serial.println("Preset 6 Save");
+}
+
+void trigger17() {   //Preset 6 Load
+  Serial.println("Preset 6 Load");
+}
+
+void trigger18() {   //Preset 6 Delete
+  Serial.println("Preset 6 Delete");
+}
+
+void trigger19() {   //Preset 7 Save
+  Serial.println("Preset 1 Save");
+}
+
+void trigger20() {   //Preset 7 Load
+  Serial.println("Preset 1 Load");
+}
+
+void trigger21() {   //Preset 7 Delete
+  Serial.println("Preset 1 Delete");
+}
+
+void trigger22() {   //Preset 8 Save
+  Serial.println("Preset 8 Save");
+}
+
+void trigger23() {   //Preset 8 Load
+  Serial.println("Preset 8 Load");
+}
+
+void trigger24() {   //Preset 8 Delete
+  Serial.println("Preset 8 Delete");
+}
+
+void trigger25() {   //Preset 9 Save
+  Serial.println("Preset 9 Save");
+}
+
+void trigger26() {   //Preset 9 Load
+  Serial.println("Preset 9 Load");
+}
+
+void trigger27() {   //Preset 9 Delete
+  Serial.println("Preset 9 Delete");
+}
+
+void trigger28() {   //Preset 10 Save
+  Serial.println("Preset 8 Save");
+}
+
+void trigger29() {   //Preset 10 Load
+  Serial.println("Preset 8 Load");
+}
+
+void trigger30() {   //Preset 10 Delete
+  Serial.println("Preset 8 Delete");
+}
+
+//SET PRESSURE
+
+void trigger31() {    //Set Pressure MARX
+  Serial.println("Set Pressure MARX")
+}
+
+void trigger32() {    //Set Pressure MTG
+  Serial.println("Set Pressure MTG")
+}
+
+void trigger33() {    //Set Pressure MARXTG70
+  Serial.println("Set Pressure MARXTG70")
+}
+
+void trigger34() {    //Set Pressure SWITCH
+  Serial.println("Set Pressure SWITCH")
+}
+
+void trigger35() {    //Set Pressure RECLAIM
+  Serial.println("Set Pressure RECLAIM")
+}
+
+void trigger36() {    //Set Pressure SWTG70
+  Serial.println("Set Pressure SWTG70")
+}
+
+void trigger37() {    //Set Pressure MIN SUPPLY
+  Serial.println("Set Pressure MIN SUPPLY")
+}
+
+//TIMES
+
+void trigger38() {    //Set Time Purge
+  Serial.println("Set Time Purge")
+}
+
+void trigger39() {    //Set Time Delay
+  Serial.println("Set Time Delay")
+}
+
+//ALARMS
+
+void trigger40() {    //Set Alarm Sound
+  Serial.println("Set Alarm Sound")
+}
+
+void trigger41() {    //Set Alarm MTG
+  Serial.println("Set Alarm MTG")
+}
+
+void trigger42() {    //Set Alarm MARX
+  Serial.println("Set Alarm MARX")
+}
+
+void trigger43() {    //Set Alarm SWITCH
+  Serial.println("Set Alarm SWITCH")
+}
+
+void trigger44() {    //Set Alarm MARXTG70
+  Serial.println("Set Alarm MARXTG70")
+}
+
+void trigger45() {    //Set Alarm SWTG70
+  Serial.println("Set Alarm SWTG70")
+}
+
+//PID
+
+void trigger46() {    //Set PID KP
+  Serial.println("Set PID KP")
+}
+
+void trigger47() {    //Set PID KD
+  Serial.println("Set PID KD")
+}
+
+void trigger48() {    //Set PID KI
+  Serial.println("Set PID KI")
+}
+
+//RECLAIMER
+
+void trigger49() {    //Set REC OM
+  Serial.println("Set REC ON")
+}
+
+void trigger50() {    //Set REC OFF
+  Serial.println("Set REC OFF")
+}
+
+void trigger51() {    //Set MIN SUPPLY
+  Serial.println("Set MIN SUPPLY")
+}
+
+void trigger52() {    //Set REC DELAY
+  Serial.println("Set REC DELAY")
+}
