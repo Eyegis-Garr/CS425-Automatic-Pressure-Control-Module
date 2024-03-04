@@ -148,3 +148,4 @@ int main() {
 
 	kd_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();	
 	currentSettings[44] = kd_MarxTG70;
+    */
