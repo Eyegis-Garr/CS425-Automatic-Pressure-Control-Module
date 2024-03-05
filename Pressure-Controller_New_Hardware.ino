@@ -1,7 +1,8 @@
 //-------------------------------------------------------------------------------------------------------------
 //NTF Automatic circuit pressure controller
 //Vladislav Petrov
-//Last modification Febuary 29, 2024
+//Sean Rolandelli
+//Last modification March 5, 2024
 //-------------------------------------------------------------------------------------------------------------
 
 
@@ -15,8 +16,12 @@
 #include <PID_v1.h>             //used for PID Controller
 //#include <LiquidCrystal.h>    //Used for LCD (Depricated for CS426 project)
 
+
+//Start CS426 addition (Vladislav Petrov)
 #include <EasyNextionLibrary.h> //Used for touchscreen display
-#include <trigger.h>            //Used for reading input data from touchscreen display
+#include <AUnit.h>              //Unit test library
+#include <AUnitVerbose.h>       //Unit test library
+//End CS426 addition (Vladislav Petrov)
 
 
   //Set pins for controlling circuit solenoids, these are global
@@ -61,7 +66,7 @@
   const int purgePin = 35;
   const int alarmPin = 36;
   const int automatereclaimerPin = 37;
-  const int abortbuttonPin = 1;
+  const int abortbuttonPin = 2; // Changed from pin 1 to pin 2
 
   //Set pins for enabling/disabling each system
   const int marxenablePin = 17;
@@ -71,8 +76,8 @@
   const int tg70marxenablePin = 21;
 
   //Set pins for automatic reclaimer control
-  const int reclaimerstopenablePin = 14;
-  const int reclaimerstartenablePin = 15;
+  const int reclaimerstopenablePin = 3;
+  const int reclaimerstartenablePin = 4;
 
   //Set pin for controlling alarm sound
   const int alarmsoundPin = 16;
@@ -118,8 +123,8 @@
   unsigned long lcdResetTime = 0;
   */
 
-  //Touchscreen display
-  EasyNex touchscreen(Serial);
+  //Touchscreen
+  EasyNex myNex(Serial3);
 
   //Menu Info. These are global
   int selection = 0;
@@ -219,9 +224,32 @@
   unsigned long int previousReclaimerSafetyTime = 0;
 
   //Setpoints
-  double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
-  double maxReclaimerPressure = 500.0;
-  double minReclaimerPressure = 50.0;
+ double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
+ double maxReclaimerPressure = 500.0;
+ double minReclaimerPressure = 50.0;
+
+
+//-------------------------------------------------------------------------------------------------------------
+//Unit Tests
+//-------------------------------------------------------------------------------------------------------------
+
+test(serial0Communications)
+{
+  int expected = 0;
+
+  int result = Serial.available();
+
+  assertEqual(result, expected);
+}
+
+test(serial3Communications)
+{
+  int expected = 0;
+
+  int result = Serial3.available();
+
+  assertEqual(result, expected);
+}
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -229,8 +257,9 @@
 //-------------------------------------------------------------------------------------------------------------
 void setup() 
 {
-    Serial.begin(9600); //This is just for debugging
-    touchscreen.begin(9600); //Setup the touchscreen display
+  Serial.begin(9600); //This is just for debugging
+  Serial3.begin(9600);
+  myNex.begin(9600);  //For touchscreen comms
   
     //lcd.print("  INITIALIZING  "); //Will be used for LOG FUNCTION
     
@@ -320,7 +349,6 @@ void setup()
     {
       File previousSettingFile = SD.open("Setting.txt", FILE_READ);
       alarmEnable = previousSettingFile.readStringUntil('\n').toInt();
-      isCouple = previousSettingFile.readStringUntil('\n').toInt();
       Marxsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
       MTGsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
       Switchsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
@@ -372,7 +400,7 @@ void setup()
       lasttg70marxenableState = !tg70marxenableState;
       previousSettingFile.close();
 
-      SaveCurrentSettings();
+//      SaveCurrentSettings();
       //lcd.print("PREVIOUS SETTING");   //Will be used for LOG FUNCTION
       //lcd.print("LOAD SUCCESS    ");   //Will be used for LOG FUNCTION
       delay(3000);
@@ -386,7 +414,7 @@ void setup()
       Switchsetpoint = analogRead(switchanaloginPin);
       TG70Switchsetpoint = analogRead(tg70switchanaloginPin);
       TG70Marxsetpoint = analogRead(tg70marxanaloginPin);
-      SaveCurrentSettings();
+//      SaveCurrentSettings();
       delay(3000);
     } 
   }
@@ -399,12 +427,15 @@ void setup()
 void loop() 
 {
 
-  //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
-  ControlButtonStateManager();
+  aunit::TestRunner::run();  //Run unit tests
 
-  //Check if a user has pressed a button on the touchscreen, and send the user to the correct function.
-  touchscreen.NextionListen();
+  //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
+  //ControlButtonStateManager();
+
+  //Check if a user has pressed a button on the touchscreen, and send the user to the correct function. (Vladislav Petrov)
+  myNex.NextionListen();
   
+ /*
   //Start shotmode pressure setting sequence
   if(shotmodeState && automaticMode)
   {
@@ -420,6 +451,7 @@ void loop()
     {
       ControlButtonStateManager();
       //lcd.print("ENABLE CIRCUITS ");   //Will be used for LOG FUNCTION
+      //lcd.print("                ");   //Will be used for LOG FUNCTION
     }
 
     //Flags to check if an enabled circuit has been purged or not
@@ -491,8 +523,18 @@ void loop()
   {
     abortShot();
   }
+  */
 }
 
+void trigger0()
+{
+  Serial.println("Reclaimer on pressed");
+}
+
+void trigger1()
+{
+  Serial.println("Reclaimer off pressed");
+}
 
 //-------------------------------------------------------------------------------------------------------------
 //Function for setting shot pressures
@@ -1280,7 +1322,7 @@ void ControlButtonStateManager()
   if((purgeState || shotmodeState || abortState ) && !errorState)
   {
     standbyMode = true;  
-    currentMenu = 0;
+//    currentMenu = 0;
     selection = 0;
   }
    
@@ -1315,7 +1357,7 @@ void ControlButtonStateCheck(int reading, bool& buttonState, bool& lastbuttonSta
     {
       buttonState = !buttonState;
       lastbuttonState = true;
-      SaveCurrentSettings();
+//      SaveCurrentSettings();
     }
     else if(reading == HIGH)
     {
@@ -1336,7 +1378,7 @@ void ControlButtonStateCheckReclaimer(int reading, bool& buttonState, bool& last
     {
       buttonState = !buttonState;
       lastbuttonState = true;
-      SaveCurrentSettings();
+//      SaveCurrentSettings();
     }
     else if(reading == HIGH)
     {
@@ -1589,7 +1631,6 @@ void SaveCurrentSettings()
     SD.remove("Setting.txt");
     File lastPresetFile = SD.open("Setting.txt", FILE_WRITE);  //Save the setting
     lastPresetFile.println(alarmEnable);
-    lastPresetFile.println(isCouple);
     lastPresetFile.println(Marxsetpoint);
     lastPresetFile.println(MTGsetpoint);
     lastPresetFile.println(Switchsetpoint);
@@ -1711,7 +1752,6 @@ bool FileWriter()
       //lcd.print("DO NOT POWER OFF");  //Corruption may occour is power is lost during save!
 
       presetFile.println(alarmEnable);
-      presetFile.println(isCouple);
       presetFile.println(Marxsetpoint);
       presetFile.println(MTGsetpoint);
       presetFile.println(Switchsetpoint);
@@ -1854,7 +1894,6 @@ bool FileReader()
       //lcd.print("DO NOT POWER OFF");  //Corruption may occour is power is lost during load!
 
       alarmEnable = presetFile.readStringUntil('\n').toInt();
-      isCouple = presetFile.readStringUntil('\n').toInt();
       Marxsetpoint = presetFile.readStringUntil('\n').toDouble();
       MTGsetpoint = presetFile.readStringUntil('\n').toDouble();
       Switchsetpoint = presetFile.readStringUntil('\n').toDouble();
