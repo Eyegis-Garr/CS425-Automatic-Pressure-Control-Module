@@ -19,9 +19,7 @@ test() {
     current = calcCRC8((uint8_t *)currentSettings[i], 9);
     i++;
 
-    if(old != current) {
-      failTestNow();
-    }
+    assertEqual(old, current);
   }
 }
 
