@@ -152,7 +152,7 @@ int circuit_select_cb(menu_t *m, option_t *o) {
 }
 
 int mode_cb(menu_t *m, option_t *o) {
-  int code;
+  int code = M_NOP;
   TSPoint p;
 
   sprintf(alert->title, "%s mode?", o->name);
