@@ -27,19 +27,6 @@ ISR(TIMER1_COMPA_vect) {
   sys.en_flags = *sys.c_led.port;
 }
 
-ISR(USART1_RX_vect) {
-  uint8_t r = UDR1;
-
-  cli();
-  if (r == SOTX) {
-    int rd = rx_packet(&sys.remote, &sys.pkt);
-    if (rd) {
-      sys.s_flags |= (1 << S_REMOTE);
-    }
-  }
-  sei();
-}
-
 void sim_setup() {
   init_ui(&sys.ui);
   init_system();
@@ -49,7 +36,7 @@ void sim_setup() {
 }
 
 void init_system() {
-  sys.s_flags = (1 << S_SHOT);
+  sys.s_flags = S_SHOT;
   sys.c_flags = 0;
   sys.p_flags = 0;
   sys.en_flags = (1 << C_MARX);
@@ -57,8 +44,8 @@ void init_system() {
   // load default circuit settings
   sys.circuits[C_MARX] = (circuit_t) {
     {
-      50,                  // pressure
-      25.75,               // set point
+      0,                  // pressure
+      254,               // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
@@ -72,8 +59,8 @@ void init_system() {
 
   sys.circuits[C_MTG70] = (circuit_t) {
     {
-      50,                  // pressure
-      25.75,               // set point
+      0,                  // pressure
+      254,               // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
@@ -87,8 +74,8 @@ void init_system() {
 
   sys.circuits[C_MTG] = (circuit_t) {
     {
-      50,                  // pressure
-      25.75,               // set point
+      0,                  // pressure
+      254,               // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
@@ -100,11 +87,10 @@ void init_system() {
     NULL
   };
   
-  
   sys.circuits[C_SWITCH] = (circuit_t) {
     {
-      50,                  // pressure
-      25.75,               // set point
+      0,                  // pressure
+      254,               // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
@@ -116,11 +102,10 @@ void init_system() {
     NULL
   };
 
-  
   sys.circuits[C_SWTG70] = (circuit_t) {
     {
-      50,                  // pressure
-      25.75,               // set point
+      0,                  // pressure
+      254,               // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
@@ -132,7 +117,6 @@ void init_system() {
     NULL
   };
   
-
   circuit_t *c;
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
     c = &sys.circuits[i];
@@ -145,12 +129,13 @@ void init_system() {
     c->disp->setBrightness(3);
     c->disp->clear();
   }
-
-  // sys.up_types =  (1 << UP_SYSTEM) | (1 << UP_CIRCUITS);
+  
   sys.up_types = 0;
   sys.uptime = 0;
 
-  sys.pkt.bytes = sys.pbuf;
+  Serial1.begin(9600);
+  init_remote(&sys.remote, &Serial1);  
+
 }
 
 void init_io() {
@@ -175,71 +160,90 @@ void init_io() {
   *DDR_L |= (1 << C_MARX) | (1 << C_MTG70) | (1 << C_MTG) | (1 << C_SWITCH) | (1 << C_SWTG70);
   *PORT_L |= (1 << C_MARX) | (1 << C_MTG70) | (1 << C_MTG) | (1 << C_SWITCH) | (1 << C_SWTG70);
 
-  // 1KHz button input polling timer (prescalar -> 64, output comare -> 2000 - 1)
+  // 500Hz button input polling timer (prescalar -> 8, output comare -> 4000 - 1)
   TCCR1A = 0; // normal timer operation
   TCCR1B |= (1 << WGM12); // clear timer on compare
-  TCCR1B |= (1 << CS11) | (1 << CS10); // clock select -> 64 prescalar
-  OCR1A = 1999; // top value for timer used for comparisons
+  TCCR1B |= (1 << CS11); // clock select -> 64 prescalar
+  OCR1A = 3999; // top value for timer used for comparisons
   TIMSK1 |= (1 << OCIE1A);  // compare match interrupt enable for timer 1A
 
   // enable recieve complete interrupts for USART1 (Serial1)
-  sys.remote = (usart_t) {
-    &UDR1,
-    &UCSR1A,
-    &UCSR1B,
-    &UCSR1C,
-    &UBRR1L,
-    &UBRR1H
-  };
+  init_remote(&sys.remote, &Serial1);
+}
 
-  usart_init(&sys.remote, 9600);
-  usart_enable_rx_interrupt(&sys.remote);
+void poll_device(remote_t *r) {
+  if (isbclr(r->r_flags, R_NDATA) && load_packet(r)) {
+    r->r_flags |= (1 << R_NDATA);
+  }
+
+  if (isbset(r->r_flags, R_NDATA)) {
+    process_packet(r);
+  }
 }
 
 void sim_tick() {
+  sys.uptime = millis();
+
   update_ui(&sys.ui);
-  if (sys.s_flags & (1 << S_SHOT)) {           // continuously checks pressures, keeping within setpoint range
+  if (sys.s_flags == S_SHOT) {           // continuously checks pressures, keeping within setpoint range
     shot_pressure(false);
-  } else if (sys.s_flags & (1 << S_PURGE)) {   // bleed all circuits to 0 pressure
+  } else if (sys.s_flags == S_PURGE) {   // bleed all circuits to 0 pressure
     purge();
-  } else if (sys.s_flags & (1 << S_ABORT)) {   // reduce all circuits to half-pressure
+  } else if (sys.s_flags == S_ABORT) {   // reduce all circuits to half-pressure
     shot_pressure(true);
-  }
-
-  sys.uptime = millis(); 
-
-  if (sys.s_flags & (1 << S_REMOTE)) {
-    sys.s_flags &= ~(1 << S_REMOTE);
-    int p = process_pkt();
+  } if (sys.s_flags == S_ERROR) {
+    // handle and log error
   }
 }
 
-/**
- * @brief WIP processes received packets
- * 
- * @return int - 0 on success, 1 on error
- */
-int process_pkt() {
-  packet_t *p = &sys.pkt;
-  uint8_t *rd = sys.pkt.bytes;
+int process_packet(remote_t *r) {
+  uint8_t *rd = r->rx.bytes;
+  int ret = 0;
 
-  switch (p->type) {
+  switch (r->rx.type) {
     case PK_UPDATE:
-      sys.up_types = p->flags;
-      if (p->flags & (1 << UP_CIRCUITS)) {
-        sys.c_flags = *rd++;  // store circuits to send updates for
-        sys.p_flags = *rd++;  // store parameters to package
-      } if (p->flags & (1 << UP_REFRESH)) {
-        issue_updates(&sys.remote);
+      if (isbset(r->rx.flags, UP_REMOVE)) {
+        // mask UP_REMOVE and bit-clear rest of packet flag-bits (i.e. rest of update types)
+        sys.up_types &= ~(r->rx.flags & ~(1 << UP_REMOVE));
+        // acknowledge
+        ret = ack_packet(r, &r->rx);
+      } else {
+        sys.up_types = r->rx.flags;   // configures system for updating specified system state
+        if (isbset(r->rx.flags, UP_CIRCUITS)) {
+          // store circuits to send updates for
+          sys.c_flags = *rd++;
+          // store parameters to package
+          sys.p_flags = (uint16_t) *rd++;
+          sys.p_flags <<= 8;
+          sys.p_flags |= (uint16_t) *rd++;
+        } if (isbset(r->rx.flags, UP_REFRESH)) {
+          ret = issue_updates(r);
+        } else {
+          // acknowledge
+          ret = ack_packet(r, &r->rx);
+        }
       }
       break;
     case PK_COMMAND:
-      rd += parse_command(p->flags, rd);
+      ret = process_command(r->rx.flags, rd);
+      if (isbset(r->rx.flags, CMD_RESPND) && ret) {
+        // if response requested and command successfully executed, send ACK
+        while ((ret = ack_packet(r, &r->rx)) == 0) { }
+      }
+      break;
+    case PK_STATUS:
+      // bit iffy on this bit with setting R_TIME but probably fine
+      if (isbset(r->rx.flags, ST_TIMEOUT)) { r->r_flags |= (1 << R_TIME); }
+      if (isbset(r->rx.flags, ST_PING)) {
+        ret = tx_packet(&r->rx, r->s); // echo ping back
+      }
+      break;
     default:
-      return 1;
+      ret = -1;
+      break;
   }
 
-  return 0;
+  return ret;
 }
 
 /**
@@ -249,21 +253,152 @@ int process_pkt() {
  * @param bytes - command packet payload
  * @return size_t - number of bytes processed
  */
-size_t parse_command(uint8_t flags, uint8_t *bytes) {
-  uint8_t cmask = 0, *cbytes = bytes;
+size_t process_command(uint8_t flags, uint8_t *bytes) {
+  uint8_t *cbytes = bytes;
+  uint8_t cmask = 0;
   uint16_t pmask = 0;
 
-  if (flags & (1 << CMD_MODESET)) {
-    sys.s_flags = *bytes++;
-  } if (flags & (1 << CMD_PSET)) {
+  if (isbset(flags, CMD_MODESET)) {
+    sys.s_flags = *cbytes++;
+  } if (isbset(flags, CMD_PSET)) {
     cmask = *cbytes++;
-    pmask = *cbytes++;
+    pmask = (uint16_t) *cbytes++;
     pmask <<= 8;
-    pmask |= *cbytes++;
+    pmask |= (uint16_t) *cbytes++;
     bytes += packetize_circuits(cbytes, cmask, pmask, 0);
-  }
+  } 
 
   return (cbytes - bytes);
+}
+
+/**
+ * @brief transmits update packet based on 
+ * system update flags.
+ * 
+ * @param r - system remote device
+ * @return int - number of bytes sent
+ */
+size_t issue_updates(remote_t *r) {
+  if (sys.up_types) {
+    r->tx.type = PK_UPDATE;
+    r->tx.flags = sys.up_types;
+    r->tx.size = 0;
+    if (isbset(sys.up_types, UP_SYSTEM)) {
+      r->tx.size += packetize_system(r->tx.bytes);
+    } if (isbset(sys.up_types, UP_CIRCUITS)) {
+      r->tx.size += packetize_circuits(r->tx.bytes + r->tx.size, sys.c_flags, sys.p_flags, 1);
+    } if (isbset(sys.up_types, UP_REMOTE)) {
+      r->tx.size += packetize_remote(r->tx.bytes + r->tx.size);
+    }
+
+    // no timeout for update-request responses
+    r->tx.bytes[r->tx.size++] = 0;
+  }
+
+  // send packet over configured remote device
+  return tx_packet(&r->tx, r->s);
+}
+
+/**
+ * @brief loads system-related state into packet buffer
+ * 
+ * @param bytes - destination packet buffer
+ * @return size_t - bytes packed
+ */
+size_t packetize_system(uint8_t *bytes) {
+  uint8_t *sbytes = bytes;
+
+  // store system flags
+  *sbytes++ = sys.s_flags;
+  *sbytes++ = sys.c_flags;
+  *sbytes++ = sys.p_flags >> 8;
+  *sbytes++ = sys.p_flags;
+  *sbytes++ = sys.en_flags;
+  // store last recieved client update flags
+  *sbytes++ = sys.up_types;
+  // store system uptime
+  *sbytes++ = sys.uptime >> 24;
+  *sbytes++ = sys.uptime >> 16;
+  *sbytes++ = sys.uptime >> 8;
+  *sbytes++ = sys.uptime; 
+
+  return sbytes - bytes;
+}
+
+/**
+ * @brief circuit packeting & depacketing.
+ * -=== circuit packet body structure ===-
+ * PK_BYTE[0]   ->  circuit mask
+ * PK_BYTE[1]   ->  circuit parameter mask (high byte)
+ * PK_BYTE[2]   ->  circuit parameter mask (low byte)
+ * ...          ->  circuit parameter data
+ * PK_BYTE[N]   ->  circuit IO data (outgoing packets only)
+ * 
+ * maximum packet size (all circuits and all parameters)
+ *    C_NUM_CIRCUITS * ((2 * C_NUM_PARAM) + 1)  +  3     bytes
+ *    |----------- parameter data -----------| |-masks-|
+ * 
+ * @param bytes - source or destination packet-buffer
+ * @param cmask - masks affect circuits
+ * @param pmask - masks affect parameters
+ * @param dir - 1 -> loads packet with circuit data
+ *              0 -> loads circuits with packet data
+ * @return size_t - bytes packed
+ */
+size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t dir) {
+  uint8_t *pdata = bytes;
+  double *cdata;
+  circuit_t *c;
+
+  if (dir) {
+    *pdata++ = cmask;
+    *pdata++ = pmask >> 8;
+    *pdata++ = pmask;
+  }
+
+  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+    if (isbset(cmask, i)) {
+      c = &sys.circuits[i];
+      cdata = c->params;
+      for (uint8_t k = 0; k < C_NUM_PARAM; k += 1) {
+        if (isbset(pmask, k)) {
+          if (dir) {
+            *pdata++ = (uint8_t) c->params[k];
+            *pdata++ = (uint8_t) ((c->params[k] - ((uint8_t) c->params[k])) * 100);
+          } else {
+            *cdata++ = *pdata + ((double)(*(pdata + 1)) / 100);
+            pdata += 2;
+          }
+        }
+      }
+      if (dir) {
+        // set circuit binary-state (solenoid io, en button, en LED)
+        *pdata++ = (digitalRead(c->pins[I_PRESSURE_IN]) << I_PRESSURE_IN)   |
+                  (digitalRead(c->pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT)  |
+                  (digitalRead(c->pins[I_ENABLE_BTN]) << I_ENABLE_BTN);
+      }
+    }
+  }
+  
+  return pdata - bytes;
+}
+
+size_t packetize_remote(uint8_t *bytes) {
+  uint8_t *rbytes = bytes + 1;
+
+  *rbytes++ = sys.remote.r_flags;
+
+  *rbytes++ = sys.remote.rx.type;
+  *rbytes++ = sys.remote.rx.flags;
+  *rbytes++ = sys.remote.rx.size;
+
+  *rbytes++ = sys.remote.tx.type;
+  *rbytes++ = sys.remote.tx.flags;
+  *rbytes++ = sys.remote.tx.size;
+
+  bytes[0] = rbytes - bytes;
+
+  return rbytes - bytes;
 }
 
 /**
@@ -293,113 +428,10 @@ void modify_circuit(circuit_t *c, uint32_t dt, uint8_t in, uint8_t out) {
     c->disp->showNumberDecEx(c->params[P_PRESSURE], 0x40, false, 2, 0);
     c->disp->showNumberDecEx(100 * (c->params[P_PRESSURE] - (int)c->params[P_PRESSURE]), 0x40, true, 2, 2);
   }
+
+  poll_device(&sys.remote);
 }
 
-/**
- * @brief transmits update packet based on 
- * system update flags.
- * 
- * @param u - serial transmitter/remote connection
- * @return int - number of bytes sent
- */
-int issue_updates(usart_t *u) {
-  packet_t *p = &sys.pkt;
-  if (sys.up_types) {
-    p->type = (1 << PK_UPDATE);
-    p->flags = sys.up_types;
-    p->size = 0;
-    if (sys.up_types & (1 << UP_SYSTEM)) {
-      p->size += packetize_system(p->bytes);
-    } if (sys.up_types & (1 << UP_CIRCUITS)) {
-      p->size += packetize_circuits(p->bytes + p->size, sys.c_flags, sys.p_flags, 1);
-    }
-  }
-
-  // send packet over configured serial device
-  return tx_packet(p, u);
-}
-
-/**
- * @brief circuit packeting & depacketing
- * 
- * @param bytes - source or destination packet-buffer
- * @param cmask - masks affect circuits
- * @param pmask - masks affect parameters
- * @param dir - 1 -> loads packet : 0 -> unloads packet
- * @return size_t - bytes packed
- */
-size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t dir) {
-  uint8_t *pdata = bytes;
-  double *cdata;
-  circuit_t *c;
-
-  if (dir) {
-    pdata += 1; // use bytes+1 to leave space for size @ bytes[0]
-    *pdata++ = cmask;
-    *pdata++ = (uint8_t)(pmask >> 8);
-    *pdata++ = (uint8_t) pmask;
-  }
-
-  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
-    if ((1 << i) & cmask) {
-      c = &sys.circuits[i];
-      cdata = c->params;
-      for (uint8_t k = 0; k < C_NUM_PARAM; k += 1) {
-        if ((1 << k) & pmask) {
-          if (dir) {
-            *pdata++ = (uint8_t) c->params[k];
-            *pdata++ = (uint8_t) ((c->params[k] - ((uint8_t) c->params[k])) * 100);
-          } else {
-            *cdata++ = *pdata + ((double)(*(pdata + 1)) / 100);
-            pdata += 2;
-          }
-        }
-      }
-
-      if (dir) {
-        // set circuit binary-state (solenoid io, en button, en LED)
-        *pdata++ = (digitalRead(c->pins[I_PRESSURE_IN]) << I_PRESSURE_IN)   |
-                  (digitalRead(c->pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT)  |
-                  (digitalRead(c->pins[I_ENABLE_BTN]) << I_ENABLE_BTN)      |
-                  (digitalRead(c->pins[I_LED]) << I_LED);
-      }
-    }
-  }
-
-  // byte length of circuit data
-  if (dir) bytes[0] = pdata - bytes;
-  
-  return pdata - bytes;
-}
-
-/**
- * @brief loads system-related state into packet buffer
- * 
- * @param bytes - destination packet buffer
- * @return size_t - bytes packed
- */
-size_t packetize_system(uint8_t *bytes) {
-  uint8_t *sbytes = bytes + 1;
-
-  // store system flags
-  *sbytes++ = sys.s_flags;
-  *sbytes++ = sys.c_flags;
-  *sbytes++ = (uint8_t) sys.p_flags >> 8;
-  *sbytes++ = (uint8_t) sys.p_flags;
-  *sbytes++ = sys.en_flags;
-  // store last recieved client update flags
-  *sbytes++ = sys.up_types;
-  // store system uptime
-  *sbytes++ = (uint8_t) sys.uptime;
-  *sbytes++ = (uint8_t) (sys.uptime >> 8);
-  *sbytes++ = (uint8_t) (sys.uptime >> 16);
-  *sbytes++ = (uint8_t) (sys.uptime >> 24);
-
-  // byte-length of system state
-  bytes[0] = sbytes - bytes;
-
-  return sbytes - bytes;
-}
 
 /**
  * @brief purges all circuits to zero pressure (full purge)
@@ -421,7 +453,7 @@ void purge() {
     }    
   }
 
-  sys.s_flags = (1 << S_STANDBY);
+  sys.s_flags = S_STANDBY;
 }
 
 /**
@@ -445,12 +477,12 @@ void set_pressure(circuit_t *c, double var, int half) {
     dir = (c->params[P_PRESSURE] > set_point + var) ? REVERSE : DIRECT;
     pid_set_direction(&c->pid, dir);
     wstart = millis();    // base time offset
-    while (millis() - wstart < out + 50) {
+    do {
       digitalWrite(c->pins[I_PRESSURE_OUT], dir);
       digitalWrite(c->pins[I_PRESSURE_IN], dir ^ 1);
       modify_circuit(c, millis() - wstart, dir ^ 1, dir);
       out = pid_compute(&c->pid);
-    }
+    } while (millis() - wstart < out);
   }
 
   // close circuit solenoids
@@ -465,10 +497,11 @@ void set_pressure(circuit_t *c, double var, int half) {
  * @param half - half-pressure set-point modifier
  */
 void shot_pressure(bool half) {
+  static int i = 0;
   double var = 0.05;
   circuit_t *c;
 
-  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {  // loop system circuits
+  // for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {  // loop system circuits
     if (sys.en_flags & (1 << i)) {   // if enabled
       c = &sys.circuits[i];
       if (millis() - c->params[P_CHECK_TIME] >= c->params[P_DELAY_TIME]) {   // check time expired
@@ -476,6 +509,7 @@ void shot_pressure(bool half) {
         c->params[P_CHECK_TIME] = millis();
       }
     }
-  }
+    i = (i + 1) % C_NUM_CIRCUITS;
+  // }
 }
 
