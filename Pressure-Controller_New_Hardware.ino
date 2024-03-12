@@ -19,6 +19,7 @@
 
 //Start CS426 addition (Vladislav Petrov)
 #include <EasyNextionLibrary.h> //Used for touchscreen display
+#include <Trigger.h>            //Used to define trigger functions
 #include <AUnit.h>              //Unit test library
 #include <AUnitVerbose.h>       //Unit test library
 //End CS426 addition (Vladislav Petrov)
@@ -260,78 +261,96 @@ void setup()
   Serial.begin(9600); //This is just for debugging
   Serial3.begin(9600);
   myNex.begin(9600);  //For touchscreen comms
-  
-    //lcd.print("  INITIALIZING  "); //Will be used for LOG FUNCTION
+
+  //Start the initial boot screen
+  myNex.writeStr("page Boot_Page");
+  myNex.writeStr("bootText.txt", "INITIALIZING...\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 0);
+  aunit::TestRunner::setPrinter(&Serial);
     
-    //Set alarm pin to OUTPUT mode.
-    pinMode(alarmsoundPin, OUTPUT);
+  //Set alarm pin to OUTPUT mode.
+  pinMode(alarmsoundPin, OUTPUT);
+  myNex.writeStr("bootText.txt+", "Alarm pin set.\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 10);
 
-    //Set solenoid pins to OUTPUT mode.
-    pinMode(marxinPin, OUTPUT);
-    pinMode(marxoutPin, OUTPUT);
-    pinMode(mtginPin, OUTPUT);
-    pinMode(mtgoutPin, OUTPUT);
-    pinMode(switchinPin, OUTPUT);
-    pinMode(switchoutPin, OUTPUT);
-    pinMode(tg70switchinPin, OUTPUT);
-    pinMode(tg70switchoutPin, OUTPUT);   
-    pinMode(tg70marxinPin, OUTPUT);
-    pinMode(tg70marxoutPin, OUTPUT);
-    pinMode(reclaimerstartPin, OUTPUT);
-    pinMode(reclaimerstopPin, OUTPUT);
+  //Set solenoid pins to OUTPUT mode.
+  pinMode(marxinPin, OUTPUT);
+  pinMode(marxoutPin, OUTPUT);
+  pinMode(mtginPin, OUTPUT);
+  pinMode(mtgoutPin, OUTPUT);
+  pinMode(switchinPin, OUTPUT);
+  pinMode(switchoutPin, OUTPUT);
+  pinMode(tg70switchinPin, OUTPUT);
+  pinMode(tg70switchoutPin, OUTPUT);   
+  pinMode(tg70marxinPin, OUTPUT);
+  pinMode(tg70marxoutPin, OUTPUT);
+  pinMode(reclaimerstartPin, OUTPUT);
+  pinMode(reclaimerstopPin, OUTPUT);
+  myNex.writeStr("bootText.txt+", "Solenoid pins set.\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 20);
 
-    //Set SDcard pin to OUTPUT mode.
-    pinMode(csPin, OUTPUT);
+  //Set SDcard pin to OUTPUT mode.
+  pinMode(csPin, OUTPUT);
+  myNex.writeStr("bootText.txt+", "SD pin set.\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 30);
 
-    //Set LED pins to OUTPUT mode.
-    pinMode(marxenableLEDPin, OUTPUT);
-    pinMode(mtgenableLEDPin, OUTPUT);
-    pinMode(switchenableLEDPin, OUTPUT);
-    pinMode(tg70switchenableLEDPin, OUTPUT);
-    pinMode(tg70marxenableLEDPin, OUTPUT);
-    pinMode(shotmodeLEDPin, OUTPUT);
-    pinMode(purgeLEDPin, OUTPUT);
-    pinMode(alarmLEDPin, OUTPUT);
-    pinMode(automatereclaimerLEDPin, OUTPUT);
-    pinMode(startLEDPin, OUTPUT);
-    pinMode(stopLEDPin, OUTPUT);
-    pinMode(abortLEDPin, OUTPUT);
+  //Set LED pins to OUTPUT mode.
+  pinMode(marxenableLEDPin, OUTPUT);
+  pinMode(mtgenableLEDPin, OUTPUT);
+  pinMode(switchenableLEDPin, OUTPUT);
+  pinMode(tg70switchenableLEDPin, OUTPUT);
+  pinMode(tg70marxenableLEDPin, OUTPUT);
+  pinMode(shotmodeLEDPin, OUTPUT);
+  pinMode(purgeLEDPin, OUTPUT);
+  pinMode(alarmLEDPin, OUTPUT);
+  pinMode(automatereclaimerLEDPin, OUTPUT);
+  pinMode(startLEDPin, OUTPUT);
+  pinMode(stopLEDPin, OUTPUT);
+  pinMode(abortLEDPin, OUTPUT);
+  myNex.writeStr("bootText.txt+", "LED pins set.\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 40);
 
-    //Set button pins to INPUT mode.
-    pinMode(shotmodePin, INPUT);
-    pinMode(purgePin, INPUT);
-    pinMode(alarmPin, INPUT);
-    pinMode(automatereclaimerPin, INPUT);
-    pinMode(marxenablePin, INPUT);
-    pinMode(mtgenablePin, INPUT);
-    pinMode(switchenablePin, INPUT);
-    pinMode(tg70marxenablePin, INPUT);
-    pinMode(tg70switchenablePin, INPUT);
-    pinMode(reclaimerstartenablePin, INPUT);
-    pinMode(reclaimerstopenablePin, INPUT);
-    pinMode(abortbuttonPin, INPUT);
+  //Set button pins to INPUT mode.
+  pinMode(shotmodePin, INPUT);
+  pinMode(purgePin, INPUT);
+  pinMode(alarmPin, INPUT);
+  pinMode(automatereclaimerPin, INPUT);
+  pinMode(marxenablePin, INPUT);
+  pinMode(mtgenablePin, INPUT);
+  pinMode(switchenablePin, INPUT);
+  pinMode(tg70marxenablePin, INPUT);
+  pinMode(tg70switchenablePin, INPUT);
+  pinMode(reclaimerstartenablePin, INPUT);
+  pinMode(reclaimerstopenablePin, INPUT);
+  pinMode(abortbuttonPin, INPUT);
+  myNex.writeStr("bootText.txt+", "Button pins set.\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 50);
 
-    //Turn on the internal pullup resistor on all buttons.
-    pinMode(shotmodePin, INPUT_PULLUP);
-    pinMode(purgePin, INPUT_PULLUP);
-    pinMode(alarmPin, INPUT_PULLUP);
-    pinMode(automatereclaimerPin, INPUT_PULLUP);
-    pinMode(marxenablePin, INPUT_PULLUP);
-    pinMode(mtgenablePin, INPUT_PULLUP);
-    pinMode(switchenablePin, INPUT_PULLUP);
-    pinMode(tg70marxenablePin, INPUT_PULLUP);
-    pinMode(tg70switchenablePin, INPUT_PULLUP);
-    pinMode(reclaimerstartenablePin, INPUT_PULLUP);
-    pinMode(reclaimerstopenablePin, INPUT_PULLUP);
-    pinMode(abortbuttonPin, INPUT_PULLUP);
+  //Turn on the internal pullup resistor on all buttons.
+  pinMode(shotmodePin, INPUT_PULLUP);
+  pinMode(purgePin, INPUT_PULLUP);
+  pinMode(alarmPin, INPUT_PULLUP);
+  pinMode(automatereclaimerPin, INPUT_PULLUP);
+  pinMode(marxenablePin, INPUT_PULLUP);
+  pinMode(mtgenablePin, INPUT_PULLUP);
+  pinMode(switchenablePin, INPUT_PULLUP);
+  pinMode(tg70marxenablePin, INPUT_PULLUP);
+  pinMode(tg70switchenablePin, INPUT_PULLUP);
+  pinMode(reclaimerstartenablePin, INPUT_PULLUP);
+  pinMode(reclaimerstopenablePin, INPUT_PULLUP);
+  pinMode(abortbuttonPin, INPUT_PULLUP);
+  myNex.writeStr("bootText.txt+", "Button pullup resistors activated.\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 60);
 
   //Startup process. Load the last used settings. If none are found, create some defaults.
   //Check if SD card exists
+  myNex.writeStr("bootText.txt+", "Checking SD Card...\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 70);
   if(!SD.begin(csPin))//No sd card is found. Set the circuit pressure to whatever they happen to be at the time
   { 
     sdCard = false;
-    //lcd.print("WARNING:        ");  //Will be used for LOG FUNCTION
-    //lcd.print("SDCARD NOT FOUND");   //Will be used for LOG FUNCTION
+    myNex.writeStr("bootText.txt+", "WARNING: SD card not found!\r\n");  //Need to write to log also
+    myNex.writeNum("Progress_Bar.val", 80);
     Marxsetpoint = analogRead(marxanaloginPin);                    
     MTGsetpoint = analogRead(mtganaloginPin);
     Switchsetpoint = analogRead(switchanaloginPin);
@@ -341,8 +360,7 @@ void setup()
   }
   else
   {
-    //lcd.print("LOADING PREVIOUS");   //Will be used for LOG FUNCTION
-    //lcd.print("SETTINGS        ");   //Will be used for LOG FUNCTION
+    myNex.writeStr("bootText.txt+", "Loading previous settings...\r\n");  //Need to write to log also
     delay(3000);
     sdCard = true;
     if(SD.exists("Setting.txt")) //Previous settings are found. Load the previous settings into the controller.
@@ -401,14 +419,14 @@ void setup()
       previousSettingFile.close();
 
 //      SaveCurrentSettings();
-      //lcd.print("PREVIOUS SETTING");   //Will be used for LOG FUNCTION
-      //lcd.print("LOAD SUCCESS    ");   //Will be used for LOG FUNCTION
+      myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");  //Need to write to log also
+      myNex.writeNum("Progress_Bar.val", 80);
       delay(3000);
     }
     else //No previous settings are found. Set the circuit pressure to whatever they happen to be at the time
     {
-      //lcd.print("NO PREVIOUS SET.");   //Will be used for LOG FUNCTION
-      //lcd.print("CREATING DEFAULT");   //Will be used for LOG FUNCTION
+      myNex.writeStr("bootText.txt+", "No previous settings found. Using default settings...\r\n");  //Need to write to log also
+      myNex.writeNum("Progress_Bar.val", 80);
       Marxsetpoint = analogRead(marxanaloginPin);                    
       MTGsetpoint = analogRead(mtganaloginPin);
       Switchsetpoint = analogRead(switchanaloginPin);
@@ -418,6 +436,11 @@ void setup()
       delay(3000);
     } 
   }
+  
+  myNex.writeStr("bootText.txt+", "Boot complete!\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 100);
+  delay(1000);
+  myNex.writeStr("page Main_Menu");
 }
 
 
@@ -426,7 +449,6 @@ void setup()
 //-------------------------------------------------------------------------------------------------------------
 void loop() 
 {
-
   aunit::TestRunner::run();  //Run unit tests
 
   //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
@@ -526,15 +548,6 @@ void loop()
   */
 }
 
-void trigger0()
-{
-  Serial.println("Reclaimer on pressed");
-}
-
-void trigger1()
-{
-  Serial.println("Reclaimer off pressed");
-}
 
 //-------------------------------------------------------------------------------------------------------------
 //Function for setting shot pressures
@@ -3540,97 +3553,97 @@ void trigger30() {   //Preset 10 Delete
 //SET PRESSURE
 
 void trigger31() {    //Set Pressure MARX
-  Serial.println("Set Pressure MARX")
+  Serial.println("Set Pressure MARX");
 }
 
 void trigger32() {    //Set Pressure MTG
-  Serial.println("Set Pressure MTG")
+  Serial.println("Set Pressure MTG");
 }
 
 void trigger33() {    //Set Pressure MARXTG70
-  Serial.println("Set Pressure MARXTG70")
+  Serial.println("Set Pressure MARXTG70");
 }
 
 void trigger34() {    //Set Pressure SWITCH
-  Serial.println("Set Pressure SWITCH")
+  Serial.println("Set Pressure SWITCH");
 }
 
 void trigger35() {    //Set Pressure RECLAIM
-  Serial.println("Set Pressure RECLAIM")
+  Serial.println("Set Pressure RECLAIM");
 }
 
 void trigger36() {    //Set Pressure SWTG70
-  Serial.println("Set Pressure SWTG70")
+  Serial.println("Set Pressure SWTG70");
 }
 
 void trigger37() {    //Set Pressure MIN SUPPLY
-  Serial.println("Set Pressure MIN SUPPLY")
+  Serial.println("Set Pressure MIN SUPPLY");
 }
 
 //TIMES
 
 void trigger38() {    //Set Time Purge
-  Serial.println("Set Time Purge")
+  Serial.println("Set Time Purge");
 }
 
 void trigger39() {    //Set Time Delay
-  Serial.println("Set Time Delay")
+  Serial.println("Set Time Delay");
 }
 
 //ALARMS
 
 void trigger40() {    //Set Alarm Sound
-  Serial.println("Set Alarm Sound")
+  Serial.println("Set Alarm Sound");
 }
 
 void trigger41() {    //Set Alarm MTG
-  Serial.println("Set Alarm MTG")
+  Serial.println("Set Alarm MTG");
 }
 
 void trigger42() {    //Set Alarm MARX
-  Serial.println("Set Alarm MARX")
+  Serial.println("Set Alarm MARX");
 }
 
 void trigger43() {    //Set Alarm SWITCH
-  Serial.println("Set Alarm SWITCH")
+  Serial.println("Set Alarm SWITCH");
 }
 
 void trigger44() {    //Set Alarm MARXTG70
-  Serial.println("Set Alarm MARXTG70")
+  Serial.println("Set Alarm MARXTG70");
 }
 
 void trigger45() {    //Set Alarm SWTG70
-  Serial.println("Set Alarm SWTG70")
+  Serial.println("Set Alarm SWTG70");
 }
 
 //PID
 
 void trigger46() {    //Set PID KP
-  Serial.println("Set PID KP")
+  Serial.println("Set PID KP");
 }
 
 void trigger47() {    //Set PID KD
-  Serial.println("Set PID KD")
+  Serial.println("Set PID KD");
 }
 
 void trigger48() {    //Set PID KI
-  Serial.println("Set PID KI")
+  Serial.println("Set PID KI");
 }
 
 //RECLAIMER
 
 void trigger49() {    //Set REC OM
-  Serial.println("Set REC ON")
+  Serial.println("Set REC ON");
 }
 
 void trigger50() {    //Set REC OFF
-  Serial.println("Set REC OFF")
+  Serial.println("Set REC OFF");
 }
 
 void trigger51() {    //Set MIN SUPPLY
-  Serial.println("Set MIN SUPPLY")
+  Serial.println("Set MIN SUPPLY");
 }
 
 void trigger52() {    //Set REC DELAY
-  Serial.println("Set REC DELAY")
+  Serial.println("Set REC DELAY");
 }
