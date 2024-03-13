@@ -18,174 +18,173 @@
 #include <AUnit.h>              //Unit test library
 #include <AUnitVerbose.h>       //Unit test library
 
+//Set pins for controlling circuit solenoids, these are global
+const int marxoutPin = 22;
+const int marxinPin = 23;
+const int mtgoutPin = 24;
+const int mtginPin = 25;
+const int switchoutPin = 26;
+const int switchinPin = 27;
+const int tg70switchoutPin = 28;
+const int tg70switchinPin = 29;
+const int tg70marxoutPin = 30;
+const int tg70marxinPin = 31;
 
-  //Set pins for controlling circuit solenoids, these are global
-  const int marxoutPin = 22;
-  const int marxinPin = 23;
-  const int mtgoutPin = 24;
-  const int mtginPin = 25;
-  const int switchoutPin = 26;
-  const int switchinPin = 27;
-  const int tg70switchoutPin = 28;
-  const int tg70switchinPin = 29;
-  const int tg70marxoutPin = 30;
-  const int tg70marxinPin = 31;
+//Ser pins for controlling reclaimer relays, these are global.
+const int reclaimerstopPin = 32;
+const int reclaimerstartPin = 33;
 
-  //Ser pins for controlling reclaimer relays, these are global.
-  const int reclaimerstopPin = 32;
-  const int reclaimerstartPin = 33;
+//Set pins for reading analog data from pressure sensors, these are global
+const int marxanaloginPin = A0;
+const int switchanaloginPin = A1;
+const int mtganaloginPin = A2;
+const int tg70marxanaloginPin = A3;
+const int tg70switchanaloginPin = A4;
+const int reclaimeranaloginPin = A5;
+const int bottleanaloginPin = A6;
 
-  //Set pins for reading analog data from pressure sensors, these are global
-  const int marxanaloginPin = A0;
-  const int switchanaloginPin = A1;
-  const int mtganaloginPin = A2;
-  const int tg70marxanaloginPin = A3;
-  const int tg70switchanaloginPin = A4;
-  const int reclaimeranaloginPin = A5;
-  const int bottleanaloginPin = A6;
+//Set pins for control buttons, these are global
+const int shotmodePin = 34;
+const int purgePin = 35;
+const int alarmPin = 36;
+const int automatereclaimerPin = 37;
+const int abortbuttonPin = 2; // Changed from pin 1 to pin 2
 
-  //Set pins for control buttons, these are global
-  const int shotmodePin = 34;
-  const int purgePin = 35;
-  const int alarmPin = 36;
-  const int automatereclaimerPin = 37;
-  const int abortbuttonPin = 2; // Changed from pin 1 to pin 2
+//Set pins for enabling/disabling each system
+const int marxenablePin = 17;
+const int mtgenablePin = 18;
+const int switchenablePin = 19;
+const int tg70switchenablePin = 20;
+const int tg70marxenablePin = 21;
 
-  //Set pins for enabling/disabling each system
-  const int marxenablePin = 17;
-  const int mtgenablePin = 18;
-  const int switchenablePin = 19;
-  const int tg70switchenablePin = 20;
-  const int tg70marxenablePin = 21;
+//Set pins for automatic reclaimer control
+const int reclaimerstopenablePin = 3;
+const int reclaimerstartenablePin = 4;
 
-  //Set pins for automatic reclaimer control
-  const int reclaimerstopenablePin = 3;
-  const int reclaimerstartenablePin = 4;
-
-  //Set pin for controlling alarm sound
-  const int alarmsoundPin = 16;
+//Set pin for controlling alarm sound
+const int alarmsoundPin = 16;
   
-  //Set pins for control button LEDs, these are global
-  const int marxenableLEDPin = 38;
-  const int mtgenableLEDPin = 39;
-  const int switchenableLEDPin = 40;
-  const int tg70switchenableLEDPin = 41;
-  const int tg70marxenableLEDPin = 42;
-  const int alarmLEDPin = 43;
-  const int abortLEDPin = 44;
-  const int shotmodeLEDPin = 45;
-  const int purgeLEDPin = 46;
-  const int startLEDPin = 47;
-  const int stopLEDPin = 48;
-  const int automatereclaimerLEDPin = 49;
+//Set pins for control button LEDs, these are global
+const int marxenableLEDPin = 38;
+const int mtgenableLEDPin = 39;
+const int switchenableLEDPin = 40;
+const int tg70switchenableLEDPin = 41;
+const int tg70marxenableLEDPin = 42;
+const int alarmLEDPin = 43;
+const int abortLEDPin = 44;
+const int shotmodeLEDPin = 45;
+const int purgeLEDPin = 46;
+const int startLEDPin = 47;
+const int stopLEDPin = 48;
+const int automatereclaimerLEDPin = 49;
 
-  //Set pins for SD card reader
-  const int misopin = 50;
-  const int mosiPin = 51;
-  const int sckPin = 52;
-  const int csPin = 53;
+//Set pins for SD card reader
+const int misopin = 50;
+const int mosiPin = 51;
+const int sckPin = 52;
+const int csPin = 53;
 
-  //Touchscreen
-  EasyNex myNex(Serial3);
+//Touchscreen
+EasyNex myNex(Serial3);
 
-  //Menu Info. These are global
-  int selection = 0;
+//Menu Info. These are global
+int selection = 0;
 
-  //PID tune parameters for each circuit
-  double kp_Marx = 50;
-  double ki_Marx = 0;
-  double kd_Marx = 25;
-  double kp_MTG = 15;
-  double ki_MTG = 0;
-  double kd_MTG = 10;
-  double kp_Switch = 50;
-  double ki_Switch = 0;
-  double kd_Switch = 25;
-  double kp_SwitchTG70 = 15;
-  double ki_SwitchTG70 = 0;
-  double kd_SwitchTG70 = 10;
-  double kp_MarxTG70 = 15;
-  double ki_MarxTG70 = 0;
-  double kd_MarxTG70 = 10;
+//PID tune parameters for each circuit
+double kp_Marx = 50;
+double ki_Marx = 0;
+double kd_Marx = 25;
+double kp_MTG = 15;
+double ki_MTG = 0;
+double kd_MTG = 10;
+double kp_Switch = 50;
+double ki_Switch = 0;
+double kd_Switch = 25;
+double kp_SwitchTG70 = 15;
+double ki_SwitchTG70 = 0;
+double kd_SwitchTG70 = 10;
+double kp_MarxTG70 = 15;
+double ki_MarxTG70 = 0;
+double kd_MarxTG70 = 10;
 
-  //Boolean for if SD card is present
-  bool sdCard = false;
+//Boolean for if SD card is present
+bool sdCard = false;
   
-  //Create variables for storing state of buttons and starting conditions for buttons, these are global
-  bool marxenableState = false;
-  bool mtgenableState = false;
-  bool switchenableState = false;
-  bool tg70switchenableState = false;
-  bool tg70marxenableState = false;
-  bool alarmState = false;
-  bool automatereclaimerState = true;
-  bool purgeState = false;
-  bool shotmodeState = false;
-  bool startreclaimerState = false;
-  bool stopreclaimerState = false;
-  bool abortState = false;
+//Create variables for storing state of buttons and starting conditions for buttons, these are global
+bool marxenableState = false;
+bool mtgenableState = false;
+bool switchenableState = false;
+bool tg70switchenableState = false;
+bool tg70marxenableState = false;
+bool alarmState = false;
+bool automatereclaimerState = true;
+bool purgeState = false;
+bool shotmodeState = false;
+bool startreclaimerState = false;
+bool stopreclaimerState = false;
+bool abortState = false;
 
-  bool lastmarxenableState = false;
-  bool lastmtgenableState = false;
-  bool lastswitchenableState = false;
-  bool lasttg70switchenableState = false;
-  bool lasttg70marxenableState = false;
-  bool lastalarmState = false;
-  bool lastautomatereclaimerState = false;
-  bool lastpurgeState = false;
-  bool lastshotmodeState = false;
-  bool laststartreclaimerState = false;
-  bool laststopreclaimerState = false;
-  bool lastabortState = false;
+bool lastmarxenableState = false;
+bool lastmtgenableState = false;
+bool lastswitchenableState = false;
+bool lasttg70switchenableState = false;
+bool lasttg70marxenableState = false;
+bool lastalarmState = false;
+bool lastautomatereclaimerState = false;
+bool lastpurgeState = false;
+bool lastshotmodeState = false;
+bool laststartreclaimerState = false;
+bool laststopreclaimerState = false;
+bool lastabortState = false;
 
-  //Error parameters
-  bool alarmEnable = false;
-  bool errorState = false;
-  unsigned long previousTime = 0;
+//Error parameters
+bool alarmEnable = false;
+bool errorState = false;
+unsigned long previousTime = 0;
 
-  //Timeout states for circuits.
-  long int marxmaxTime = 5000;
-  long int mtgmaxTime = 5000;
-  long int switchmaxTime = 5000;
-  long int tg70switchmaxTime = 5000;
-  long int tg70marxmaxTime = 5000;
+//Timeout states for circuits.
+long int marxmaxTime = 5000;
+long int mtgmaxTime = 5000;
+long int switchmaxTime = 5000;
+long int tg70switchmaxTime = 5000;
+long int tg70marxmaxTime = 5000;
 
-  //Delay time for each circuit
-  long int marxDelay = 1000;
-  long int mtgDelay = 1000;
-  long int switchDelay = 1000;
-  long int tg70marxDelay = 1000;
-  long int tg70switchDelay = 1000;
+//Delay time for each circuit
+long int marxDelay = 1000;
+long int mtgDelay = 1000;
+long int switchDelay = 1000;
+long int tg70marxDelay = 1000;
+long int tg70switchDelay = 1000;
 
-  //Circuit check time delays
-  unsigned long checkMarxTime = 0;
-  unsigned long checkMTGTime = 0;
-  unsigned long checkSwitchTime = 0;
-  unsigned long checkTG70SwitchTime = 0;
-  unsigned long checkTG70MarxTime = 0;
+//Circuit check time delays
+unsigned long checkMarxTime = 0;
+unsigned long checkMTGTime = 0;
+unsigned long checkSwitchTime = 0;
+unsigned long checkTG70SwitchTime = 0;
+unsigned long checkTG70MarxTime = 0;
 
-  //Purge time. Default is 2 minutes
-  long int marxPurgeTime = 120000;
-  long int mtgPurgeTime = 120000;
-  long int switchPurgeTime = 120000;
-  long int tg70switchPurgeTime = 120000;
-  long int tg70marxPurgeTime = 120000;
+//Purge time. Default is 2 minutes
+long int marxPurgeTime = 120000;
+long int mtgPurgeTime = 120000;
+long int switchPurgeTime = 120000;
+long int tg70switchPurgeTime = 120000;
+long int tg70marxPurgeTime = 120000;
 
-  //Minimum bottle pressure
-  double minBottlePressure = 50.00;
+//Minimum bottle pressure
+double minBottlePressure = 50.00;
 
-  //Standby mode.
-  bool standbyMode = true;
+//Standby mode.
+bool standbyMode = true;
 
-  //Cotrol mode.
-  bool automaticMode = true;
+//Cotrol mode.
+bool automaticMode = true;
 
-  //State of reclaimer.
-  bool reclaimerRunning = false;
-  int reclaimerSafetyTime = 30000;
-  unsigned long int previousReclaimerSafetyTime = 0;
+//State of reclaimer.
+bool reclaimerRunning = false;
+int reclaimerSafetyTime = 30000;
+unsigned long int previousReclaimerSafetyTime = 0;
 
-  //Setpoints
+//Setpoints
  double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
  double maxReclaimerPressure = 500.0;
  double minReclaimerPressure = 50.0;
