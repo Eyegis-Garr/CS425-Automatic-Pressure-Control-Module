@@ -3193,128 +3193,31 @@ void alarmController(String errorString)
 //--------------------------------------------------------------------------------------------
 
 //PRESET TRIGGERS
-void trigger1() {   //Preset 1 Save
-  Serial.println("Preset 1 Save");
+//Save a preset
+void trigger1() 
+{
+  uint32_t presetNum = 0;
+  presetNum = myNex.readNumber("Global.preset.val");
+  Serial.println("Preset " + presetNum + " Saved");
 }
 
-void trigger2() {   //Preset 1 Load
-  Serial.println("Preset 1 Load");
+//Load a preset
+void trigger2() 
+{
+  uint32_t presetNum = 0;
+  presetNum = myNex.readNumber("Global.preset.val");
+  Serial.println("Preset " + presetNum + " Loaded");
 }
 
-void trigger3() {   //Preset 1 Delete
-  Serial.println("Preset 1 Delete");
-}
-
-void trigger4() {   //Preset 2 Save
-  Serial.println("Preset 2 Save");
-}
-
-void trigger5() {   //Preset 2 Load
-  Serial.println("Preset 2 Load");
-}
-
-void trigger6() {   //Preset 2 Delete
-  Serial.println("Preset 2 Delete");
-}
-
-void trigger7() {   //Preset 3 Save
-  Serial.println("Preset 3 Save");
-}
-
-void trigger8() {   //Preset 3 Load
-  Serial.println("Preset 3 Load");
-}
-
-void trigger9() {   //Preset 3 Delete
-  Serial.println("Preset 3 Delete");
-}
-
-void trigger10() {   //Preset 4 Save
-  Serial.println("Preset 1 Save");
-}
-
-void trigger11() {   //Preset 4 Load
-  Serial.println("Preset 1 Load");
-}
-
-void trigger12() {   //Preset 4 Delete
-  Serial.println("Preset 1 Delete");
-}
-
-void trigger13() {   //Preset 5 Save
-  Serial.println("Preset 5 Save");
-}
-
-void trigger14() {   //Preset 5 Load
-  Serial.println("Preset 5 Load");
-}
-
-void trigger15() {   //Preset 5 Delete
-  Serial.println("Preset 5 Delete");
-}
-
-void trigger16() {   //Preset 6 Save
-  Serial.println("Preset 6 Save");
-}
-
-void trigger17() {   //Preset 6 Load
-  Serial.println("Preset 6 Load");
-}
-
-void trigger18() {   //Preset 6 Delete
-  Serial.println("Preset 6 Delete");
-}
-
-void trigger19() {   //Preset 7 Save
-  Serial.println("Preset 1 Save");
-}
-
-void trigger20() {   //Preset 7 Load
-  Serial.println("Preset 1 Load");
-}
-
-void trigger21() {   //Preset 7 Delete
-  Serial.println("Preset 1 Delete");
-}
-
-void trigger22() {   //Preset 8 Save
-  Serial.println("Preset 8 Save");
-}
-
-void trigger23() {   //Preset 8 Load
-  Serial.println("Preset 8 Load");
-}
-
-void trigger24() {   //Preset 8 Delete
-  Serial.println("Preset 8 Delete");
-}
-
-void trigger25() {   //Preset 9 Save
-  Serial.println("Preset 9 Save");
-}
-
-void trigger26() {   //Preset 9 Load
-  Serial.println("Preset 9 Load");
-}
-
-void trigger27() {   //Preset 9 Delete
-  Serial.println("Preset 9 Delete");
-}
-
-void trigger28() {   //Preset 10 Save
-  Serial.println("Preset 8 Save");
-}
-
-void trigger29() {   //Preset 10 Load
-  Serial.println("Preset 8 Load");
-}
-
-void trigger30() {   //Preset 10 Delete
-  Serial.println("Preset 8 Delete");
+//Delete a preset
+void trigger3() 
+{
+  uint32_t presetNum = 0;
+  presetNum = myNex.readNumber("Global.preset.val");
+  Serial.println("Preset " + presetNum + " Deleted");
 }
 
 //SET PRESSURE
-
 void trigger31() {    //Set Pressure MARX
   Serial.println("Set Pressure MARX");
 }
