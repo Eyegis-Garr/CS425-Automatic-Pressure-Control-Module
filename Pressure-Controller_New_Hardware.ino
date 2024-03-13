@@ -11,18 +11,11 @@
 //-------------------------------------------------------------------------------------------------------------
 #include <SD.h>                 //Used for SD Card reader
 #include <SPI.h>                //Used for serial communication
-//#include <Key.h>              //Used for maytrix keypads (Depricated for CS426 project)
-//#include <Keypad.h>           //Used for maytrix keypads (Depricated for CS426 project)
 #include <PID_v1.h>             //used for PID Controller
-//#include <LiquidCrystal.h>    //Used for LCD (Depricated for CS426 project)
-
-
-//Start CS426 addition (Vladislav Petrov)
 #include <EasyNextionLibrary.h> //Used for touchscreen display
 #include <Trigger.h>            //Used to define trigger functions
 #include <AUnit.h>              //Unit test library
 #include <AUnitVerbose.h>       //Unit test library
-//End CS426 addition (Vladislav Petrov)
 
 
   //Set pins for controlling circuit solenoids, these are global
@@ -49,18 +42,6 @@
   const int tg70switchanaloginPin = A4;
   const int reclaimeranaloginPin = A5;
   const int bottleanaloginPin = A6;
-
-  //Set pins for sending analog data from pressure sensors to displays, these are global
-  //CURENTLY NOT IN USE, DISPLAYS ARE CONNECTED DIRECTLY TO SENSORS
-  /*
-  const int marxanalogoutPin = 7;
-  const int mtganalogoutPin = 8;
-  const int switchanalogoutPin = 9;
-  const int tg70switchanalogoutPin = 10;
-  const int tg70marxanalogoutPin = 11;
-  const int reclaimeranalognoutPin = 12;
-  const int bottleanalogoutPin = 13;
-  */
 
   //Set pins for control buttons, these are global
   const int shotmodePin = 34;
@@ -102,27 +83,6 @@
   const int mosiPin = 51;
   const int sckPin = 52;
   const int csPin = 53;
-
-  //Set pins for MENU control buttons, these are global
-  //DEPRICATED FOR CS426
-  /*
-  const byte ROWS = 1;
-  const byte COLS = 5;
-  char keys[ROWS][COLS] = {
-                           {'1', '2', '3', '4', '5'}
-                          };
-  byte rowPins[ROWS] = {2};
-  byte colPins[COLS] = {3, 4, 5, 6, 7};
-  Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
-  */
-
-  //Set pins for MENU LCD, these are global
-  //DEPRICATED FOR CS426
-  /*
-  const int rs = 8, en = 9, d4 = 10, d5 = 11, d6 = 12, d7 = 13;
-  LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-  unsigned long lcdResetTime = 0;
-  */
 
   //Touchscreen
   EasyNex myNex(Serial3);
@@ -266,12 +226,18 @@ void setup()
   myNex.writeStr("page Boot_Page");
   myNex.writeStr("bootText.txt", "INITIALIZING...\r\n");  //Need to write to log also
   myNex.writeNum("Progress_Bar.val", 0);
-  aunit::TestRunner::setPrinter(&Serial);
+
+  //Unit test setup
+  myNex.writeStr("bootText.txt+", "Setting up unit tests...\r\n");  //Need to write to log also
+  aunit::TestRunner::setPrinter(&Serial);  //I would like to set this to output onto the screen eventually
+  aunit::TestRunner::setTimeout(10);
+  myNex.writeStr("bootText.txt+", "Done.\r\n");  //Need to write to log also
+  myNex.writeNum("Progress_Bar.val", 10);
     
   //Set alarm pin to OUTPUT mode.
   pinMode(alarmsoundPin, OUTPUT);
   myNex.writeStr("bootText.txt+", "Alarm pin set.\r\n");  //Need to write to log also
-  myNex.writeNum("Progress_Bar.val", 10);
+  myNex.writeNum("Progress_Bar.val", 20);
 
   //Set solenoid pins to OUTPUT mode.
   pinMode(marxinPin, OUTPUT);
@@ -287,12 +253,12 @@ void setup()
   pinMode(reclaimerstartPin, OUTPUT);
   pinMode(reclaimerstopPin, OUTPUT);
   myNex.writeStr("bootText.txt+", "Solenoid pins set.\r\n");  //Need to write to log also
-  myNex.writeNum("Progress_Bar.val", 20);
+  myNex.writeNum("Progress_Bar.val", 30);
 
   //Set SDcard pin to OUTPUT mode.
   pinMode(csPin, OUTPUT);
   myNex.writeStr("bootText.txt+", "SD pin set.\r\n");  //Need to write to log also
-  myNex.writeNum("Progress_Bar.val", 30);
+  myNex.writeNum("Progress_Bar.val", 40);
 
   //Set LED pins to OUTPUT mode.
   pinMode(marxenableLEDPin, OUTPUT);
@@ -308,7 +274,7 @@ void setup()
   pinMode(stopLEDPin, OUTPUT);
   pinMode(abortLEDPin, OUTPUT);
   myNex.writeStr("bootText.txt+", "LED pins set.\r\n");  //Need to write to log also
-  myNex.writeNum("Progress_Bar.val", 40);
+  myNex.writeNum("Progress_Bar.val", 50);
 
   //Set button pins to INPUT mode.
   pinMode(shotmodePin, INPUT);
@@ -324,7 +290,7 @@ void setup()
   pinMode(reclaimerstopenablePin, INPUT);
   pinMode(abortbuttonPin, INPUT);
   myNex.writeStr("bootText.txt+", "Button pins set.\r\n");  //Need to write to log also
-  myNex.writeNum("Progress_Bar.val", 50);
+  myNex.writeNum("Progress_Bar.val", 60);
 
   //Turn on the internal pullup resistor on all buttons.
   pinMode(shotmodePin, INPUT_PULLUP);
@@ -340,28 +306,27 @@ void setup()
   pinMode(reclaimerstopenablePin, INPUT_PULLUP);
   pinMode(abortbuttonPin, INPUT_PULLUP);
   myNex.writeStr("bootText.txt+", "Button pullup resistors activated.\n");  //Need to write to log also
-  myNex.writeNum("Progress_Bar.val", 60);
+  myNex.writeNum("Progress_Bar.val", 70);
 
   //Startup process. Load the last used settings. If none are found, create some defaults.
   //Check if SD card exists
   myNex.writeStr("bootText.txt+", "Checking SD Card...\r\n");  //Need to write to log also
-  myNex.writeNum("Progress_Bar.val", 70);
+  myNex.writeNum("Progress_Bar.val", 80);
   if(!SD.begin(csPin))//No sd card is found. Set the circuit pressure to whatever they happen to be at the time
   { 
     sdCard = false;
     myNex.writeStr("bootText.txt+", "WARNING: SD card not found!\r\n");  //Need to write to log also
-    myNex.writeNum("Progress_Bar.val", 80);
+    myNex.writeNum("Progress_Bar.val", 90);
     Marxsetpoint = analogRead(marxanaloginPin);                    
     MTGsetpoint = analogRead(mtganaloginPin);
     Switchsetpoint = analogRead(switchanaloginPin);
     TG70Switchsetpoint = analogRead(tg70switchanaloginPin);
     TG70Marxsetpoint = analogRead(tg70marxanaloginPin);
-    delay(3000);
+    delay(2000);
   }
   else
   {
     myNex.writeStr("bootText.txt+", "Loading previous settings...\r\n");  //Need to write to log also
-    delay(3000);
     sdCard = true;
     if(SD.exists("Setting.txt")) //Previous settings are found. Load the previous settings into the controller.
     {
@@ -418,28 +383,28 @@ void setup()
       lasttg70marxenableState = !tg70marxenableState;
       previousSettingFile.close();
 
-//      SaveCurrentSettings();
+      SaveCurrentSettings();
       myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");  //Need to write to log also
-      myNex.writeNum("Progress_Bar.val", 80);
-      delay(3000);
+      myNex.writeNum("Progress_Bar.val", 90);
+      delay(2000);
     }
     else //No previous settings are found. Set the circuit pressure to whatever they happen to be at the time
     {
       myNex.writeStr("bootText.txt+", "No previous settings found. Using default settings...\r\n");  //Need to write to log also
-      myNex.writeNum("Progress_Bar.val", 80);
+      myNex.writeNum("Progress_Bar.val", 90);
       Marxsetpoint = analogRead(marxanaloginPin);                    
       MTGsetpoint = analogRead(mtganaloginPin);
       Switchsetpoint = analogRead(switchanaloginPin);
       TG70Switchsetpoint = analogRead(tg70switchanaloginPin);
       TG70Marxsetpoint = analogRead(tg70marxanaloginPin);
-//      SaveCurrentSettings();
-      delay(3000);
+      SaveCurrentSettings();
+      delay(2000);
     } 
   }
   
   myNex.writeStr("bootText.txt+", "Boot complete!\r\n");  //Need to write to log also
   myNex.writeNum("Progress_Bar.val", 100);
-  delay(1000);
+  delay(3000);
   myNex.writeStr("page Main_Menu");
 }
 
@@ -1266,6 +1231,7 @@ void Purge(bool& circuitState, int intakerelayPin, int exhaustrelayPin)
 //-------------------------------------------------------------------------------------------------------------
 void ControlButtonStateManager()
 { 
+  /*
   //Check the supply pressure
   if(!errorState)
   {
@@ -1282,6 +1248,7 @@ void ControlButtonStateManager()
     //Run the manual reclaimer controller if needed
     manualReclaimerControl();    
   }
+  */
   
   //Check buttons for HIGH or LOW
   int readmarxenableState = digitalRead(marxenablePin);
@@ -1334,9 +1301,7 @@ void ControlButtonStateManager()
   //If a state function is activated, set standbymode to true
   if((purgeState || shotmodeState || abortState ) && !errorState)
   {
-    standbyMode = true;  
-//    currentMenu = 0;
-    selection = 0;
+    standbyMode = true;
   }
    
   //If the system is in manual mode, it should not run the program and disable these states.
@@ -1370,7 +1335,7 @@ void ControlButtonStateCheck(int reading, bool& buttonState, bool& lastbuttonSta
     {
       buttonState = !buttonState;
       lastbuttonState = true;
-//      SaveCurrentSettings();
+      SaveCurrentSettings();
     }
     else if(reading == HIGH)
     {
@@ -1391,7 +1356,7 @@ void ControlButtonStateCheckReclaimer(int reading, bool& buttonState, bool& last
     {
       buttonState = !buttonState;
       lastbuttonState = true;
-//      SaveCurrentSettings();
+      SaveCurrentSettings();
     }
     else if(reading == HIGH)
     {
@@ -1429,213 +1394,9 @@ void ControlButtonLEDStateCheck(bool buttonState, const int ledPin)
     digitalWrite(ledPin, buttonState);
 }
 
-
-//-------------------------------------------------------------------------------------------------------------
-//LCD Menu Function. Gets user input from keypad and displays on LCD
-//-------------------------------------------------------------------------------------------------------------
-/*
-void menu()
-{ 
-  
-    ControlButtonStateManager();
-  
-  //Setup the menus in a 2D array. First dimension lists the number of menus. Second dimension lists the number of options.
-  String menu[9][10] = {
-                      {"CONTROL MODE", "PRESETS", "SET PRESSURES", "SET TIMES", "ALARM CONFIG", "PID CONFIG", "EXIT", "                "}, 
-                      {"SET PURGE TIMES", "SET CIRC. DELAY", "SET SAFETY DEL.", "EXIT", "                "}, 
-                      {"SAVE PRESET", "LOAD PRESET", "DELETE PRESET", "EXIT", "                "}, 
-                      {"SET MARX", "SET MARX TG70", "SET MTG", "SET SWITCH", "SET SWITCH TG70", "SET RECL. ON", "SET RECL. OFF", "SET MIN SUPPLY", "EXIT", "                "},
-                      {"SOUND ON/OFF", "MARX ALARM", "MARX TG70 ALARM", "MTG ALARM", "SWITCH ALARM", "SWITCH TG70 ALARM", "EXIT", "                "},
-                      {"MARX DELAY", "MARX TG70 DELAY", "MTG DELAY", "SWITCH DELAY", "SWITCH TG70 DELAY", "EXIT", "                "},
-                      {"MARX PID", "MARX TG70 PID", "MTG PID", "SWITCH PID", "SWITCH TG70 PID", "EXIT", "                "},
-                      {"KP", "KI", "KD", "EXIT"},
-                      {"MARX PURGE", "MARX TG70 PURGE", "MTG PURGE", "SWITCH PURGE", "SWITCH TG70 PURGE", "EXIT", "                "}
-                      };
-
-  //The limits of options in each menu. Used for a counter in navigation.
-  int limits[9] = {7, 4, 4, 9, 7, 6, 6, 4, 6};
-
-  //A map of menus. Each element corresponds to the menu item that is mapped to the selection.
-  int menuMap[9][9] = {
-                       {NULL, 2, 3, 1, 4, 6, 0},
-                       {8, 5, NULL, 0},
-                       {NULL, NULL, NULL, 0},
-                       {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0},
-                       {NULL, NULL, NULL, NULL, NULL, NULL, 0},
-                       {NULL, NULL, NULL, NULL, NULL, 1},
-                       {7, 7, 7, 7, 7, 0},
-                       {NULL, NULL, NULL, 6},
-                       {NULL, NULL, NULL, NULL, NULL, 1}
-                       };
-
-
-  //Get user input
-  char key = keypad.getKey();
-  if(key)
-  {
-    switch(key)
-    {
-      case '1': //Select
-        if(currentMenu >= 8)  //If we scroll to the last menu item, do not increment up
-        {
-          currentMenu = 8;
-        }
-        if(currentMenu <= 0 || currentMenu == NULL)  //If we scroll to the last menu item, do not increment down
-        {
-          currentMenu = 0;
-        }
-        if((currentMenu == 1) && (selection == 2)) //Select to adjust the reclaimer safety delay
-        {
-          setReclaimerSafetyDelay();
-          break;
-        }
-        if((currentMenu == 4) && (selection == 0)) //Selected turn alarm on or off
-        {
-          setAlarmOnOff();
-          break;
-        }
-        if((currentMenu == 4) && (selection != 0) && (selection != 6)) //Select to set alarm tme of a circuit
-        {
-          alarmConfig(selection);
-          break;
-        }
-        if((currentMenu == 5) && (selection != 5)) //Select to set delay time of a circuit
-        {
-          circuitDelay(selection);
-          break;
-        }
-        if((currentMenu == 8) && (selection != 5)) //Selected to set purge time of a circuit
-        {
-          purgeConfig(selection);
-          break;
-        }
-        if((currentMenu == 2) && (selection == 0)) //Selected to save a file
-        {
-          FileWriter();
-          break;
-        }
-        if((currentMenu == 2) && (selection == 1)) //Selected to load a file
-        {
-          FileReader();
-          break;
-        }
-        if((currentMenu == 2) && (selection == 2)) //Select to delete a file
-        {
-          FileRemover();
-          break;
-        }
-        if((currentMenu == 3) && (selection != 8)) //Select to set pressure of a circuit or sensor
-        {
-          SetPressure(selection);
-          break;
-        }
-        if((currentMenu == 7) && (selection != 3)) //Select to set PID variable of a circuit
-        {
-          setPID(circuitSelection, selection);
-          break;
-        }
-        if((currentMenu == 0) && (selection == 0)) //Select automatic or manual mode
-        {
-          automaticMode = AutoManual();
-          break;
-        }
-        if(menu[currentMenu][selection] == "EXIT")  //Select to exit menu
-        {
-          standbyMode = true;
-          currentMenu = 0;
-          lastSelection = 0;
-          selection = 0;
-          return;
-        }
-
-        //Using the selection, goes to the correct menu using the map, and sets the default option to the top
-        currentMenu = menuMap[currentMenu][selection];
-        lastSelection = selection;
-        selection = 0; 
-        break;
-        
-      case '2': //Menu Down
-        selection++;
-        if(selection >= limits[currentMenu])
-        {
-          selection = limits[currentMenu] - 1;
-        }
-        if(selection <= 0)
-        {
-          selection = 0;
-        }
-        if(currentMenu == 6)
-        {
-          circuitSelection = selection;
-        }
-        break;
-        
-      case '3': //Menu Up
-        selection--;
-        if(selection >= limits[currentMenu])
-        {
-          selection = limits[currentMenu] - 1;
-        }
-        if(selection <= 0)
-        {
-          selection = 0;
-        }
-        if(currentMenu == 6)
-        {
-          circuitSelection = selection;
-        }
-        break;
-        
-      case '4': //Return
-        if(currentMenu >= 8)  //If we scroll to the last menu item, do not increment up
-        {
-          currentMenu = 8;
-        }
-        if(currentMenu < 0 || currentMenu == NULL)  //If we scroll to the first menu item, do not increment down
-        {
-          currentMenu = 0;
-        }
-        if(currentMenu != 0)  //Set the menu to the correct selection using the map
-        {
-          currentMenu = menuMap[currentMenu][limits[currentMenu]-1];
-        }
-        selection = lastSelection;    
-        break;
-        
-      case '5': //Limited select
-        if(currentMenu >= 7)  //If we scroll to the last menu item, do not increment up
-        {
-          currentMenu = 7;
-        }
-        if(currentMenu <= 0)  //If we scroll to the last menu item, do not increment down
-        {
-          currentMenu = 0;
-        }
-        if(menu[currentMenu][selection] == "EXIT")  //Select to exit menu
-        {
-          standbyMode = true;
-          currentMenu = 0;
-          lastSelection = 0;
-          selection = 0;
-          return;
-        }
-        //Using the selection, goes to the correct menu using the map, and sets the default option to the top
-        if(menuMap[currentMenu][selection] != NULL)
-        {
-          currentMenu = menuMap[currentMenu][selection];
-          lastSelection = selection;
-          selection = 0; 
-          break;
-        }
-    }
-  }
-}
-*/
-
 //-------------------------------------------------------------------------------------------------------------
 //Updates the current settings to the file that is used when starting the program
 //-------------------------------------------------------------------------------------------------------------
-/*
 void SaveCurrentSettings()
 {
   //Check is an SD card is present and active. If one is present, save the data. If not skip to return.
@@ -1692,7 +1453,6 @@ void SaveCurrentSettings()
   }
   return;
 }
-*/
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -1705,7 +1465,7 @@ bool FileWriter()
   int presetNumber = 1;
   bool selecting = true;
 
-    ControlButtonStateManager();
+  ControlButtonStateManager();
     
 //menu select presets
   while(selecting)
@@ -2311,6 +2071,7 @@ void manualReclaimerControl()
 //-------------------------------------------------------------------------------------------------------------
 //Automatically controls the reclaimer
 //-------------------------------------------------------------------------------------------------------------
+/*
 bool automaticReclaimerControl()
 {
   //Set variables for pressure in the bottles
@@ -2385,11 +2146,12 @@ bool automaticReclaimerControl()
   
   return true;  
 }
-
+*/
 
 //-------------------------------------------------------------------------------------------------------------
 //Monitor bottle supply pressure
 //-------------------------------------------------------------------------------------------------------------
+/*
 void checkSupply()
 {
   double bottlePressure;
@@ -2402,7 +2164,7 @@ void checkSupply()
     alarmController(String("LOW SUPPLY"));
   }
 }
-
+*/
 
 //-------------------------------------------------------------------------------------------------------------
 //Purge time setting.
@@ -3201,7 +2963,7 @@ void alarmConfig(int selection)
   bool selecting = true;
   bool displayDigit = true;
 
-    ControlButtonStateManager();
+  ControlButtonStateManager();
     
   //Check which circuit we are setting the alarm time for, and retrieve the corresponidng value
   switch (selection)
@@ -3369,6 +3131,7 @@ void alarmConfig(int selection)
 //-------------------------------------------------------------------------------------------------------------
 //Alarm controller checks if condition for alarm is met
 //-------------------------------------------------------------------------------------------------------------
+/*
 void alarmController(String errorString)
 {
   //Turn on the alarm, display error to user
@@ -3423,13 +3186,13 @@ void alarmController(String errorString)
     delay(3000);
   }
 }
+*/
 
 //--------------------------------------------------------------------------------------------
 //TRIGGERS
 //--------------------------------------------------------------------------------------------
 
 //PRESET TRIGGERS
-
 void trigger1() {   //Preset 1 Save
   Serial.println("Preset 1 Save");
 }
