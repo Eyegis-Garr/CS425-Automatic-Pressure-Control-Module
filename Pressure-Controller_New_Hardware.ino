@@ -231,7 +231,6 @@ void setup()
   myNex.writeStr("bootText.txt+", "Setting up unit tests...\r\n");  //Need to write to log also
   aunit::TestRunner::setPrinter(&Serial);  //I would like to set this to output onto the screen eventually
   aunit::TestRunner::setTimeout(10);
-  myNex.writeStr("bootText.txt+", "Done.\r\n");  //Need to write to log also
   myNex.writeNum("Progress_Bar.val", 10);
     
   //Set alarm pin to OUTPUT mode.
@@ -305,7 +304,7 @@ void setup()
   pinMode(reclaimerstartenablePin, INPUT_PULLUP);
   pinMode(reclaimerstopenablePin, INPUT_PULLUP);
   pinMode(abortbuttonPin, INPUT_PULLUP);
-  myNex.writeStr("bootText.txt+", "Button pullup resistors activated.\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Button pullup resistors activated.\r\n");  //Need to write to log also
   myNex.writeNum("Progress_Bar.val", 70);
 
   //Startup process. Load the last used settings. If none are found, create some defaults.
@@ -1458,144 +1457,76 @@ void SaveCurrentSettings()
 //-------------------------------------------------------------------------------------------------------------
 //Save presets
 //-------------------------------------------------------------------------------------------------------------
-/*
-bool FileWriter()
+String FileWriter(int presetNumber)
 {
-  //Preset number variable. Defaults to one
-  int presetNumber = 1;
-  bool selecting = true;
-
   ControlButtonStateManager();
-    
-//menu select presets
-  while(selecting)
-  { 
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Menu Down
-        presetNumber++;
-        if(presetNumber > 10)
-        {
-          presetNumber = 1;
-        }
-        break;
-        
-      case '3': //Menu Up
-        presetNumber--;
-        if(presetNumber < 1)
-        {
-          presetNumber = 10;
-        }
-        break;
-        
-      case '4': //Return
-        selecting = false;
-        return false;
-        break;
-        
-      }
-    }
-    //lcd.print("SELECT PRESET:  ");   //Will be used for LOG FUNCTION
-    //lcd.print(String("Preset_" + String(presetNumber) + "                "));  //Will be used for LOG FUNCTION
-  }
   
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
 
   //Save the selected preset
   SD.begin(csPin);
-  if(SD.open(file, FILE_WRITE)) //File is found. Ask if overwrite.
-  {
-    lcd.setCursor(0,0);
-    //lcd.print(String("SAVE " + preset + "?                "));   //Will be used for LOG FUNCTION
-    if(YesOrNo())
-    {     
-      SD.remove(file);
-    
-      File presetFile = SD.open(file, FILE_WRITE);  //Save the file
+  if(SD.open(file, FILE_WRITE)) //File is found.
+  {     
+    SD.remove(file);
+    File presetFile = SD.open(file, FILE_WRITE);  //Save the file
+    presetFile.println(alarmEnable);
+    presetFile.println(Marxsetpoint);
+    presetFile.println(MTGsetpoint);
+    presetFile.println(Switchsetpoint);
+    presetFile.println(TG70Switchsetpoint);
+    presetFile.println(TG70Marxsetpoint);
+    presetFile.println(maxReclaimerPressure);
+    presetFile.println(minReclaimerPressure);
+    presetFile.println(marxenableState);
+    presetFile.println(mtgenableState);
+    presetFile.println(switchenableState);
+    presetFile.println(tg70switchenableState);
+    presetFile.println(tg70marxenableState);
+    presetFile.println(marxmaxTime);
+    presetFile.println(mtgmaxTime);
+    presetFile.println(switchmaxTime);
+    presetFile.println(tg70switchmaxTime);
+    presetFile.println(tg70marxmaxTime);
+    presetFile.println(marxDelay);
+    presetFile.println(mtgDelay);
+    presetFile.println(switchDelay);
+    presetFile.println(tg70marxDelay);
+    presetFile.println(tg70switchDelay);
+    presetFile.println(marxPurgeTime);
+    presetFile.println(mtgPurgeTime);
+    presetFile.println(switchPurgeTime);
+    presetFile.println(tg70switchPurgeTime);
+    presetFile.println(tg70marxPurgeTime);
+    presetFile.println(minBottlePressure);
+    presetFile.println(kp_Marx);
+    presetFile.println(ki_Marx);
+    presetFile.println(kd_Marx);
+    presetFile.println(kp_MTG);
+    presetFile.println(ki_MTG);
+    presetFile.println(kd_MTG);
+    presetFile.println(kp_Switch);
+    presetFile.println(ki_Switch);
+    presetFile.println(kd_Switch);
+    presetFile.println(kp_SwitchTG70);
+    presetFile.println(ki_SwitchTG70);
+    presetFile.println(kd_SwitchTG70);
+    presetFile.println(kp_MarxTG70);
+    presetFile.println(ki_MarxTG70);
+    presetFile.println(kd_MarxTG70);
+    presetFile.println(reclaimerSafetyTime);
+    presetFile.close();
+    SaveCurrentSettings();
 
-      //lcd.print((String("SAVING: " + preset + "                ")));   //Will be used for LOG FUNCTION
-      //lcd.print("DO NOT POWER OFF");  //Corruption may occour is power is lost during save!
-
-      presetFile.println(alarmEnable);
-      presetFile.println(Marxsetpoint);
-      presetFile.println(MTGsetpoint);
-      presetFile.println(Switchsetpoint);
-      presetFile.println(TG70Switchsetpoint);
-      presetFile.println(TG70Marxsetpoint);
-      presetFile.println(maxReclaimerPressure);
-      presetFile.println(minReclaimerPressure);
-      presetFile.println(marxenableState);
-      presetFile.println(mtgenableState);
-      presetFile.println(switchenableState);
-      presetFile.println(tg70switchenableState);
-      presetFile.println(tg70marxenableState);
-      presetFile.println(marxmaxTime);
-      presetFile.println(mtgmaxTime);
-      presetFile.println(switchmaxTime);
-      presetFile.println(tg70switchmaxTime);
-      presetFile.println(tg70marxmaxTime);
-      presetFile.println(marxDelay);
-      presetFile.println(mtgDelay);
-      presetFile.println(switchDelay);
-      presetFile.println(tg70marxDelay);
-      presetFile.println(tg70switchDelay);
-      presetFile.println(marxPurgeTime);
-      presetFile.println(mtgPurgeTime);
-      presetFile.println(switchPurgeTime);
-      presetFile.println(tg70switchPurgeTime);
-      presetFile.println(tg70marxPurgeTime);
-      presetFile.println(minBottlePressure);
-      presetFile.println(kp_Marx);
-      presetFile.println(ki_Marx);
-      presetFile.println(kd_Marx);
-      presetFile.println(kp_MTG);
-      presetFile.println(ki_MTG);
-      presetFile.println(kd_MTG);
-      presetFile.println(kp_Switch);
-      presetFile.println(ki_Switch);
-      presetFile.println(kd_Switch);
-      presetFile.println(kp_SwitchTG70);
-      presetFile.println(ki_SwitchTG70);
-      presetFile.println(kd_SwitchTG70);
-      presetFile.println(kp_MarxTG70);
-      presetFile.println(ki_MarxTG70);
-      presetFile.println(kd_MarxTG70);
-      presetFile.println(reclaimerSafetyTime);
-      presetFile.close();
-
-      delay(3000);
-      SaveCurrentSettings();
-      
-      //lcd.print((String("SAVED: " + preset + "                ")));  //Will be used for LOG FUNCTION
-      //lcd.print("SUCCESS         ");   //Will be used for LOG FUNCTION
-
-      delay(3000);
-      return true;
-    }
-    else
-    {
-      return false ;
-    }
+    //Checksum test goes here
+    return String("Preset " + String(presetNumber) + String(" Saved!"));  //Also log this
   }
   else //SD card is not found.
   {
-    //lcd.print((String("ERROR: " + preset + "                ")));  //Will be used for LOG FUNCTION
-    //lcd.print("SDCARD NOT FOUND");   //Will be used for LOG FUNCTION
-    delay(3000);
-    return true;
+    return "ERROR: SD card not found!";
   }
-  
-  return true;
 }
-*/
+
 
 //-------------------------------------------------------------------------------------------------------------
 //Load presets
@@ -3131,9 +3062,10 @@ void alarmConfig(int selection)
 //-------------------------------------------------------------------------------------------------------------
 //Alarm controller checks if condition for alarm is met
 //-------------------------------------------------------------------------------------------------------------
-/*
+
 void alarmController(String errorString)
 {
+  /*
   //Turn on the alarm, display error to user
   while(errorState && !alarmState)
   {
@@ -3185,36 +3117,59 @@ void alarmController(String errorString)
     //lcd.print(errorString);  //Will be used for LOG FUNCTION
     delay(3000);
   }
+  */
 }
-*/
+
 
 //--------------------------------------------------------------------------------------------
 //TRIGGERS
 //--------------------------------------------------------------------------------------------
 
 //PRESET TRIGGERS
-//Save a preset
+//Trigger to Save, Load, or Delete a preset
 void trigger1() 
 {
-  uint32_t presetNum = 0;
+  int presetNum = 0;
+  String action = "";
   presetNum = myNex.readNumber("Global.preset.val");
-  Serial.println("Preset " + presetNum + " Saved");
-}
+  action = myNex.readStr("Global.presetAction.txt");
+  myNex.writeStr("page Confirm_Preset");
 
-//Load a preset
-void trigger2() 
-{
-  uint32_t presetNum = 0;
-  presetNum = myNex.readNumber("Global.preset.val");
-  Serial.println("Preset " + presetNum + " Loaded");
-}
-
-//Delete a preset
-void trigger3() 
-{
-  uint32_t presetNum = 0;
-  presetNum = myNex.readNumber("Global.preset.val");
-  Serial.println("Preset " + presetNum + " Deleted");
+  //Check if serial communication is successful, then map to function
+  if(action == "ERROR" || presetNum == 777777)
+  {
+    myNex.writeStr("Confirm_Preset.t0.txt+", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Presets_Menu");
+    return;
+  }
+  else
+  {
+    //Map to the correct function
+    if(action == "SAVE")
+    {
+      myNex.writeStr("Confirm_Preset.t0.txt+", FileWriter(presetNum));
+    }
+    else if(action == "LOAD")
+    {
+      
+    }
+    else if(action == "DELETE")
+    {
+      
+    }
+    else
+    {
+      myNex.writeStr("Confirm_Preset.t0.txt+", "ERROR: Could not execute command!"); //Log this
+      delay(1500);
+      myNex.writeStr("page Presets_Menu");
+      return;
+    }
+    
+    delay(1500);
+    myNex.writeStr("page Presets_Menu");
+    return;
+  }
 }
 
 //SET PRESSURE
