@@ -1,4 +1,5 @@
 #include "remote.h"
+#include <Arduino.h>
 
 int init_remote(remote_t *r, Stream *s) {
   if (!s) return 0;
@@ -11,24 +12,27 @@ int init_remote(remote_t *r, Stream *s) {
   return 0;
 }
 
-static size_t cobs_encode(const void *data, size_t length, uint8_t *buffer) {
-	uint8_t *encode = buffer; // Encoded byte pointer
-	uint8_t *codep = encode++; // Output code pointer
-	uint8_t code = 1; // Code value
+static size_t cobs_encode(const void *in, size_t length, uint8_t *out) {
+	uint8_t *encode = out;            // Encoded byte pointer
+	uint8_t *codep = encode++;        // Output code pointer
+	uint8_t code = 1;                 // Code value
 
-	for (const uint8_t *byte = (const uint8_t *)data; length--; ++byte) {
-		if (*byte) // Byte not zero, write it
+	for (const uint8_t *byte = (const uint8_t *)in; length--; ++byte) {
+		if (*byte) {                     // Byte not zero, write it
 			*encode++ = *byte, ++code;
+    }
 
 		if (!*byte || code == 0xff) {
 			*codep = code, code = 1, codep = encode;
-			if (!*byte || length)
+			if (!*byte || length) {
 				++encode;
+      }
 		}
 	}
-	*codep = code; // Write final code value
 
-	return (size_t)(encode - buffer);
+	*codep = code;                      // Write final code value
+
+	return (size_t)(encode - out);
 }
 
 static size_t cobs_decode(uint8_t *in, size_t length, void *out) {
@@ -52,27 +56,36 @@ static size_t cobs_decode(uint8_t *in, size_t length, void *out) {
   return (size_t)(decode - (uint8_t *)out);
 }
 
-int load_packet(remote_t *r) {
-  static uint8_t rx_buffer[PS_LENGTH + PS_HEADER];
-  size_t rd;
-  int ret = 0;
+int rx_packet(remote_t *r) {
+  static uint8_t rx_buffer[PS_LENGTH + PS_HEADER + 1];
+  int ret = 0, rd;
 
   if (isbclr(r->r_flags, R_RXINP)) {
     r->rx_head = rx_buffer;
   }
 
-  if (r->s->available()) {
-    rd = r->s->readBytesUntil(0, rx_buffer, PS_LENGTH + PS_HEADER);
-
-    r->rx_head += rd;
-
+  while (r->s->available()) {
     r->r_flags |= (1 << R_RXINP);
 
-    if (*(r->rx_head) == 0) {
-      cobs_decode(rx_buffer, r->rx_head - rx_buffer + 1, &r->rx);
+    rd = r->s->read();
+
+    if (rd == 0) {
+      cobs_decode(rx_buffer, r->rx_head - rx_buffer, &r->rx);
+
+      // Serial.println("============================");
+      // Serial.print("type: "); Serial.println(r->rx.type);
+      // Serial.print("flags: "); Serial.println(r->rx.flags);
+      // Serial.print("size: "); Serial.println(r->rx.size);
+      // for (int i = 0; i < r->rx.size; i += 1) {
+      //   Serial.print("byte: "); Serial.println(r->rx.bytes[i]);
+      // }
+
       r->rx_head = rx_buffer;
       r->r_flags &= ~(1 << R_RXINP);
+      r->r_flags |= (1 << R_NDATA);
       ret = 1;
+    } else if (rd > 0) {
+      *r->rx_head++ = rd;
     }
   }
 
@@ -83,7 +96,15 @@ size_t tx_packet(packet_t *p, Stream *s) {
   static uint8_t tx_buffer[PS_LENGTH + PS_HEADER];
   size_t wr = 0;
 
-  wr = cobs_encode(p, p->size + PS_HEADER + 1, tx_buffer);
+  // Serial.println("============================");
+  // Serial.print("type: "); Serial.println(p->type);
+  // Serial.print("flags: "); Serial.println(p->flags);
+  // Serial.print("size: "); Serial.println(p->size);
+  // for (int i = 0; i < p->size; i += 1) {
+  //   Serial.print("byte: "); Serial.println(p->bytes[i]);
+  // }
+
+  wr = cobs_encode(p, p->size + PS_HEADER, tx_buffer);
 
   tx_buffer[wr++] = 0;
 

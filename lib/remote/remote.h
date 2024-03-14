@@ -31,9 +31,9 @@
 // command packet flags
 #define CMD_RESPND  0  // response/ack required
 #define CMD_MODESET 1  // configure mode
-#define CMD_PSET    2  // parameter set
+#define CMD_PARSET  2  // parameter set
 #define CMD_SAVE    3  // initiates config save to disk
-#define CMD_DMPLOG  4  // dumps system log
+#define CMD_GETLOG  4  // dumps system log
 #define CMD_DMPCFG  5  // dumps loaded config
 
 // remote flags
@@ -79,8 +79,7 @@ typedef struct remote_t {
 
 int init_remote(remote_t *r, Stream *s);
 
-int load_packet(remote_t *r);
-
+int rx_packet(remote_t *r);
 size_t tx_packet(packet_t *p, Stream *s);
 
 size_t ack_packet(remote_t *r, packet_t *p);
