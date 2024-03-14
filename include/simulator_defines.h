@@ -1,3 +1,7 @@
+#ifndef SIMULATOR_DEFINES_H
+#define SIMULATOR_DEFINES_H
+
+#define S_NUM_MODES 8
 // system state bit positions
 #define S_SHOT    0
 #define S_ABORT   1
@@ -47,3 +51,5 @@
 #define C_RECLAIM_TIME		30
 
 #define IN_RANGE(v, min, max) ((v >= min && v <= max))
+
+#endif // SIMULATOR_DEFINES_H
