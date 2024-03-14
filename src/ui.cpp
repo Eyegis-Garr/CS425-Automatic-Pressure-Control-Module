@@ -20,7 +20,7 @@ TouchScreen ts(YPOS, XPOS, YMIN, XMIN, 300);
 Adafruit_ILI9341 tft(tft8bitbus, 22, 35, 36, 37, 33, 34);
 
 void init_ui(ui_t *ui) {
-	init_menus();
+  init_menus();
 
   tft.begin();
   tft.setRotation(1);
