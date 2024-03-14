@@ -1,0 +1,83 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/include",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/src",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/remote",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/pid",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/menu",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/util",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/TM1637",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit TouchScreen",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit ILI9341",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit GFX Library",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit BusIO",
+                "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/avr-debugger/avr8-stub",
+                "C:/Users/brsul/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "C:/Users/brsul/.platformio/packages/framework-arduino-avr/variants/mega",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit SH110X",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit STMPE610",
+                "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit TSC2007",
+                "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/include",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/src",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/remote",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/pid",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/menu",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/lib/util",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/TM1637",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit TouchScreen",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit ILI9341",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit GFX Library",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit BusIO",
+                    "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/avr-debugger/avr8-stub",
+                    "C:/Users/brsul/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "C:/Users/brsul/.platformio/packages/framework-arduino-avr/variants/mega",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit SH110X",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit STMPE610",
+                    "b:/CS425 Repo/CS425-Automatic-Pressure-Control-Module/.pio/libdeps/megaatmega2560/Adafruit TSC2007",
+                    "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "C:/Users/brsul/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60113",
+                "ARDUINO_AVR_MEGA2560",
+                "AVR8_BREAKPOINT_MODE=2",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "__AVR_ATmega2560__",
+                ""
+            ],
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++11",
+            "compilerPath": "C:/Users/brsul/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerArgs": [
+                "-mmcu=atmega2560",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}
