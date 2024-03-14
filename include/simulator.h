@@ -7,8 +7,8 @@
 
 #include "ui.h"
 #include "pid.h"
-#include "remote.h"
 #include "simulator_defines.h"
+#include "processing.h"
 
 typedef struct io_t {
   volatile uint8_t *pin;
@@ -84,7 +84,6 @@ typedef struct system_t {
   ui_t ui;
 } system_t;
 
-extern TM1637Display pdisp;
 extern system_t sys;
 
 extern volatile uint8_t *PORT_B;
@@ -107,14 +106,6 @@ void init_io();
  * 
  */
 void sim_tick();
-
-int process_packet(remote_t *r);
-size_t process_command(uint8_t flags, uint8_t *bytes);
-
-size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t dir);
-size_t packetize_system(uint8_t *bytes);
-size_t packetize_remote(uint8_t *bytes);
-size_t issue_updates(remote_t *r);
 
 void modify_circuit(circuit_t *c, uint32_t dt);
 
