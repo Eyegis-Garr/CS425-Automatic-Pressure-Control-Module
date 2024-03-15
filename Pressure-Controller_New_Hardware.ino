@@ -1465,9 +1465,8 @@ String FileWriter(int presetNumber)
   String file = String(preset + ".txt");
 
   //Save the selected preset
-  SD.begin(csPin);
-  if(SD.open(file, FILE_WRITE)) //File is found.
-  {     
+  if(SD.begin(csPin))
+  {   
     SD.remove(file);
     File presetFile = SD.open(file, FILE_WRITE);  //Save the file
     presetFile.println(alarmEnable);
@@ -1519,7 +1518,7 @@ String FileWriter(int presetNumber)
     SaveCurrentSettings();
 
     //Checksum test goes here
-    return String("Preset " + String(presetNumber) + String(" Saved!"));  //Also log this
+    return String("Preset " + String(presetNumber) + String(" saved!"));  //Also log this
   }
   else //SD card is not found.
   {
@@ -1531,72 +1530,18 @@ String FileWriter(int presetNumber)
 //-------------------------------------------------------------------------------------------------------------
 //Load presets
 //-------------------------------------------------------------------------------------------------------------
-/*
-bool FileReader()
+String FileReader(int presetNumber)
 {
-  //Preset number variable. Defaults to one
-  int presetNumber = 1;
-  bool selecting = true;
-
-    ControlButtonStateManager();
-
-//menu select presets
-  while(selecting)
-  {
-    
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Menu Down
-        presetNumber++;
-        if(presetNumber > 10)
-        {
-          presetNumber = 1;
-        }
-        break;
-        
-      case '3': //Menu Up
-        presetNumber--;
-        if(presetNumber < 1)
-        {
-          presetNumber = 10;
-        }
-        break;
-        
-      case '4': //Return
-        selecting = false;
-        return false;
-        break;
-        
-      }
-    }
-    //lcd.print("SELECT PRESET:  ");   //Will be used for LOG FUNCTION
-    //lcd.print(String("Preset_" + String(presetNumber) + "                "));  //Will be used for LOG FUNCTION
-  }
+  ControlButtonStateManager();
 
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
   
-  SD.begin(csPin);
-  if(SD.open(file, FILE_READ)) //File is found.
+  if(SD.begin(csPin))
   {
-    lcd.setCursor(0,0);
-    //lcd.print(String("LOAD " + preset + "?                "));   //Will be used for LOG FUNCTION
-    if(YesOrNo())
-    {     
+    if(SD.open(file, FILE_READ)) //File is found.
+    {
       File presetFile = SD.open(file, FILE_READ);
-        
-      lcd.setCursor(0,0);
-      //lcd.print((String("LOAD: " + preset + "                ")));   //Will be used for LOG FUNCTION
-      lcd.setCursor(0,1);
-      //lcd.print("DO NOT POWER OFF");  //Corruption may occour is power is lost during load!
-
       alarmEnable = presetFile.readStringUntil('\n').toInt();
       Marxsetpoint = presetFile.readStringUntil('\n').toDouble();
       MTGsetpoint = presetFile.readStringUntil('\n').toDouble();
@@ -1642,138 +1587,56 @@ bool FileReader()
       ki_MarxTG70 = presetFile.readStringUntil('\n').toDouble();
       kd_MarxTG70 = presetFile.readStringUntil('\n').toDouble();
       //reclaimerSafetyTime = presetFile.readStringUntil('\n').toInt();
-
       lastmarxenableState = !marxenableState;
       lastmtgenableState = !mtgenableState;
       lastswitchenableState = !switchenableState;
       lasttg70switchenableState = !tg70switchenableState;
       lasttg70marxenableState = !tg70marxenableState;
-
       presetFile.close();
-
-      delay(3000);
       SaveCurrentSettings();
 
-      lcd.setCursor(0,0);
-      //lcd.print((String("LOAD: " + preset + "                ")));   //Will be used for LOG FUNCTION
-      lcd.setCursor(0,1);
-      //lcd.print("SUCCESS         ");   //Will be used for LOG FUNCTION
-
-      delay(3000);
-      return true;
-    }
-    else
+      //Checksum test goes here
+      return String("Preset " + String(presetNumber) + String(" loaded!"));  //Also log this
+    } 
+    else //No file is found, display error and return
     {
-      return false;
+      return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
     }
   }
-  else //No file is found, display error and return to menu
+  else //SD card is not found.
   {
-    lcd.setCursor(0,0);
-    //lcd.print((String("ERROR: " + preset + "                ")));  //Will be used for LOG FUNCTION
-    lcd.setCursor(0,1);
-    //lcd.print("FILE NOT FOUND  ");   //Will be used for LOG FUNCTION
-
-    delay(3000);
-    return false;
+    return "ERROR: SD card not found!";
   }
-
-  return true;
 }
-*/
 
 
 //-------------------------------------------------------------------------------------------------------------
 //Delete presets.
 //-------------------------------------------------------------------------------------------------------------
-/*
-bool FileRemover()
+String FileRemover(int presetNumber)
 {
-  int presetNumber = 1;
-  bool selecting = true;
-
-    ControlButtonStateManager();
-
-//menu select presets
-  while(selecting)
-  { 
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Menu Down
-        presetNumber++;
-        if(presetNumber > 10)
-        {
-          presetNumber = 1;
-        }
-        break;
-        
-      case '3': //Menu Up
-        presetNumber--;
-        if(presetNumber < 1)
-        {
-          presetNumber = 10;
-        }
-        break;
-        
-      case '4': //Return
-        selecting = false;
-        return false;
-        break;
-        
-      }
-    }
-    lcd.setCursor(0,0);
-    //lcd.print("SELECT PRESET:  ");   //Will be used for LOG FUNCTION
-    lcd.setCursor(0,1);
-    //lcd.print(String("Preset_" + String(presetNumber) + "                "));  //Will be used for LOG FUNCTION
-  }
+  ControlButtonStateManager();
 
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
   
-  SD.begin(csPin);
-  if(SD.exists(file)) //File is found.
+  if(SD.begin(csPin)) //Check for SD card
   {
-    lcd.setCursor(0,0);
-    //lcd.print(String("DEL " + preset + "?                "));  //Will be used for LOG FUNCTION
-    if(YesOrNo())
-    {     
+    if(SD.exists(file)) //File is found.
+    {  
       SD.remove(file);
-
-      lcd.setCursor(0,0);
-      //lcd.print((String("DEL: " + preset + "                ")));  //Will be used for LOG FUNCTION
-      lcd.setCursor(0,1);
-      //lcd.print("SUCCESS         ");   //Will be used for LOG FUNCTION
-
-      delay(3000);
-      return true;
+      return String("Preset " + String(presetNumber) + String(" deleted!"));  //Also log this
     }
-    else
+    else //No file is found, display error and return
     {
-      return false;
+      return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
     }
   }
-  else //No file is found, display error and return to menu
+  else //SD card is not found.
   {
-    lcd.setCursor(0,0);
-    //lcd.print((String("ERROR: " + preset + "                ")));  //Will be used for LOG FUNCTION
-    lcd.setCursor(0,1);
-    //lcd.print("FILE NOT FOUND  ");   //Will be used for LOG FUNCTION
-
-    delay(3000);
-    return false;
+    return "ERROR: SD card not found!";
   }
-  
-  return true;
 }
-*/
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -3152,11 +3015,11 @@ void trigger1()
     }
     else if(action == "LOAD")
     {
-      
+      myNex.writeStr("Confirm_Preset.t0.txt+", FileLoader(presetNum));  
     }
     else if(action == "DELETE")
     {
-      
+      myNex.writeStr("Confirm_Preset.t0.txt+", FileDeleter(presetNum)); 
     }
     else
     {
