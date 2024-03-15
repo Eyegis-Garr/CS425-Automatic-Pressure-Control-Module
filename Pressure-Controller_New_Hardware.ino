@@ -1478,7 +1478,7 @@ String FileWriter(int presetNumber)
   { 
     //Display progress bar
     myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "48631");
-    myNex.writeStr("Confirm_Preset.t0.txt+", String("Saving Preset " + String(presetNumber) + String(" ...")));
+    myNex.writeStr("Confirm_Preset.t0.txt", String("Saving Preset " + String(presetNumber) + String(" ...")));
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 0);
     
     SD.remove(file);
@@ -1608,8 +1608,9 @@ String FileReader(int presetNumber)
     {
       //Display progress bar
       myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "48631");
-      myNex.writeStr("Confirm_Preset.t0.txt+", String("Loading Preset " + String(presetNumber) + String(" ...")));
+      myNex.writeStr("Confirm_Preset.t0.txt", String("Loading Preset " + String(presetNumber) + String(" ...")));
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 0);
+      
       File presetFile = SD.open(file, FILE_READ);
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 2);
       alarmEnable = presetFile.readStringUntil('\n').toInt();
@@ -3128,7 +3129,7 @@ void trigger1()
   //Check if serial communication is successful, then map to function
   if(action == "ERROR" || presetNum == 777777)
   {
-    myNex.writeStr("Confirm_Preset.t0.txt+", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Preset.t0.txt", "ERROR: Serial communication failure!"); //Log this
     delay(1500);
     myNex.writeStr("page Presets_Menu");
     return;
@@ -3138,20 +3139,20 @@ void trigger1()
     //Map to the correct function
     if(action == "SAVE")
     {
-      myNex.writeStr("Confirm_Preset.t0.txt+", FileWriter(presetNum));
+      myNex.writeStr("Confirm_Preset.t0.txt", FileWriter(presetNum));
     }
     else if(action == "LOAD")
     {
-      myNex.writeStr("Confirm_Preset.t0.txt+", FileLoader(presetNum));  
+      myNex.writeStr("Confirm_Preset.t0.txt", FileLoader(presetNum));  
     }
     else if(action == "DELETE")
     {
-      myNex.writeStr("Confirm_Preset.t0.txt+", FileDeleter(presetNum)); 
+      myNex.writeStr("Confirm_Preset.t0.txt", FileDeleter(presetNum)); 
     }
     else
     {
       myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
-      myNex.writeStr("Confirm_Preset.t0.txt+", "ERROR: Could not execute command!"); //Log this
+      myNex.writeStr("Confirm_Preset.t0.txt", "ERROR: Could not execute command!"); //Log this
       delay(1500);
       myNex.writeStr("page Presets_Menu");
       return;
