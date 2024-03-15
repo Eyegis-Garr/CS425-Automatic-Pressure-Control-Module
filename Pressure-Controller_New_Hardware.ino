@@ -3,7 +3,7 @@
 //Vladislav Petrov
 //Sean Rolandelli
 //Bradley Sullivan
-//Last modification March 12, 2024
+//Last modification March 14, 2024
 //-------------------------------------------------------------------------------------------------------------
 
 
@@ -212,6 +212,15 @@ test(serial3Communications)
   assertEqual(result, expected);
 }
 
+test(SDCardReader)
+{
+  int expected = 1;
+
+  int result = SD.begin(csPin);
+
+  assertEqual(result, expected);
+}
+
 
 //-------------------------------------------------------------------------------------------------------------
 //Setup
@@ -321,7 +330,7 @@ void setup()
     Switchsetpoint = analogRead(switchanaloginPin);
     TG70Switchsetpoint = analogRead(tg70switchanaloginPin);
     TG70Marxsetpoint = analogRead(tg70marxanaloginPin);
-    delay(2000);
+    delay(1500);
   }
   else
   {
@@ -385,7 +394,7 @@ void setup()
       SaveCurrentSettings();
       myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");  //Need to write to log also
       myNex.writeNum("Progress_Bar.val", 90);
-      delay(2000);
+      delay(1500);
     }
     else //No previous settings are found. Set the circuit pressure to whatever they happen to be at the time
     {
@@ -397,7 +406,7 @@ void setup()
       TG70Switchsetpoint = analogRead(tg70switchanaloginPin);
       TG70Marxsetpoint = analogRead(tg70marxanaloginPin);
       SaveCurrentSettings();
-      delay(2000);
+      delay(1500);
     } 
   }
   
@@ -1466,62 +1475,118 @@ String FileWriter(int presetNumber)
 
   //Save the selected preset
   if(SD.begin(csPin))
-  {   
+  { 
+    //Display progress bar
+    myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "48631");
+    myNex.writeStr("Confirm_Preset.t0.txt+", String("Saving Preset " + String(presetNumber) + String(" ...")));
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 0);
+    
     SD.remove(file);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 2);
     File presetFile = SD.open(file, FILE_WRITE);  //Save the file
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 4);
     presetFile.println(alarmEnable);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 6);
     presetFile.println(Marxsetpoint);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 8);
     presetFile.println(MTGsetpoint);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 10);
     presetFile.println(Switchsetpoint);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 12);
     presetFile.println(TG70Switchsetpoint);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 14);
     presetFile.println(TG70Marxsetpoint);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 16);
     presetFile.println(maxReclaimerPressure);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 18);
     presetFile.println(minReclaimerPressure);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 20);
     presetFile.println(marxenableState);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 22);
     presetFile.println(mtgenableState);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 24);
     presetFile.println(switchenableState);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 26);
     presetFile.println(tg70switchenableState);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 28);
     presetFile.println(tg70marxenableState);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 30);
     presetFile.println(marxmaxTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 32);
     presetFile.println(mtgmaxTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 34);
     presetFile.println(switchmaxTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 36);
     presetFile.println(tg70switchmaxTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 38);
     presetFile.println(tg70marxmaxTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 40);
     presetFile.println(marxDelay);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 42);
     presetFile.println(mtgDelay);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 44);
     presetFile.println(switchDelay);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 44);
     presetFile.println(tg70marxDelay);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 46);
     presetFile.println(tg70switchDelay);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 48);
     presetFile.println(marxPurgeTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 50);
     presetFile.println(mtgPurgeTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 52);
     presetFile.println(switchPurgeTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 54);
     presetFile.println(tg70switchPurgeTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 56);
     presetFile.println(tg70marxPurgeTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 58);
     presetFile.println(minBottlePressure);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 60);
     presetFile.println(kp_Marx);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 62);
     presetFile.println(ki_Marx);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 64);
     presetFile.println(kd_Marx);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 66);
     presetFile.println(kp_MTG);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 68);
     presetFile.println(ki_MTG);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 70);
     presetFile.println(kd_MTG);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 72);
     presetFile.println(kp_Switch);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 74);
     presetFile.println(ki_Switch);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 76);
     presetFile.println(kd_Switch);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 78);
     presetFile.println(kp_SwitchTG70);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 80);
     presetFile.println(ki_SwitchTG70);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 82);
     presetFile.println(kd_SwitchTG70);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 84);
     presetFile.println(kp_MarxTG70);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 86);
     presetFile.println(ki_MarxTG70);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 88);
     presetFile.println(kd_MarxTG70);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 90);
     presetFile.println(reclaimerSafetyTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 92);
     presetFile.close();
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 94);
     SaveCurrentSettings();
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 98);
 
     //Checksum test goes here
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 100);
     return String("Preset " + String(presetNumber) + String(" saved!"));  //Also log this
   }
   else //SD card is not found.
   {
+    myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
     return "ERROR: SD card not found!";
   }
 }
@@ -1541,70 +1606,130 @@ String FileReader(int presetNumber)
   {
     if(SD.open(file, FILE_READ)) //File is found.
     {
+      //Display progress bar
+      myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "48631");
+      myNex.writeStr("Confirm_Preset.t0.txt+", String("Loading Preset " + String(presetNumber) + String(" ...")));
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 0);
       File presetFile = SD.open(file, FILE_READ);
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 2);
       alarmEnable = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 4);
       Marxsetpoint = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 6);
       MTGsetpoint = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 8);
       Switchsetpoint = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 10);
       TG70Switchsetpoint = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 12);
       TG70Marxsetpoint = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 14);
       maxReclaimerPressure = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 16);
       minReclaimerPressure = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 18);
       marxenableState = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 20);
       mtgenableState = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 22);
       switchenableState = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 24);
       tg70switchenableState = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 26);
       tg70marxenableState = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 28);
       marxmaxTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 30);
       mtgmaxTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 32);
       switchmaxTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 34);
       tg70switchmaxTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 36);
       tg70marxmaxTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 38);
       marxDelay = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 40);
       mtgDelay = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 42);
       switchDelay = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 44);
       tg70marxDelay = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 46);
       tg70switchDelay = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 48);
       marxPurgeTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 50);
       mtgPurgeTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 52);
       switchPurgeTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 54);
       tg70switchPurgeTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 56);
       tg70marxPurgeTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 58);
       minBottlePressure = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 60);
       kp_Marx = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 62);
       ki_Marx = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 64);
       kd_Marx = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 66);
       kp_MTG = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 68);
       ki_MTG = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 70);
       kd_MTG = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 72);
       kp_Switch = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 74);
       ki_Switch = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 76);
       kd_Switch = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 78);
       kp_SwitchTG70 = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 80);
       ki_SwitchTG70 = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 82);
       kd_SwitchTG70 = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 84);
       kp_MarxTG70 = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 86);
       ki_MarxTG70 = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 88);
       kd_MarxTG70 = presetFile.readStringUntil('\n').toDouble();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 90);
       //reclaimerSafetyTime = presetFile.readStringUntil('\n').toInt();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 92);
       lastmarxenableState = !marxenableState;
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 93);
       lastmtgenableState = !mtgenableState;
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 94);
       lastswitchenableState = !switchenableState;
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 95);
       lasttg70switchenableState = !tg70switchenableState;
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 96);
       lasttg70marxenableState = !tg70marxenableState;
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 97);
       presetFile.close();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 98);
       SaveCurrentSettings();
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 99);
 
       //Checksum test goes here
+      myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "65535");
       return String("Preset " + String(presetNumber) + String(" loaded!"));  //Also log this
     } 
     else //No file is found, display error and return
     {
+      myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
       return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
     }
   }
   else //SD card is not found.
   {
+    myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
     return "ERROR: SD card not found!";
   }
 }
@@ -1629,11 +1754,13 @@ String FileRemover(int presetNumber)
     }
     else //No file is found, display error and return
     {
+      myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
       return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
     }
   }
   else //SD card is not found.
   {
+    myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
     return "ERROR: SD card not found!";
   }
 }
@@ -3023,6 +3150,7 @@ void trigger1()
     }
     else
     {
+      myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
       myNex.writeStr("Confirm_Preset.t0.txt+", "ERROR: Could not execute command!"); //Log this
       delay(1500);
       myNex.writeStr("page Presets_Menu");
