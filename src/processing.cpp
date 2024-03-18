@@ -1,17 +1,17 @@
 #include "processing.h"
 
 int process_packet(remote_t *r) {
-  uint8_t *rd = r->rx.bytes;
+  uint8_t *rd = r->rx.packet.data;
   int ret = 0;
 
-  switch (r->rx.type) {
+  switch (r->rx.packet.type) {
     case PK_UPDATE:
-      if (isbset(r->rx.flags, UP_REMOVE)) {
+      if (isbset(r->rx.packet.flags, UP_REMOVE)) {
         // mask UP_REMOVE and bit-clear rest of packet flag-bits (i.e. rest of update types)
-        sys.up_types &= ~(r->rx.flags & ~(1 << UP_REMOVE));
+        sys.up_types &= ~(r->rx.packet.flags & ~(1 << UP_REMOVE));
       } else {
-        sys.up_types = r->rx.flags;   // configures system for updating specified system state
-        if (isbset(r->rx.flags, UP_CIRCUITS)) {
+        sys.up_types = r->rx.packet.flags;   // configures system for updating specified system state
+        if (isbset(r->rx.packet.flags, UP_CIRCUITS)) {
           // store circuits to send updates for
           sys.c_flags = *rd++;
           // store parameters to package
@@ -21,15 +21,15 @@ int process_packet(remote_t *r) {
         }
       }
 
-      if (isbset(r->rx.flags, UP_REFRESH)) {
+      if (isbset(r->rx.packet.flags, UP_REFRESH)) {
         ret = issue_updates(r);
       } else {
         ret = ack_packet(r, &r->rx);
       }
       break;
     case PK_COMMAND:
-      ret = process_command(r->rx.flags, rd);
-      if (isbset(r->rx.flags, CMD_RESPND) && ret) {
+      ret = process_command(r->rx.packet.flags, rd);
+      if (isbset(r->rx.packet.flags, CMD_RESPND) && ret) {
         // if response requested and command successfully executed, send ACK
         ret = tx_packet(&r->rx, r->s);
       } else {
@@ -37,7 +37,7 @@ int process_packet(remote_t *r) {
       }
       break;
     case PK_STATUS:
-      if (isbset(r->rx.flags, ST_PING)) {
+      if (isbset(r->rx.packet.flags, ST_PING)) {
         ret = tx_packet(&r->rx, r->s); // echo ping back
       }
       break;
@@ -104,12 +104,16 @@ size_t process_command(uint8_t flags, uint8_t *bytes) {
  * @return int - number of bytes sent
  */
 size_t issue_updates(remote_t *r) {
-  uint8_t *pdata = r->tx.bytes;
+  uint8_t *pdata = r->tx.packet.data;
 
   if (sys.up_types) {
-    r->tx.type = PK_UPDATE;
-    r->tx.flags = sys.up_types;
-    r->tx.size = 0;
+    r->tx.packet.type = PK_UPDATE;
+    r->tx.packet.flags = sys.up_types;
+    r->tx.packet.size = 0;
+
+    // no timeout for update-request responses
+    *pdata++ = 0;
+    
     if (isbset(sys.up_types, UP_SYSTEM)) {
       pdata += packetize_system(pdata);
     } if (isbset(sys.up_types, UP_CIRCUITS)) {
@@ -117,12 +121,9 @@ size_t issue_updates(remote_t *r) {
     } if (isbset(sys.up_types, UP_REMOTE)) {
       pdata += packetize_remote(pdata);
     }
-
-    // no timeout for update-request responses
-    *pdata++ = 0;
   }
 
-  r->tx.size = pdata - r->tx.bytes;
+  r->tx.packet.size = pdata - r->tx.bytes;
 
   // send packet over configured remote device
   tx_packet(&r->tx, r->s);
@@ -202,11 +203,12 @@ size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t
           }
         }
       }
-      // if (dir) {
-      //   // set circuit binary-state (solenoid io, en button, en LED)
-      //   *pdata++ = (digitalRead(c->pins[I_PRESSURE_IN]) << I_PRESSURE_IN)    |
-      //              (digitalRead(c->pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT);
-      // }
+
+      if (dir) {
+        // set circuit binary-state (solenoid io, en button, en LED)
+        *pdata++ = (digitalRead(c->pins[I_PRESSURE_IN]) << I_PRESSURE_IN)    |
+                   (digitalRead(c->pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT);
+      }
     }
   }
   
@@ -218,13 +220,13 @@ size_t packetize_remote(uint8_t *bytes) {
 
   *rbytes++ = sys.remote.r_flags;
 
-  *rbytes++ = sys.remote.rx.type;
-  *rbytes++ = sys.remote.rx.flags;
-  *rbytes++ = sys.remote.rx.size;
+  *rbytes++ = sys.remote.rx.packet.type;
+  *rbytes++ = sys.remote.rx.packet.flags;
+  *rbytes++ = sys.remote.rx.packet.size;
 
-  *rbytes++ = sys.remote.tx.type;
-  *rbytes++ = sys.remote.tx.flags;
-  *rbytes++ = sys.remote.tx.size;
+  *rbytes++ = sys.remote.tx.packet.type;
+  *rbytes++ = sys.remote.tx.packet.flags;
+  *rbytes++ = sys.remote.tx.packet.size;
 
   bytes[0] = rbytes - bytes;
 

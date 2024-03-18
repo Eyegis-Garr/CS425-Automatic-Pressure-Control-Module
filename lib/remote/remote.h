@@ -8,16 +8,23 @@
 #define SOTX        0xAA
 #define EOTX        0x55
 
+// packet sizing
 #define PS_LENGTH  255
-#define PS_HEADER  3
+#define PS_HEADER  4
 
-// packet types
+// packet header byte-indices
+#define PH_TYPE     0
+#define PH_FLAGS    1
+#define PH_SIZE     2
+#define PH_TIMEOUT  3
+
+// packet type
 #define PK_UPDATE   0  // state update packet (required response)
 #define PK_COMMAND  1  // state config packet (specified response)
 #define PK_STATUS   2  // comm status packet  (required response)
 #define PK_ACK      3  // ACK response packet
 
-// status packet flags
+// system <-> client
 #define ST_TIMEOUT  0  // broken packet (?)
 #define ST_PING     1  // if time permits (lol)
 
@@ -36,7 +43,6 @@
 #define CMD_GETLOG  4  // dumps system log
 #define CMD_DMPCFG  5  // dumps loaded config
 
-// remote flags
 #define R_RXINP 0   // receive in progress
 #define R_NDATA 1   // new data to process
 #define R_TIME  2   // timeout counter active
@@ -56,12 +62,18 @@
  * @bytes: packet payload buffer
  * 
  */
-typedef struct packet_t {
+struct packet_s {
   uint8_t type;
   uint8_t flags;
   uint8_t size;
+  uint8_t timeout;
 
-  uint8_t bytes[PS_LENGTH];
+  uint8_t data[PS_LENGTH];
+};
+
+typedef union packet_t {
+  struct packet_s packet;
+  uint8_t bytes[PS_HEADER + PS_LENGTH];
 } packet_t;
 
 typedef struct remote_t {

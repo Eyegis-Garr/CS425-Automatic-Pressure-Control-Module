@@ -72,14 +72,6 @@ int rx_packet(remote_t *r) {
     if (rd == 0) {
       cobs_decode(rx_buffer, r->rx_head - rx_buffer, &r->rx);
 
-      // Serial.println("============================");
-      // Serial.print("type: "); Serial.println(r->rx.type);
-      // Serial.print("flags: "); Serial.println(r->rx.flags);
-      // Serial.print("size: "); Serial.println(r->rx.size);
-      // for (int i = 0; i < r->rx.size; i += 1) {
-      //   Serial.print("byte: "); Serial.println(r->rx.bytes[i]);
-      // }
-
       r->rx_head = rx_buffer;
       r->r_flags &= ~(1 << R_RXINP);
       r->r_flags |= (1 << R_NDATA);
@@ -96,19 +88,13 @@ size_t tx_packet(packet_t *p, Stream *s) {
   static uint8_t tx_buffer[PS_LENGTH + PS_HEADER];
   size_t wr = 0;
 
-  // Serial.println("============================");
-  // Serial.print("type: "); Serial.println(p->type);
-  // Serial.print("flags: "); Serial.println(p->flags);
-  // Serial.print("size: "); Serial.println(p->size);
-  // for (int i = 0; i < p->size; i += 1) {
-  //   Serial.print("byte: "); Serial.println(p->bytes[i]);
-  // }
-
-  wr = cobs_encode(p, p->size + PS_HEADER, tx_buffer);
+  wr = cobs_encode(p, p->packet.size + PS_HEADER, tx_buffer);
 
   tx_buffer[wr++] = 0;
 
   wr = s->write(tx_buffer, wr);
+
+  Serial.write(tx_buffer, wr);
 
   return wr;
 }
@@ -116,13 +102,14 @@ size_t tx_packet(packet_t *p, Stream *s) {
 size_t ack_packet(remote_t *r, packet_t *p) {
   size_t wr = 0;
 
-  r->tx.type = PK_ACK;
-  r->tx.flags = 0;
-  r->tx.size = PS_HEADER;
+  r->tx.packet.type = PK_ACK;
+  r->tx.packet.flags = 0;
+  r->tx.packet.size = PS_HEADER;
+  r->tx.packet.timeout = 0;
 
-  r->tx.bytes[0] = p->type;
-  r->tx.bytes[1] = p->flags;
-  r->tx.bytes[2] = p->size;
+  r->tx.bytes[0] = p->packet.type;
+  r->tx.bytes[1] = p->packet.flags;
+  r->tx.bytes[2] = p->packet.size;
 
   wr = tx_packet(&r->tx, r->s);
   
