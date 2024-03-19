@@ -139,11 +139,11 @@ size_t tx_packet(remote_t *r) {
   static uint8_t tx_buffer[PS_LENGTH + PS_HEADER];
   size_t wr = 0;
 
-  wr = cobs_encode((uint8_t *)&r->tx, r->tx.size + PS_HEADER, (uint8_t *)&tx_buffer);
+  wr = cobs_encode(&r->tx, r->tx.size + PS_HEADER, tx_buffer);
 
   tx_buffer[wr++] = 0;
 
-  wr = write(r->fd, (uint8_t *)&tx_buffer, wr);
+  wr = write(r->fd, tx_buffer, wr);
 
   return wr;
 }
@@ -162,7 +162,7 @@ int rx_packet(remote_t *r) {
 
   rd = read(r->fd, r->rx_head, PS_LENGTH);
 
-  if (rd > 0) {
+  if (rd >= 0) {
     r->rx_head += rd;
   }
 
