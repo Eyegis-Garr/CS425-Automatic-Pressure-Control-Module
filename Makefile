@@ -5,7 +5,7 @@ CC = gcc
 CFLAGS = -Iinclude -Wall -g
 
 # Linker flags
-LDFLAGS = -lncurses -largp
+LDFLAGS = -lncurses
 
 # Source directory
 SRC_DIR = src
