@@ -17,7 +17,7 @@
 #define EOTX        0x55
 
 #define PS_LENGTH  255
-#define PS_HEADER  3
+#define PS_HEADER  4
 // packet type
 #define PK_UPDATE   0  // state update packet (required response)
 #define PK_COMMAND  1  // state config packet (specified response)
@@ -58,6 +58,7 @@ typedef struct packet_t {
   uint8_t type;
   uint8_t flags;
   uint8_t size;
+  uint8_t timeout;
 
   uint8_t bytes[PS_LENGTH];
 } packet_t;

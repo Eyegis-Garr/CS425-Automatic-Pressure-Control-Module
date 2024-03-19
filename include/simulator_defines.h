@@ -2,6 +2,7 @@
 #define SIMULATOR_DEFINES_H
 
 #include <inttypes.h>
+#include <curses.h>
 
 #define S_NUM_MODES 8
 // system state bit positions
@@ -56,10 +57,11 @@
 typedef struct circuit_t {
   double params[C_NUM_PARAM];
   uint8_t io;
+  WINDOW *w;
 } circuit_t;
 
 // core system state
-typedef struct simulator_t {
+typedef struct system_t {
   uint8_t s_flags;    // state
   uint8_t c_flags;    // circuit mask
   uint16_t p_flags;   // parameter mask
@@ -67,6 +69,6 @@ typedef struct simulator_t {
   uint8_t en_flags;   // circuit enable/disable
   uint8_t up_types;   // updates to issue
   uint32_t uptime;    // system uptime in ms
-} simulator_t;
+} system_t;
 
 #endif // SIMULATOR_DEFINES_H
