@@ -30,8 +30,8 @@
 #define I_PRESSURE_READ 0
 #define I_PRESSURE_IN   1
 #define I_PRESSURE_OUT  2
-#define I_ENABLE_BTN    3
-#define I_LED           4
+#define I_LED           3
+#define I_ENABLE_BTN    4
 #define I_DISP_CLK      5
 #define I_DISP_DIO      6
 
