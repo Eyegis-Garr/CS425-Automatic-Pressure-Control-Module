@@ -24,7 +24,7 @@ int connect(remote_t *r) {
 
   r->fd = open(r->dev_path, O_RDWR | O_NOCTTY, S_IRUSR | S_IWUSR);
   if (r->fd < 0) {
-    printf("ERR: Could not open port '%s'.\n", r->dev_path);
+    printf("ERROR: Could not open port '%s'.\n", r->dev_path);
     ret = -1;
   } else {
     struct termios op;
@@ -55,7 +55,7 @@ int connect(remote_t *r) {
     ret = tcsetattr(r->fd, TCSANOW, &op);
     
     if (ret) {
-      printf("ERR: Error %d from tcsetattr.\n", errno);
+      printf("ERROR: Error %d from tcsetattr.\n", errno);
       ret = -1;
     }
   }  
@@ -162,7 +162,7 @@ int rx_packet(remote_t *r) {
 
   rd = read(r->fd, r->rx_head, PS_LENGTH);
 
-  if (rd >= 0) {
+  if (rd > 0) {
     r->rx_head += rd;
   }
 
@@ -204,10 +204,8 @@ int ping(remote_t *r, uint8_t ttl, int ntimes) {
   // ping header
   r->tx.type = PK_STATUS;
   r->tx.flags = (1 << ST_PING);
-  r->tx.size = 1;
-
-  // ping time-to-live in seconds
-  r->tx.bytes[0] = ttl;
+  r->tx.size = 0;
+  r->tx.timeout = ttl;
 
   for (int i = 0; i < ntimes; i += 1) {
     gettimeofday(&itime, NULL);
@@ -237,6 +235,7 @@ void print_packet(packet_t *p) {
   printf("PK TYPE         : %u\n", p->type);
   printf("PK FLAGS        : %u\n", p->flags);
   printf("PK SIZE         : %u\n", p->size);
+  printf("PK TIMEOUT      : %u\n", p->timeout);
 
   printf("\t---- data ----\n");
   for (int i = 0; i < p->size; i += 1) {
