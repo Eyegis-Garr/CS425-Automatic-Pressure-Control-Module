@@ -17,6 +17,8 @@
 #include <Trigger.h>            //Used to define trigger functions
 #include <AUnit.h>              //Unit test library
 #include <AUnitVerbose.h>       //Unit test library
+#include "CRC8.h"               //Checksum Library
+#include "CRC.h"                //Checksum Library
 
 //Set pins for controlling circuit solenoids, these are global
 const int marxoutPin = 22;
@@ -189,6 +191,8 @@ unsigned long int previousReclaimerSafetyTime = 0;
  double maxReclaimerPressure = 500.0;
  double minReclaimerPressure = 50.0;
 
+//Checksum setup
+CRC8 crc;
 
 //-------------------------------------------------------------------------------------------------------------
 //Unit Tests
@@ -221,7 +225,22 @@ test(SDCardReader)
   assertEqual(result, expected);
 }
 
+test() {
+  char *oldSettings[2] = {"hi", "hello"};
+  char *currentSettings[2] = {"hi", "hello"};
 
+  crc.reset();
+
+  int old = 0, current = 0, i = 0;
+
+  while(i < sizeof(oldSettings)/sizeof(int)) {
+    old = calcCRC8((uint8_t *)oldSettings[i], 9);
+    current = calcCRC8((uint8_t *)currentSettings[i], 9);
+    i++;
+
+    assertEqual(old, current);
+  }
+}
 //-------------------------------------------------------------------------------------------------------------
 //Setup
 //-------------------------------------------------------------------------------------------------------------
