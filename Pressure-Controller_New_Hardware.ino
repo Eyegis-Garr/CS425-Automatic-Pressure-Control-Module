@@ -3284,8 +3284,6 @@ void *getCurrentSettings(char *buf[]) {
 void Checksum()
 {
 
-  Serial.println("");
-
   char *oldSettings[2], *currentSettings[2];
 
   getOldSettings(oldSettings);
@@ -3307,6 +3305,23 @@ void Checksum()
   }
 }
 
+
+//-------------------------------------------------------------------------------------------
+//Rename Presets
+//-------------------------------------------------------------------------------------------
+
+/*
+I am thinkng we will need to add preset names to the sd card and read from there during setup,
+and have them restart it to switch the names
+*/
+
+//-------------------------------------------------------------------------------------------
+//Change Brightness
+//
+
+/*
+We will need to add brightness to the sd card and have them restart to change the brightness at setup
+*/
 
 
 //--------------------------------------------------------------------------------------------
