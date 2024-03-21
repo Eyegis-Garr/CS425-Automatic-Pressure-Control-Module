@@ -2117,179 +2117,56 @@ void checkSupply()
 //-------------------------------------------------------------------------------------------------------------
 //Purge time setting.
 //-------------------------------------------------------------------------------------------------------------
-/*
 void purgeConfig(int selection)
 {
   long int setTime = 0;
-  int digit = 0;
-  int decimal = 5;
-  long int number[3] = {0,0,0};
-  bool selecting = true;
-  bool displayDigit = true;
 
-    ControlButtonStateManager();
+  ControlButtonStateManager();
     
-  //Check which circuit we are setting the alarm time for, and retrieve the corresponidng value
-  switch (selection)
+  //Check which circuit we are setting the purge time for, and retrieve the corresponidng value
+  switch(selection)
   {
     case 0:
       setTime = marxPurgeTime;
       break;
-    
     case 1:
       setTime = tg70marxPurgeTime;
-      break;
-      
+      break; 
     case 2:
       setTime = mtgPurgeTime;
-      break;
-      
+      break;    
     case 3:
       setTime = switchPurgeTime;
-      break;
-            
+      break;            
     case 4:
       setTime = tg70switchPurgeTime;
       break;
   }
+  myNex.writeStr("stringNum.txt", String(setTime/1000));
 
-  lcd.setCursor(0,0);
-  //lcd.print("SET PURGE TIME: ");   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-
-  //Break the given time into individual digits
-  number[0] = setTime / 100000 % 10;
-  number[1] = setTime / 10000 % 10;
-  number[2] = setTime / 1000 % 10;
-
-  //Put the individual digitso nto the LCD
-  //lcd.print("   ");  //Will be used for LOG FUNCTION
-  lcd.setCursor(3,1);
-  //lcd.print(String(number[0]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(4,1);
-  //lcd.print(String(number[1]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(5,1);
-  //lcd.print(String(number[2]));    //Will be used for LOG FUNCTION
-  lcd.setCursor(6,1);
-  //lcd.print(" SECONDS  ");     //Will be used for LOG FUNCTION
-  lcd.setCursor(decimal, 1);
-
-  digit = number[2];
-
-  //Set the time based n user input
-  while(selecting)
-  {
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Down
-        digit--;
-        if(digit < 0)
-        {
-          digit = 9;
-        }
-        number[decimal - 3] = digit;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '3': //Up
-        digit++;
-        if(digit > 9)
-        {
-          digit = 0;
-        }
-        number[decimal - 3] = digit;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '4': //Left
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal--;
-        if(decimal < 3)
-        {
-          decimal = 3;
-        }
-        digit = number[decimal - 3];
-        break;
-        
-      case '5': //Right
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal++;
-        if(decimal > 5)
-        {
-          decimal = 5;
-        }
-        digit = number[decimal - 3];
-        break;
-      }
-    }
-
-    lcd.setCursor(decimal, 1);
-
-    //Blink the character space to let the user know what digit they are setting
-    unsigned long currentTime = millis();
-    if(currentTime - previousTime >= 500)
-    {
-      previousTime = currentTime;
-      if(displayDigit)
-      {
-        displayDigit = false;
-        //lcd.print("_");  //Will be used for LOG FUNCTION
-      }
-      else
-      {
-        displayDigit = true;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-      }
-    }
-  }
-
-  //Calculate the new purge time from the selection
-  setTime = (number[0]*100 + number[1]*10 + number[2]) * 1000;
-  SaveCurrentSettings();
+  //Get purge time here
 
   //Set the new purge time to the correct circuit
-  lcd.setCursor(0,0);
-  switch (selection)
+  switch(selection)
   {
     case 0:
       marxPurgeTime = setTime;
-      //lcd.print("MARX PURGE:     ");   //Will be used for LOG FUNCTION
-      break;
-          
+      break;         
     case 1:
       tg70marxPurgeTime = setTime;
-      //lcd.print("MARX TG70 PURGE: ");  //Will be used for LOG FUNCTION
-      break;
-  
+      break; 
     case 2:
       mtgPurgeTime = setTime;
-      //lcd.print("MTG PURGE:      ");   //Will be used for LOG FUNCTION
-      break;
-      
+      break;     
     case 3:
       switchPurgeTime = setTime;
-      //lcd.print("SWITCH PURGE:   ");   //Will be used for LOG FUNCTION
-      break;
-            
+      break;           
     case 4:
       tg70switchPurgeTime = setTime;
-      //lcd.print("SWITCH TG70 PURGE");  //Will be used for LOG FUNCTION
       break;
   }
-  
-  lcd.setCursor(0,1);
-  //lcd.print(String(String(setTime / 1000) + " SECONDS        "));  //Will be used for LOG FUNCTION
-  delay(3000);
   return;
 }
-*/
 
 //-------------------------------------------------------------------------------------------------------------
 //Circuit delay configuration function
@@ -3192,7 +3069,8 @@ void trigger1()
 void trigger2() 
 {
   int circuitNum = 0;
-  //purgeConfig(int circuitNum);
+  circuitNum = myNex.readNumber("Global.Circuit.val");
+  purgeConfig(circuitNum);
 }
 
 //SET PRESSURE
