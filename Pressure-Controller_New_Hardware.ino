@@ -3,7 +3,7 @@
 //Vladislav Petrov
 //Sean Rolandelli
 //Bradley Sullivan
-//Last modification March 14, 2024
+//Last modification March 21, 2024
 //-------------------------------------------------------------------------------------------------------------
 
 
@@ -187,12 +187,13 @@ int reclaimerSafetyTime = 30000;
 unsigned long int previousReclaimerSafetyTime = 0;
 
 //Setpoints
- double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
- double maxReclaimerPressure = 500.0;
- double minReclaimerPressure = 50.0;
+double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
+double maxReclaimerPressure = 500.0;
+double minReclaimerPressure = 50.0;
 
 //Checksum setup
 CRC8 crc;
+
 
 //-------------------------------------------------------------------------------------------------------------
 //Unit Tests
@@ -225,7 +226,8 @@ test(SDCardReader)
   assertEqual(result, expected);
 }
 
-test() {
+test(Checksum)
+{
   char *oldSettings[2] = {"hi", "hello"};
   char *currentSettings[2] = {"hi", "hello"};
 
@@ -233,7 +235,8 @@ test() {
 
   int old = 0, current = 0, i = 0;
 
-  while(i < sizeof(oldSettings)/sizeof(int)) {
+  while(i < sizeof(oldSettings)/sizeof(int))
+  {
     old = calcCRC8((uint8_t *)oldSettings[i], 9);
     current = calcCRC8((uint8_t *)currentSettings[i], 9);
     i++;
@@ -241,6 +244,8 @@ test() {
     assertEqual(old, current);
   }
 }
+
+
 //-------------------------------------------------------------------------------------------------------------
 //Setup
 //-------------------------------------------------------------------------------------------------------------
@@ -1427,7 +1432,7 @@ void ControlButtonLEDStateCheck(bool buttonState, const int ledPin)
 void SaveCurrentSettings()
 {
   //Check is an SD card is present and active. If one is present, save the data. If not skip to return.
-  if(sdCard && SD.begin())
+  if(sdCard && SD.begin(csPin))
   {
     SD.remove("Setting.txt");
     File lastPresetFile = SD.open("Setting.txt", FILE_WRITE);  //Save the setting
@@ -1492,14 +1497,15 @@ String FileWriter(int presetNumber)
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
 
+
   //Save the selected preset
-  if(SD.begin(csPin))
+  if(sdCard && SD.begin(csPin))
   { 
     //Display progress bar
-    myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "48631");
-    myNex.writeStr("Confirm_Preset.t0.txt", String("Saving Preset " + String(presetNumber) + String(" ...")));
+    myNex.writeNum("Confirm_Preset.Progress_Bar.aph", 127);
+    myNex.writeStr("Confirm_Preset.t0.txt", String("Saving Preset " + String(presetNumber) + String("...")));
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 0);
-    
+
     SD.remove(file);
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 2);
     File presetFile = SD.open(file, FILE_WRITE);  //Save the file
@@ -1605,7 +1611,7 @@ String FileWriter(int presetNumber)
   }
   else //SD card is not found.
   {
-    myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
+    myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
     return "ERROR: SD card not found!";
   }
 }
@@ -1621,13 +1627,14 @@ String FileReader(int presetNumber)
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
   
-  if(SD.begin(csPin))
+  if(sdCard && SD.begin(csPin))
   {
-    if(SD.open(file, FILE_READ)) //File is found.
+    if(SD.exists(file)) //File is found.
     {
+
       //Display progress bar
-      myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "48631");
-      myNex.writeStr("Confirm_Preset.t0.txt", String("Loading Preset " + String(presetNumber) + String(" ...")));
+      myNex.writeNum("Confirm_Preset.Progress_Bar.aph", 127);
+      myNex.writeStr("Confirm_Preset.t0.txt", String("Loading Preset " + String(presetNumber) + String("...")));
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 0);
       
       File presetFile = SD.open(file, FILE_READ);
@@ -1738,18 +1745,18 @@ String FileReader(int presetNumber)
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 99);
 
       //Checksum test goes here
-      myNex.writeNum("Confirm_Preset.Progress_Bar.bco", "65535");
+      myNex.writeNum("Confirm_Preset.Progress_Bar.val", 100);
       return String("Preset " + String(presetNumber) + String(" loaded!"));  //Also log this
     } 
     else //No file is found, display error and return
     {
-      myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
+      myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
       return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
     }
   }
   else //SD card is not found.
   {
-    myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
+    myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
     return "ERROR: SD card not found!";
   }
 }
@@ -1765,7 +1772,7 @@ String FileRemover(int presetNumber)
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
   
-  if(SD.begin(csPin)) //Check for SD card
+  if(sdCard && SD.begin(csPin)) //Check for SD card
   {
     if(SD.exists(file)) //File is found.
     {  
@@ -1774,13 +1781,13 @@ String FileRemover(int presetNumber)
     }
     else //No file is found, display error and return
     {
-      myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
+      myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
       return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
     }
   }
   else //SD card is not found.
   {
-    myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
+    myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
     return "ERROR: SD card not found!";
   }
 }
@@ -2113,7 +2120,6 @@ void checkSupply()
 /*
 void purgeConfig(int selection)
 {
-
   long int setTime = 0;
   int digit = 0;
   int decimal = 5;
@@ -2284,7 +2290,6 @@ void purgeConfig(int selection)
   return;
 }
 */
-
 
 //-------------------------------------------------------------------------------------------------------------
 //Circuit delay configuration function
@@ -3131,199 +3136,6 @@ void alarmController(String errorString)
 }
 
 
-//-------------------------------------------------------------------------------------------
-//Checksum
-//-------------------------------------------------------------------------------------------
-
-void *getOldSettings(char *buf[]) {
-   
-  buf[0] = "hi";
-  buf[1] = "hello";
-  
-}
-
-void *getCurrentSettings(char *buf[]) {
-   
-  alarmEnable = previousSettingFile.readStringUntil('\n').toInt();
-	currentSettings[0] = alarmEnable;
-
-  isCouple = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[1] = isCouple;
-
-	Marxsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[2] = Marxsetpoint;
-    
-	MTGsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[3] = MTGsetpoint;
-    
-	Switchsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[4] = Switchsetpoint;
-    
-	TG70Switchsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[5] = TG70Switchsetpoint;
-    
-	TG70Marxsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[6] = TG70Marxsetpoint;
-
-	maxReclaimerPressure = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[7] = maxReclaimerPressure;
-
-	minReclaimerPressure = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[8] = minReclaimerPressure;
-
-	marxenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[9] = marxenableState;
-	
-	mtgenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[10] = mtgenableState;
-
-	switchenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[11] = switchenableState;
-
-	tg70switchenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[12] = tg70switchenableState;
-
-	tg70marxenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[13] = tg70marxenableState;
-
-	marxmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[14] = marxmaxTime;
- 
-	mtgmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[15] = mtgmaxTime;
-
-	switchmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[16] = switchmaxTime;
-
-	tg70switchmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[17] = tg70switchmaxTime
-
-	tg70marxmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[18] = tg70marxmaxTime
-
-	marxDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[19] = marxDelay
-
-	mtgDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[20] = mtgDelay
-
-	switchDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[21] = switchDelay
-
-	tg70marxDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[22] = tg70marxDelay;
-
-	tg70switchDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[23] = tg70switchDelay;
-
-	marxPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[24] = marxPurgeTime;
-
-	mtgPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[25] = mtgPurgeTime;
-
-	switchPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[26] = switchPurgeTime;
-
-	tg70switchPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[27] = tg70switchPurgeTime;
-
-	tg70marxPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[28] = tg70marxPurgeTime;
-
-	minBottlePressure = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[29] = minBottlePressure;
-
-	kp_Marx = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[30] = kp_Marx;
-
-	ki_Marx = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[31] = ki_Marx;
-
-	kd_Marx = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[32] = kd_Marx;
-
-	kp_MTG = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[33] = kp_MTG;
-
-	ki_MTG = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[34] = ki_MTG;
-
-	kd_MTG = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[35] = kd_MTG;
-
-	kp_Switch = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[36] = kp_Switch;
-
-	ki_Switch = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[37] = ki_Switch;
-
-	kd_Switch = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[38] = kd_Switch;
-
-	kp_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[39] = kp_SwitchTG70
-
-	ki_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[40] = ki_SwitchTG70;
-
-	kd_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[41] = kd_SwitchTG70;
-
-	kp_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[42] = kp_MarxTG70;
-
-	ki_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[43] = ki_MarxTG70;
-
-	kd_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();	
-	currentSettings[44] = kd_MarxTG70;
-  
-}
-
-void Checksum()
-{
-
-  char *oldSettings[2], *currentSettings[2];
-
-  getOldSettings(oldSettings);
-  getCurrentSettings(currentSettings);
-
-  crc.reset();
-
-  int old = 0, current = 0, i = 0;
-
-  while(i < sizeof(oldSettings)/sizeof(int)) {
-    old = calcCRC8((uint8_t *)oldSettings[i], 9);
-    current = calcCRC8((uint8_t *)currentSettings[i], 9);
-    i++;
-
-    if(old != current) {
-      Serial.println("Error");
-      break;
-    }
-  }
-}
-
-
-//-------------------------------------------------------------------------------------------
-//Rename Presets
-//-------------------------------------------------------------------------------------------
-
-/*
-I am thinkng we will need to add preset names to the sd card and read from there during setup,
-and have them restart it to switch the names
-*/
-
-//-------------------------------------------------------------------------------------------
-//Change Brightness
-//
-
-/*
-We will need to add brightness to the sd card and have them restart to change the brightness at setup
-*/
-
-
 //--------------------------------------------------------------------------------------------
 //TRIGGERS
 //--------------------------------------------------------------------------------------------
@@ -3355,11 +3167,11 @@ void trigger1()
     }
     else if(action == "LOAD")
     {
-      myNex.writeStr("Confirm_Preset.t0.txt", FileLoader(presetNum));  
+      myNex.writeStr("Confirm_Preset.t0.txt", FileReader(presetNum));  
     }
     else if(action == "DELETE")
     {
-      myNex.writeStr("Confirm_Preset.t0.txt", FileDeleter(presetNum)); 
+      myNex.writeStr("Confirm_Preset.t0.txt", FileRemover(presetNum)); 
     }
     else
     {
@@ -3374,6 +3186,13 @@ void trigger1()
     myNex.writeStr("page Presets_Menu");
     return;
   }
+}
+
+//SET PURGE TIMES
+void trigger2() 
+{
+  int circuitNum = 0;
+  //purgeConfig(int circuitNum);
 }
 
 //SET PRESSURE
