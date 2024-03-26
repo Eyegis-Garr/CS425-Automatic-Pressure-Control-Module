@@ -454,12 +454,13 @@ void loop()
   //Check if a user has pressed a button on the touchscreen, and send the user to the correct function. (Vladislav Petrov)
   myNex.NextionListen();
   
- /*
+ 
   //Start shotmode pressure setting sequence
   if(shotmodeState && automaticMode)
   {
     ShotPressure(false);
   }
+
   
   //Start purge sequence for all enabled systems
   if(purgeState && automaticMode)
@@ -542,7 +543,6 @@ void loop()
   {
     abortShot();
   }
-  */
 }
 
 
@@ -2117,34 +2117,12 @@ void checkSupply()
 //-------------------------------------------------------------------------------------------------------------
 //Purge time setting.
 //-------------------------------------------------------------------------------------------------------------
-void purgeConfig(int selection)
+void purgeConfig(int selection, long int setTime)
 {
-  long int setTime = 0;
-
   ControlButtonStateManager();
-    
-  //Check which circuit we are setting the purge time for, and retrieve the corresponidng value
-  switch(selection)
-  {
-    case 0:
-      setTime = marxPurgeTime;
-      break;
-    case 1:
-      setTime = tg70marxPurgeTime;
-      break; 
-    case 2:
-      setTime = mtgPurgeTime;
-      break;    
-    case 3:
-      setTime = switchPurgeTime;
-      break;            
-    case 4:
-      setTime = tg70switchPurgeTime;
-      break;
-  }
-  myNex.writeStr("stringNum.txt", String(setTime/1000));
 
   //Get purge time here
+  setTime = setTime * 1000;
 
   //Set the new purge time to the correct circuit
   switch(selection)
@@ -2164,7 +2142,14 @@ void purgeConfig(int selection)
     case 4:
       tg70switchPurgeTime = setTime;
       break;
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeStr("page Warning_Page");
+      myNex.writeStr("Warning_Page.warningText.txt", "WARNING: Setting has failed!");
+      delay(3000);
+      break;
   }
+  myNex.writeStr("page Cir_Purge_Sel");
   return;
 }
 
@@ -3069,8 +3054,10 @@ void trigger1()
 void trigger2() 
 {
   int circuitNum = 0;
+  long int timer = 0;
   circuitNum = myNex.readNumber("Global.Circuit.val");
-  purgeConfig(circuitNum);
+  timer = myNex.readNumber("Enter_Numbers.number.val");
+  purgeConfig(circuitNum, timer);
 }
 
 //SET PRESSURE
