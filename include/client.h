@@ -8,6 +8,7 @@
 #include <getopt.h>
 #include <error.h>
 #include <poll.h>
+#include <time.h>
 
 #include "simulator_defines.h"
 #include "remote.h"
@@ -37,6 +38,8 @@ typedef struct _win_st WINDOW;
 #define E_OPTION    4
 #define E_SUBOPT    5
 #define E_CONNECT   6
+#define E_PCREATE   7
+#define E_ARGUMENT  8
 
 typedef struct valset_t {
   int op;
@@ -76,6 +79,7 @@ typedef struct client_t {
   char err_message[MAX_CMD_LEN];
 
   WINDOW *scr;
+  WINDOW *view_win;
   WINDOW *view;
   WINDOW *cmd;
 } client_t;
@@ -85,8 +89,7 @@ extern char *const circuit_map[];
 extern char *const param_map[];
 extern char *const io_map[];
 extern char *const mode_map[];
-extern char *const update_map[];
-extern char *const command_map[];
+extern char *const flag_map[][7];
 extern char *const status_map[];
 extern char *const pktype_map[];
 
@@ -103,7 +106,9 @@ int process_input(client_t *c, char *cmd);
 int process_update(client_t *c, packet_t *p);
 int process_error(client_t *c, int key);
 
-int parse_input(packet_args *pargs, int ac, char *av[], const char *optstring);
+int parse_update(packet_args *pargs, int ac, char *av[]);
+int parse_command(packet_args *pargs, int ac, char *av[]);
+int parse_ping(packet_args *pargs, int ac, char *av[]);
 int mapstr(char *const map[], int maplen, char *str);
 int mapflag(int flag, int width, char *const map[], char *str);
 int tokenize_cmd(char *cmd, char **vec); 
@@ -114,7 +119,7 @@ int val_cmp_flag(const void *a, const void *b);
 int val_cmp_op(const void *a, const void *b);
 int val_cmp_value(const void *a, const void *b);
 
-size_t construct_packet(client_t *c, packet_t *p, packet_args *pargs);
+int construct_packet(client_t *c, packet_t *p, packet_args *pargs);
 
 void wclrtorng(WINDOW *w, int y, int bx, int ex);
 void center_str(WINDOW *w, int y, const char *str);
@@ -124,6 +129,8 @@ void draw_input(client_t *c);
 void draw_simulator(client_t *c);
 void draw_packet(client_t *c, packet_t *p);
 void draw_err(client_t *c);
+void draw_help(client_t *c, char *msg);
+void print_view(client_t *c, char *msg);
 
 void update_client(client_t *c);
 
