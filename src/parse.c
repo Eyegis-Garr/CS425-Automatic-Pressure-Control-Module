@@ -11,24 +11,20 @@ static struct option loptions[] = {
   {"config",    no_argument,        NULL, 'g'},
   {"timeout",   required_argument,  NULL, 't'},
   {"ack",       no_argument,        NULL, 'k'},
-  {"nping",     required_argument,  NULL, 'n'},
-  {"ttl",       required_argument,  NULL, 'l'},
+  {"ntimes",    required_argument,  NULL, 'n'},
   { 0 }
 };
 
-const char update_opts[] = "c:p:t:rsk";
-const char command_opts[] = "c:p:t:m:v:agk";
-const char ping_opts[] = "n:l:t:";
 
-int parse_input(packet_args *pargs, int ac, char *av[], const char *optstring) {
+int parse_update(packet_args *pargs, int ac, char *av[]) {
   int opidx = 0, opt, ret = 0;
-  int midx, tidx;
+  int tidx;
   char *subopts, *value;
 
   // reset optind for reinitializing getopt state
   optind = 0;
 
-  while ((opt = getopt_long(ac, av, optstring, loptions, &opidx)) != -1) {
+  while ((opt = getopt_long(ac, av, ":c:p:t:rsk", loptions, &opidx)) != -1) {
     switch (opt) {
       case 's':   /* --system, -s */
         pargs->op_flags |= (1 << UP_SYSTEM);
@@ -67,7 +63,77 @@ int parse_input(packet_args *pargs, int ac, char *av[], const char *optstring) {
         }
         break;
       case 'r':   /* --refresh, -r */
-        pargs->op_flags |= (1 << UP_REFRESH); break;
+        pargs->op_flags |= (1 << UP_REFRESH);
+        break;
+      case 't':   /* --timeout, -t */
+        if (sscanf(optarg, "%hhu", &pargs->timeout) == -1) {
+          pargs->timeout = 0;
+          ret = E_OPTION;
+        }
+        break;
+      case 'k':   /* --ack, -k */
+        pargs->req_ack = 1; 
+        break;
+      case '?':
+        ret = E_OPTION;
+        break;
+      case ':':
+        ret = E_ARGUMENT;
+        break;
+    }      
+  }
+
+  return ret;
+}
+
+int parse_command(packet_args *pargs, int ac, char *av[]) {
+  int opidx = 0, opt, ret = 0;
+  int midx, tidx;
+  char *subopts, *value;
+
+  // reset optind for reinitializing getopt state
+  optind = 0;
+
+  while ((opt = getopt_long(ac, av, ":c:p:t:m:v:agk", loptions, &opidx)) != -1) {
+    switch (opt) {
+      case 'c':   /* --circuit, -c */
+        subopts = optarg;
+        while (*subopts != '\0') {
+          tidx = getsubopt(&subopts, circuit_map, &value);
+
+          if (tidx != -1) {
+            if (tidx == C_NUM_CIRCUITS)   // 'ALL' argument
+              pargs->cmask = (1 << C_NUM_CIRCUITS) - 1;
+            else
+              pargs->cmask |= (1 << tidx); 
+          } else {
+            ret = E_SUBOPT;
+            break;
+          }
+        }
+        
+        break;
+      case 'p':   /* --parameter, -p */
+        subopts = optarg;
+        while (*subopts != '\0') {
+          tidx = getsubopt(&subopts, param_map, &value);
+          if (tidx != -1) {
+            if (tidx == C_NUM_PARAM) 
+              pargs->pmask = (1 << C_NUM_PARAM) - 1;
+            else
+              pargs->pmask |= (1 << tidx); 
+          } else {
+            ret = E_SUBOPT;
+            break;
+          }
+        }
+        break;
+      case 't':   /* --timeout, -t */
+        if (sscanf(optarg, "%hhu", &pargs->timeout) == -1) {
+          pargs->timeout = 0;
+          ret = E_OPTION;
+        }
+        break;
       case 'm':   /* --modeset, -m */
         pargs->op_flags |= (1 << CMD_MODESET);
         if ((midx = mapstr(mode_map, S_NUM_MODES, optarg)) != -1) {
@@ -105,18 +171,34 @@ int parse_input(packet_args *pargs, int ac, char *av[], const char *optstring) {
         }
         break;
       case 'a':   /* --save, -s */
-        pargs->op_flags |= (1 << CMD_SAVE); break;
-      case 'f':   /* --config, -f */
-        pargs->op_flags |= (1 << CMD_DMPCFG); break;
-      case 'l':   /* --ttl, -l  */
-      case 't':   /* --timeout, -t */
-        if (sscanf(optarg, "%hhu", &pargs->timeout) == -1) {
-          pargs->timeout = 0;
-          ret = E_OPTION;
-        }
+        pargs->op_flags |= (1 << CMD_SAVE); 
+        break;
+      case 'g':   /*  --config, -g  */
+        pargs->op_flags |= (1 << CMD_DMPCFG);
         break;
       case 'k':   /* --ack, -k */
-        pargs->req_ack = 1; break;
+        pargs->req_ack = 1; 
+        break;
+      case '?':
+        ret = E_OPTION;
+        break;
+      case ':':
+        ret = E_ARGUMENT;
+        break;
+    }
+  }
+  
+  return ret;
+}
+
+int parse_ping(packet_args *pargs, int ac, char *av[]) {
+  int opidx = 0, opt, ret = 0;
+
+  // reset optind for reinitializing getopt state
+  optind = 0;
+
+  while ((opt = getopt_long(ac, av, ":n:t:", loptions, &opidx)) != -1) {
+    switch (opt) {
       case 'n':   /* --nping, -n */
         pargs->op_flags |= (1 << ST_PING);
         if (sscanf(optarg, "%lf", &pargs->values[pargs->next_val].value) != -1) {
@@ -127,8 +209,17 @@ int parse_input(packet_args *pargs, int ac, char *av[], const char *optstring) {
           ret = E_OPTION;
         }
         break;
-      case '?':   /* unknown/invalid option */
+      case 't':   /* --timeout, -t */
+        if (sscanf(optarg, "%hhu", &pargs->timeout) == -1) {
+          pargs->timeout = 0;
+          ret = E_OPTION;
+        }
+        break;
+      case '?':
         ret = E_OPTION;
+        break;
+      case ':':
+        ret = E_ARGUMENT;
         break;
     }
   }
@@ -187,7 +278,7 @@ int mapflag(int flag, int width, char *const map[], char *str) {
 	for (i = 0; i < width; i += 1) {
 		if (map[i] == NULL) break;
 		if (isbset(flag, i)) {
-			print += sprintf(print, "| %s", map[i]);
+			print += sprintf(print, "%s%s ", (strlen(str) > 0) ? "| " : " ", map[i]);
 		}
 	}
 
@@ -195,9 +286,12 @@ int mapflag(int flag, int width, char *const map[], char *str) {
 }
 
 int tokenize_cmd(char *cmd, char **vec) {
+  static char input[MAX_CMD_LEN], *tok;
   int ct = 0;
 
-  char *tok = strtok(cmd, " \n\t");     // split by spaces, tabs, and new lines
+  strncpy(input, cmd, strlen(cmd));
+
+  tok = strtok(input, " \n\0");     // split by spaces, tabs, and new lines
   while (tok && ct < MAX_ARGS) {        // while tokens remain
     vec[ct] = malloc(strlen(tok) + 1);  // malloc space for new token in vector
     if (!vec[ct]) return -1;            // error if malloc fails

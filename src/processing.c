@@ -5,7 +5,7 @@ int process_key(client_t *c, int key) {
 
   if (key != ERR) {
     // buffer user input
-    if (isprint(key) && c->cursor < MAX_CMD_LEN - 1) {
+    if ((isprint(key) || key == 10) && c->cursor < MAX_CMD_LEN - 1) {
       c->cmd_input[c->cursor++] = (char) key;
       c->cmd_input[c->cursor] = '\0';
     }
@@ -40,7 +40,7 @@ int process_input(client_t *c, char *cmd) {
   if (!cmd) return E_INPUT;
 
   ac = tokenize_cmd(cmd, av);
-  
+
   if (ac < 0) {
     ret = E_TOKEN;
   } else {
@@ -48,20 +48,24 @@ int process_input(client_t *c, char *cmd) {
 			// parse update input command
       c->pargs.op_type = PK_UPDATE;
 
-			ret = parse_input(&c->pargs, ac, av, update_opts);
+      ret = parse_update(&c->pargs, ac, av);
+			// ret = parse_input(&c->pargs, ac, av, update_opts);
     } else if (strcmp(av[0], "do") == 0) {
 			// parse command input command
       c->pargs.op_type = PK_COMMAND;
 
-			ret = parse_input(&c->pargs, ac, av, command_opts);
+			ret = parse_command(&c->pargs, ac, av);
     } else if (strcmp(av[0], "ping") == 0) {
 			// parse ping input command
       c->pargs.op_type = PK_STATUS;
       c->s_flags |= (1 << S_PING);
 
-			ret = parse_input(&c->pargs, ac, av, ping_opts);
+			ret = parse_ping(&c->pargs, ac, av);
     } else if (strcmp(av[0], "exit") == 0) {
       c->s_flags |= (1 << S_EXIT);
+    } else if (strcmp(av[0], "help") == 0) {
+      draw_help(c, (ac > 0) ? av[1] : NULL);
+      ret = -1;
     } else {
       ret = E_INPUT;
     }
@@ -132,10 +136,26 @@ int process_error(client_t *c, int key) {
 			sprintf(c->err_header, "UNKNOWN SUBOPTION (%d)", c->err);
 			sprintf(c->err_message, "Unrecognized suboption. See --help,-h for valid usage.");
 			break;
+    case E_CONNECT:
+      sprintf(c->err_header, "DISCONNECTED (%d)", c->err);
+      sprintf(c->err_message, "Couldn't connect to serial device %s.", c->r.dev_path);
+      break;
+    case E_PCREATE:
+      sprintf(c->err_header, "PACKET CONSTRUCT (%d)", c->err);
+      sprintf(c->err_message, "Failed to create %s-type packet.", pktype_map[c->r.tx.type]);
+      break;
+    case E_ARGUMENT:
+      sprintf(c->err_header, "MISSING ARGUMENT (%d)", c->err);
+      sprintf(c->err_message, "Option is missing argument.");
+      break;
+    default:
+      *c->err_header = '\0';
+      *c->err_message = '\0';
+      break;
 	}
 
 	if (key != ERR) {
-		werase(c->cmd);
+		werase(c->cmd); wrefresh(c->cmd);
 		sprintf(c->err_header, "INPUT");
 		c->cmd_input[0] = '\0';
 		c->cursor = 0;

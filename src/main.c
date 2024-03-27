@@ -18,32 +18,25 @@ int ping_test(remote_t *r, uint8_t npings);
 
 #define DEBUG 
 int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    printf("\nInvalid usage.\n\n\tPlease provide the device path to the tranceiver.\n");
-    printf("\teg. %s /dev/ttyS420\n", argv[0]);
-    return 1;
-  }
+  // if (argc < 2) {
+  //   printf("\nInvalid usage.\n\n\tPlease provide the device path to the tranceiver.\n");
+  //   printf("\teg. %s /dev/ttyS420\n", argv[0]);
+  //   return 1;
+  // }
+
   client_t client;
-  packet_t p;
-  char input[256];
 
   init_client(&client);
-  if (init_remote(&client.r, "/dev/ttyS16", B9600) < 0) {
-    printf("Failed to initialize remote device.\n\nExiting...\n");
-    return 1;
-  }
+
+  // if (init_remote(&client.r, "/dev/ttyS16", B9600) < 0) {
+  //   printf("Failed to initialize remote device.\n\nExiting...\n");
+  //   return 1;
+  // }
 
   while (isbclr(client.s_flags, S_EXIT)) {
-    // fgets(input, 256, stdin);
-
-    // printf("\tinput: %s\n", input);
-    // if (process_input(&client, input) == 0) {
-    //   // construct packet
-    //   construct_packet(&client, &client.r.tx, &client.pargs);
-    //   print_packet(&client.r.tx);
-    // }
 
     update_client(&client);
+
   }
 
   endwin();

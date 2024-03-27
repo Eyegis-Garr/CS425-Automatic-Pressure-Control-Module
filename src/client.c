@@ -25,9 +25,9 @@ char *const param_map[] = {
 };
 
 char *const io_map[] = {
-  "INTAKE   ",
-  "EXHAUST  ",
-  "ENABLED  "
+  "INTAKE",
+  "EXHAUST",
+  "ENABLED"
 };
 
 char *const mode_map[] = {
@@ -42,23 +42,35 @@ char *const mode_map[] = {
   NULL
 };
 
-char *const update_map[] = {
-  "UP_SYSTEM",
-  "UP_CIRCUITS",
-  "UP_REMOTE",
-  "UP_REFRESH",
-  "UP_REMOVE",
-  NULL
-};
+char *const flag_map[][7] = {
+  { /* update flags */
+    "UP_SYSTEM",
+    "UP_CIRCUITS",
+    "UP_REMOTE",
+    "UP_REFRESH",
+    "UP_REMOVE",
+    NULL
+  },
 
-char *const command_map[] = {
-  "CMD_RESPND", 
-  "CMD_MODESET",
-  "CMD_PARSET", 
-  "CMD_SAVE",   
-  "CMD_GETLOG", 
-  "CMD_DMPCFG",
-  NULL
+  { /* command flags */
+    "CMD_RESPND", 
+    "CMD_MODESET",
+    "CMD_PARSET", 
+    "CMD_SAVE",   
+    "CMD_GETLOG", 
+    "CMD_DMPCFG",
+    NULL
+  },
+
+  { /* status flags */
+    "ST_TIMEOUT",
+    "ST_PING",
+    NULL
+  },
+
+  {
+    NULL
+  }
 };
 
 char *const status_map[] = {
@@ -90,32 +102,31 @@ int init_client(client_t *c) {
   curs_set(0);
   start_color();
 
-  init_pair(1, COLOR_GREEN, COLOR_BLACK);
-  init_pair(2, COLOR_RED, COLOR_BLACK);
-  init_pair(3, COLOR_BLUE, COLOR_BLACK);
-
   int i;
   for (i = 0; i < C_NUM_CIRCUITS; i += 1) {
     c->circuit[i].w = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH, i * CWIN_HEIGHT, 0);
     wborder(c->circuit[i].w, 0, 0, 0, 0, 0, 0, 0, 0);
   }
 
-  c->view = subwin(c->scr, SWIN_HEIGHT, SWIN_WIDTH - 2, CWIN_HEIGHT, CWIN_WIDTH + 1);
-  wborder(c->view, 0, 0, 0, 0, 0, 0, 0, 0);
+  c->view_win = subwin(c->scr, SWIN_HEIGHT, SWIN_WIDTH - 2, CWIN_HEIGHT, CWIN_WIDTH + 1);
+  c->view = subwin(c->scr, SWIN_HEIGHT - 2, SWIN_WIDTH - 4, CWIN_HEIGHT + 1, CWIN_WIDTH + 2);
+  wborder(c->view_win, 0, 0, 0, 0, 0, 0, 0, 0);
+  scrollok(c->view, TRUE);
 
   c->cmd = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH - 2, 0, CWIN_WIDTH + 1);
 
   return ret;
 }
 
-size_t construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
-  int i, l, s;
+int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
+  int i, l, s, ret;
   uint8_t *pdata = p->bytes;
   valset_t *seek, *sort[MAX_VALUES];
 
   p->type = pargs->op_type;
   p->flags = pargs->op_flags;
   p->timeout = pargs->timeout;
+  ret = 0;
 
   switch (pargs->op_type) {
     case PK_UPDATE:
@@ -165,6 +176,9 @@ size_t construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
             case CMD_GETLOG:
             case CMD_DMPCFG:
               break;
+            default:
+              ret = E_PCREATE;
+              break;
           }
         }
       }
@@ -176,24 +190,40 @@ size_t construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
           *pdata++ = (uint8_t) seek->value;
       }
       break;
+    default:
+      ret = E_PCREATE;
+      break;
   }
 
   p->size = pdata - p->bytes;
 
-  return p->size;
+  return ret;
 }
 
 void update_client(client_t *c) {
   int i, key;
 
   // listen for new packets
-  if (isbclr(c->r.r_flags, R_EXIT)) {
-    // if (poll_resp(&c->r, 1000) > 0)
-      // print_packet(&c->r.rx);
-  }
+  // if (isbclr(c->r.r_flags, R_EXIT)) {
+  //   // if (poll_resp(&c->r, 1000) > 0)
+  //     // print_packet(&c->r.rx);
+  // }
 
   // processes user input
   key = wgetch(c->scr);
+
+  if (c->err) {
+    process_error(c, key);
+  } else {
+    if (process_key(c, key)) {                    // returns 1 on key ENTER
+      memset(&c->pargs, 0, sizeof(packet_args));
+      c->err = process_input(c, c->cmd_input);
+      if (!c->err) c->s_flags |= (1 << S_INPUT);
+    }
+
+    draw_circuits(c);
+    draw_input(c);
+  }
 
   // processes client state updates
   for (i = 0; i < 8; i += 1) {
@@ -203,12 +233,16 @@ void update_client(client_t *c) {
           // dealloc client stuff
           break;
         case S_INPUT:
+          c->s_flags &= ~(1 << S_INPUT);
+          c->cmd_input[0] = '\0';
+          c->cursor = 0;
           // construct and transmit packet(s)
-          if (construct_packet(c, &c->r.tx, &c->pargs)) {
+          c->err = construct_packet(c, &c->r.tx, &c->pargs);
+          if (!c->err) {
             if (isbclr(c->r.r_flags, R_RXINP)) {
               // tx_packet(&c->r);
               draw_packet(c, &c->r.tx);
-              exit(1);
+              // exit(1);
             } else {
               c->s_flags |= (1 << S_RETRY);
             }
@@ -225,19 +259,6 @@ void update_client(client_t *c) {
           break;
       }
     }
-  }
-
-  if (c->err) {
-    process_error(c, key);
-  } else {
-    if (process_key(c, key)) {                    // returns 1 on key ENTER
-      memset(&c->pargs, 0, sizeof(packet_args));
-      c->err = process_input(c, c->cmd_input);
-      if (!c->err) c->s_flags |= (1 << S_INPUT);
-    }
-
-    draw_circuits(c);
-    draw_input(c);
   }
 }
 
