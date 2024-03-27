@@ -451,7 +451,7 @@ void loop()
   aunit::TestRunner::run();  //Run unit tests
 
   //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
-  //ControlButtonStateManager();
+  ControlButtonStateManager();
 
   //Check if a user has pressed a button on the touchscreen, and send the user to the correct function. (Vladislav Petrov)
   myNex.NextionListen();
