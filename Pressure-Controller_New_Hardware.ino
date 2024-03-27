@@ -88,6 +88,8 @@ const int csPin = 53;
 
 //Touchscreen
 EasyNex myNex(Serial3);
+//GREEN WIRE = RX
+//WHITE WIRE = TX
 
 //Menu Info. These are global
 int selection = 0;
@@ -1263,7 +1265,6 @@ void Purge(bool& circuitState, int intakerelayPin, int exhaustrelayPin)
 //-------------------------------------------------------------------------------------------------------------
 void ControlButtonStateManager()
 { 
-  /*
   //Check the supply pressure
   if(!errorState)
   {
@@ -1280,7 +1281,6 @@ void ControlButtonStateManager()
     //Run the manual reclaimer controller if needed
     manualReclaimerControl();    
   }
-  */
   
   //Check buttons for HIGH or LOW
   int readmarxenableState = digitalRead(marxenablePin);
@@ -2019,7 +2019,6 @@ void manualReclaimerControl()
 //-------------------------------------------------------------------------------------------------------------
 //Automatically controls the reclaimer
 //-------------------------------------------------------------------------------------------------------------
-/*
 bool automaticReclaimerControl()
 {
   //Set variables for pressure in the bottles
@@ -2091,17 +2090,15 @@ bool automaticReclaimerControl()
       }
     }
   }
-  
   return true;  
 }
-*/
 
 //-------------------------------------------------------------------------------------------------------------
 //Monitor bottle supply pressure
 //-------------------------------------------------------------------------------------------------------------
-/*
 void checkSupply()
 {
+  /*
   double bottlePressure;
   bottlePressure = analogRead(bottleanaloginPin);
   
@@ -2111,8 +2108,8 @@ void checkSupply()
     errorState = true;
     alarmController(String("LOW SUPPLY"));
   }
+  */
 }
-*/
 
 //-------------------------------------------------------------------------------------------------------------
 //Purge time setting.
@@ -2120,35 +2117,41 @@ void checkSupply()
 void purgeConfig(int selection, long int setTime)
 {
   ControlButtonStateManager();
-
-  //Get purge time here
-  setTime = setTime * 1000;
+  myNex.writeStr("page Confirm_Number");
 
   //Set the new purge time to the correct circuit
   switch(selection)
   {
     case 0:
-      marxPurgeTime = setTime;
+      marxPurgeTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("Marx purge time set to " + String(setTime) + String(" seconds.")));
       break;         
     case 1:
-      tg70marxPurgeTime = setTime;
+      tg70marxPurgeTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("TG70 purge time set to " + String(setTime) + String(" seconds.")));
       break; 
     case 2:
-      mtgPurgeTime = setTime;
+      mtgPurgeTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("MTG purge time set to " + String(setTime) + String(" seconds.")));
       break;     
     case 3:
-      switchPurgeTime = setTime;
+      switchPurgeTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("Switch purge time set to " + String(setTime) + String(" seconds.")));
       break;           
     case 4:
-      tg70switchPurgeTime = setTime;
+      tg70switchPurgeTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("Switch TG70 purge time set to " + String(setTime) + String(" seconds.")));
       break;
     default:  //Error condition
       //Switch to error screen indicating that the setting has failed.
-      myNex.writeStr("page Warning_Page");
-      myNex.writeStr("Warning_Page.warningText.txt", "WARNING: Setting has failed!");
-      delay(3000);
-      break;
+      myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_Number.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page Cir_Purge_Sel");
+      return;
   }
+  SaveCurrentSettings();
+  delay(1500);
   myNex.writeStr("page Cir_Purge_Sel");
   return;
 }
@@ -2156,265 +2159,66 @@ void purgeConfig(int selection, long int setTime)
 //-------------------------------------------------------------------------------------------------------------
 //Circuit delay configuration function
 //-------------------------------------------------------------------------------------------------------------
-/*
-void circuitDelay(int selection)
+void circuitDelay(int selection, long int setTime)
 {
+  ControlButtonStateManager();
+  myNex.writeStr("page Confirm_Number");
   
-  long int setTime = 0;
-  int digit = 0;
-  int decimal = 3;
-  long int number[4] = {0,0,0,0};
-  bool selecting = true;
-  bool displayDigit = true;
-
-    ControlButtonStateManager();
-
-  //Check which circuit we are setting the alarm time for, and retrieve the corresponidng value
-  switch (selection)
-  {
-    case 0:
-      setTime = marxDelay;
-      break;
-    
-    case 1:
-      setTime = tg70marxDelay;
-      break;
-      
-    case 2:
-      setTime = mtgDelay;
-      break;
-      
-    case 3:
-      setTime = switchDelay;
-      break;
-            
-    case 4:
-      setTime = tg70switchDelay;
-      break;
-  }
-
-  
-  lcd.setCursor(0,0);
-  //lcd.print("SET DELAY TIME: ");   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-
-  //Break the given time into individual digits
-  number[0] = setTime / 1000 % 10;
-  number[1] = setTime / 100 % 10;
-  number[2] = setTime / 10 % 10;
-  number[3] = setTime / 1 % 10;
-
-  //Put the individual digitso nto the LCD
-  lcd.setCursor(0,1);
-  //lcd.print(String(number[0]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(1,1);
-  //lcd.print(String(number[1]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(2,1);
-  //lcd.print(String(number[2]));    //Will be used for LOG FUNCTION
-  lcd.setCursor(3,1);
-  //lcd.print(String(number[3]));    //Will be used for LOG FUNCTION
-  lcd.setCursor(4,1);
-  //lcd.print(" MILLISECONDS  ");    //Will be used for LOG FUNCTION
-  lcd.setCursor(decimal, 1);
-
-  digit = number[3];
-
-  //Set the time based on user input
-  while(selecting)
-  {
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Down
-        digit--;
-        if(digit < 0)
-        {
-          digit = 9;
-        }
-        number[decimal] = digit;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '3': //Up
-        digit++;
-        if(digit > 9)
-        {
-          digit = 0;
-        }
-        number[decimal] = digit;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '4': //Left
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal--;
-        if(decimal < 0)
-        {
-          decimal = 0;
-        }
-        digit = number[decimal];
-        break;
-        
-      case '5': //Right
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal++;
-        if(decimal > 3)
-        {
-          decimal = 3;
-        }
-        digit = number[decimal];
-        break;
-      }
-    }
-
-    lcd.setCursor(decimal, 1);
-
-    //Blink the character space to let the user know what digit they are setting
-    unsigned long currentTime = millis();
-    if(currentTime - previousTime >= 500)
-    {
-      previousTime = currentTime;
-      if(displayDigit)
-      {
-        displayDigit = false;
-        //lcd.print("_");  //Will be used for LOG FUNCTION
-      }
-      else
-      {
-        displayDigit = true;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-      }
-    }
-  }
-
-  //Calculate the new time from the selection
-  setTime = (number[0]*1000 + number[1]*100 + number[2]*10 + number[3]);
-  SaveCurrentSettings();
-  
-  //Set the new alarm time to the correct circuit
-  lcd.setCursor(0,0);
-  switch (selection)
+  //Set the new circuit delay time to the correct circuit
+  switch(selection)
   {
     case 0:
       marxDelay = setTime;
-      //lcd.print("MARX DELAY:     ");   //Will be used for LOG FUNCTION
-      break;
-          
+      myNex.writeStr("Confirm_Number.t0.txt", String("Marx delay set to " + String(setTime) + String(" milliseconds.")));
+      break;         
     case 1:
       tg70marxDelay = setTime;
-      //lcd.print("MARX TG70 DELAY: ");  //Will be used for LOG FUNCTION
-      break;
-  
+      myNex.writeStr("Confirm_Number.t0.txt", String("TG70 delay set to " + String(setTime) + String(" milliseconds.")));
+      break; 
     case 2:
       mtgDelay = setTime;
-      //lcd.print("MTG DELAY:      ");   //Will be used for LOG FUNCTION
-      break;
-      
+      myNex.writeStr("Confirm_Number.t0.txt", String("MTG delay set to " + String(setTime) + String(" milliseconds.")));
+      break;     
     case 3:
       switchDelay = setTime;
-      //lcd.print("SWITCH DELAY:   ");   //Will be used for LOG FUNCTION
-      break;
-            
+      myNex.writeStr("Confirm_Number.t0.txt", String("Switch delay set to " + String(setTime) + String(" milliseconds.")));
+      break;           
     case 4:
       tg70switchDelay = setTime;
-      //lcd.print("SWITCH TG70 DELAY");  //Will be used for LOG FUNCTION
+      myNex.writeStr("Confirm_Number.t0.txt", String("Switch TG70 delay set to " + String(setTime) + String(" milliseconds.")));
       break;
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_Number.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page Cir_Delay_Sel");
+      return;
   }
 
-  lcd.setCursor(0,1);
-  //lcd.print(String(String(setTime) + " MILLISECONDS    "));  //Will be used for LOG FUNCTION
-  delay(3000);
+  SaveCurrentSettings();
+  delay(1500);
+  myNex.writeStr("page Cir_Delay_Sel");
   return;
 }
-*/
 
 
 //-------------------------------------------------------------------------------------------------------------
 //Reclaimer safety delay setting function
 //-------------------------------------------------------------------------------------------------------------
-/*
-void setReclaimerSafetyDelay()
+void setReclaimerSafetyDelay(long int setTime)
 {
-  
-  long int setTime = reclaimerSafetyTime / 60000;
-  bool selecting = true;
-  bool displayDigit = true;
-
-    ControlButtonStateManager();
-  lcd.setCursor(0,0);
-  //lcd.print("SET DELAY TIME: ");   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-  //lcd.print(String(setTime) + " MINUTES        "); //Display time in minutes   //Will be used for LOG FUNCTION
-
-  //Set the time based on user input
-  while(selecting)
-  {
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Down
-        setTime--;
-        if(setTime < 1)
-        {
-          setTime = 5;
-        }
-        break;
-        
-      case '3': //Up
-        setTime++;
-        if(setTime > 5)
-        {
-          setTime = 1;
-        }
-        break;
-      }  
-      lcd.setCursor(0,1);
-      //lcd.print(String(setTime) + " MINUTES       "); //Display time in minutes  //Will be used for LOG FUNCTION
-    }
-
-    //Blink the character space to let the user know what digit they are setting
-    unsigned long currentTime = millis();
-    if(currentTime - previousTime >= 500)
-    {
-      previousTime = currentTime;
-      if(displayDigit)
-      {
-        displayDigit = false;
-        lcd.setCursor(0,1);
-        //lcd.print("_ MINUTES       "); //Display time in minutes   //Will be used for LOG FUNCTION
-      }
-      else
-      {
-        displayDigit = true;
-        lcd.setCursor(0,1);
-        //lcd.print(String(setTime) + " MINUTES       "); //Display time in minutes  //Will be used for LOG FUNCTION
-      }
-    }
-  }
+  ControlButtonStateManager();
+  myNex.writeStr("page Confirm_Number");
 
   //Set and save the new delay time
-  reclaimerSafetyTime = setTime * 60000;
+  reclaimerSafetyTime = setTime * 1000;
+  myNex.writeStr("Confirm_Number.t0.txt", String("Reclaimer safety delay set to " + String(setTime) + String(" seconds.")));
   SaveCurrentSettings();
-  lcd.setCursor(0,0);
-  //lcd.print("REC SAFETY TIME:");   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-  //lcd.print(String(setTime) + " MINUTES        ");   //Will be used for LOG FUNCTION
-  delay(3000);
+  delay(1500);
+  myNex.writeStr("page Timers");
   return;
 }
-*/
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -2760,180 +2564,47 @@ void setAlarmOnOff()
 //-------------------------------------------------------------------------------------------------------------
 //Alarm configuration function for circuit timeout
 //-------------------------------------------------------------------------------------------------------------
-/*
-void alarmConfig(int selection)
+void alarmConfig(int selection, long int setTime)
 {
-  
-  long int setTime = 0;
-  int digit = 0;
-  int decimal = 5;
-  long int number[3] = {0,0,0};
-  bool selecting = true;
-  bool displayDigit = true;
-
   ControlButtonStateManager();
-    
-  //Check which circuit we are setting the alarm time for, and retrieve the corresponidng value
-  switch (selection)
-  {
-    case 1:
-      setTime = marxmaxTime;
-      break;
-    
-    case 2:
-      setTime = tg70marxmaxTime;
-      break;
-      
-    case 3:
-      setTime = mtgmaxTime;
-      break;
-      
-    case 4:
-      setTime = switchmaxTime;
-      break;
-            
-    case 5:
-      setTime = tg70switchmaxTime;
-      break;
-  }
+  myNex.writeStr("page Confirm_Number");
 
-  
-  lcd.setCursor(0,0);
-  //lcd.print("SET ALARM TIME: ");   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-
-  //Break the given time into individual digits
-  number[0] = setTime / 100000 % 10;
-  number[1] = setTime / 10000 % 10;
-  number[2] = setTime / 1000 % 10;
-
-  //Put the individual digitso nto the LCD
-  //lcd.print("   ");  //Will be used for LOG FUNCTION
-  lcd.setCursor(3,1);
-  //lcd.print(String(number[0]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(4,1);
-  //lcd.print(String(number[1]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(5,1);
-  //lcd.print(String(number[2]));    //Will be used for LOG FUNCTION
-  lcd.setCursor(6,1);
-  //lcd.print(" SECONDS  ");     //Will be used for LOG FUNCTION
-  lcd.setCursor(decimal, 1);
-
-  digit = number[2];
-
-  //Set the time based n user input
-  while(selecting)
-  {
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Down
-        digit--;
-        if(digit < 0)
-        {
-          digit = 9;
-        }
-        number[decimal - 3] = digit;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '3': //Up
-        digit++;
-        if(digit > 9)
-        {
-          digit = 0;
-        }
-        number[decimal - 3] = digit;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '4': //Left
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal--;
-        if(decimal < 3)
-        {
-          decimal = 3;
-        }
-        digit = number[decimal - 3];
-        break;
-        
-      case '5': //Right
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal++;
-        if(decimal > 5)
-        {
-          decimal = 5;
-        }
-        digit = number[decimal - 3];
-        break;
-      }
-    }
-
-    lcd.setCursor(decimal, 1);
-
-    //Blink the character space to let the user know what digit they are setting
-    unsigned long currentTime = millis();
-    if(currentTime - previousTime >= 500)
-    {
-      previousTime = currentTime;
-      if(displayDigit)
-      {
-        displayDigit = false;
-        //lcd.print("_");  //Will be used for LOG FUNCTION
-      }
-      else
-      {
-        displayDigit = true;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-      }
-    }
-  }
-
-  //Calculate the new time from the selection
-  setTime = (number[0]*100 + number[1]*10 + number[2]) * 1000;
-  SaveCurrentSettings();
-  
   //Set the new alarm time to the correct circuit
-  switch (selection)
+  switch(selection)
   {
+    case 0:
+      marxmaxTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("Marx alarm time set to " + String(setTime) + String(" seconds.")));
+      break;         
     case 1:
-      marxmaxTime = setTime;
-      //lcd.print("MARX ALARM:     ");   //Will be used for LOG FUNCTION
-      break;
-          
+      tg70marxmaxTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("TG70 alarm time set to " + String(setTime) + String(" seconds.")));
+      break; 
     case 2:
-      tg70marxmaxTime = setTime;
-      //lcd.print("MARX TG70 ALARM: ");  //Will be used for LOG FUNCTION
-      break;
-  
+      mtgmaxTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("MTG alarm time set to " + String(setTime) + String(" seconds.")));
+      break;     
     case 3:
-      mtgmaxTime = setTime;
-      //lcd.print("MTG ALARM:      ");   //Will be used for LOG FUNCTION
-      break;
-      
+      switchmaxTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("Switch alarm time set to " + String(setTime) + String(" seconds.")));
+      break;           
     case 4:
-      switchmaxTime = setTime;
-      //lcd.print("SWITCH ALARM:   ");   //Will be used for LOG FUNCTION
+      tg70switchmaxTime = setTime * 1000;
+      myNex.writeStr("Confirm_Number.t0.txt", String("Switch TG70 alarm time set to " + String(setTime) + String(" seconds.")));
       break;
-            
-    case 5:
-      tg70switchmaxTime = setTime;
-      //lcd.print("SWITCH TG70 ALARM");  //Will be used for LOG FUNCTION
-      break;
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_Number.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page Cir_Alarm_Sel");
+      return;
   }
-
-  lcd.setCursor(0,1);
-  //lcd.print(String(String(setTime / 1000) + " SECONDS        "));  //Will be used for LOG FUNCTION
-  delay(3000);
+  SaveCurrentSettings();
+  delay(1500);
+  myNex.writeStr("page Cir_Alarm_Sel");
   return;
 }
-*/
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -3057,102 +2728,89 @@ void trigger2()
   long int timer = 0;
   circuitNum = myNex.readNumber("Global.Circuit.val");
   timer = myNex.readNumber("Enter_Numbers.number.val");
-  purgeConfig(circuitNum, timer);
+
+  //Check if serial communication is successful, then map to function
+  if(circuitNum == 777777 || timer == 777777)
+  {
+    myNex.writeStr("page Confirm_Number");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Cir_Purge_Sel");
+    return;
+  }
+  else
+  {
+    purgeConfig(circuitNum, timer);
+  }
 }
 
-//SET PRESSURE
-void trigger31() {    //Set Pressure MARX
-  Serial.println("Set Pressure MARX");
+//SET CIRCUIT DELAY
+void trigger3() 
+{
+  int circuitNum = 0;
+  long int timer = 0;
+  circuitNum = myNex.readNumber("Global.Circuit.val");
+  timer = myNex.readNumber("Enter_Numbers.number.val");
+
+  //Check if serial communication is successful, then map to function
+  if(circuitNum == 777777 || timer == 777777)
+  {
+    myNex.writeStr("page Confirm_Number");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Cir_Delay_Sel");
+    return;
+  }
+  else
+  {
+    circuitDelay(circuitNum, timer);
+  }
 }
 
-void trigger32() {    //Set Pressure MTG
-  Serial.println("Set Pressure MTG");
+//SET ALARM TIMES
+void trigger4() 
+{
+  int circuitNum = 0;
+  long int timer = 0;
+  circuitNum = myNex.readNumber("Global.Circuit.val");
+  timer = myNex.readNumber("Enter_Numbers.number.val");
+
+    //Check if serial communication is successful, then map to function
+  if(circuitNum == 777777 || timer == 777777)
+  {
+    myNex.writeStr("page Confirm_Number");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Cir_Alarm_Sel");
+    return;
+  }
+  else
+  {
+    alarmConfig(circuitNum, timer);
+  }
 }
 
-void trigger33() {    //Set Pressure MARXTG70
-  Serial.println("Set Pressure MARXTG70");
-}
+//SET RECLAIMER SAFETY DELAY
+void trigger5() 
+{
+  long int timer = 0;
+  timer = myNex.readNumber("Enter_Numbers.number.val");
 
-void trigger34() {    //Set Pressure SWITCH
-  Serial.println("Set Pressure SWITCH");
-}
-
-void trigger35() {    //Set Pressure RECLAIM
-  Serial.println("Set Pressure RECLAIM");
-}
-
-void trigger36() {    //Set Pressure SWTG70
-  Serial.println("Set Pressure SWTG70");
-}
-
-void trigger37() {    //Set Pressure MIN SUPPLY
-  Serial.println("Set Pressure MIN SUPPLY");
-}
-
-//TIMES
-
-void trigger38() {    //Set Time Purge
-  Serial.println("Set Time Purge");
-}
-
-void trigger39() {    //Set Time Delay
-  Serial.println("Set Time Delay");
-}
-
-//ALARMS
-
-void trigger40() {    //Set Alarm Sound
-  Serial.println("Set Alarm Sound");
-}
-
-void trigger41() {    //Set Alarm MTG
-  Serial.println("Set Alarm MTG");
-}
-
-void trigger42() {    //Set Alarm MARX
-  Serial.println("Set Alarm MARX");
-}
-
-void trigger43() {    //Set Alarm SWITCH
-  Serial.println("Set Alarm SWITCH");
-}
-
-void trigger44() {    //Set Alarm MARXTG70
-  Serial.println("Set Alarm MARXTG70");
-}
-
-void trigger45() {    //Set Alarm SWTG70
-  Serial.println("Set Alarm SWTG70");
-}
-
-//PID
-
-void trigger46() {    //Set PID KP
-  Serial.println("Set PID KP");
-}
-
-void trigger47() {    //Set PID KD
-  Serial.println("Set PID KD");
-}
-
-void trigger48() {    //Set PID KI
-  Serial.println("Set PID KI");
-}
-
-//RECLAIMER
-
-void trigger49() {    //Set REC OM
-  Serial.println("Set REC ON");
-}
-
-void trigger50() {    //Set REC OFF
-  Serial.println("Set REC OFF");
-}
-
-void trigger51() {    //Set MIN SUPPLY
-  Serial.println("Set MIN SUPPLY");
-}
-
-void trigger52() {    //Set REC DELAY
-  Serial.println("Set REC DELAY");
+  //Check if serial communication is successful, then map to function
+  if(timer == 777777)
+  {
+    myNex.writeStr("page Confirm_Number");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Timers");
+    return;
+  }
+  else
+  {
+    setReclaimerSafetyDelay(timer);
+  }
 }
