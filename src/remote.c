@@ -67,8 +67,7 @@ int reconnect(remote_t *r, int retries, int timeout) {
   int ret = 0;
 
   close(r->fd);
-  printf("Disconnected. Attempting reconnect...\n");
-
+  
   while (retries--) {
 
     if (connect(r) < 0) {
@@ -76,13 +75,10 @@ int reconnect(remote_t *r, int retries, int timeout) {
     } else {
       ret = poll(r->pfds, 1, timeout);
       if (ret == 0) {
-        printf("Successfully reconnected!\n");
         r->r_flags &= ~(1 << R_NOTTY);
         break;
       }
     }
-
-    printf("Reconnect failed (retry = %d).\n", retries);
   }
 
   if (!retries && isbset(r->r_flags, R_NOTTY)) {
@@ -195,38 +191,6 @@ int poll_resp(remote_t *r, int timeout) {
   } 
 
   return ret;
-}
-
-int ping(remote_t *r, uint8_t ttl, int ntimes) {
-  int reply = 0;
-  struct timeval itime;
-
-  // ping header
-  r->tx.type = PK_STATUS;
-  r->tx.flags = (1 << ST_PING);
-  r->tx.size = 0;
-  r->tx.timeout = ttl;
-
-  for (int i = 0; i < ntimes; i += 1) {
-    gettimeofday(&itime, NULL);
-
-    tx_packet(r);
-
-    if (poll_resp(r, -1) > 0) {
-      if (r->rx.type == PK_STATUS) {
-        if (isbset(r->rx.flags, ST_PING)) {
-          printf("\tPing reply: bytes=%d  TTL=%ds\n", PS_HEADER + r->rx.size, ttl);
-          reply += 1;
-        } else if (isbset(r->rx.flags, ST_TIMEOUT)) {
-          printf("\tPing timed out: TTL=%ds\n", ttl);
-        }
-      }
-    } else {
-      printf("\tResponse timed out\n");
-    }
-  }
-
-  return reply;
 }
 
 void print_packet(packet_t *p) {

@@ -87,7 +87,7 @@ char *const pktype_map[] = {
   NULL
 };
 
-int init_client(client_t *c) {
+int init_client(client_t *c, char *dev_path) {
   int ret = 0;
 
   c->s_flags = 0;
@@ -114,6 +114,8 @@ int init_client(client_t *c) {
   scrollok(c->view, TRUE);
 
   c->cmd = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH - 2, 0, CWIN_WIDTH + 1);
+
+  ret = init_remote(&c->r, dev_path, B9600);
 
   return ret;
 }
@@ -200,30 +202,41 @@ int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
   return ret;
 }
 
+int ping(client_t *c, packet_t *p) {
+  int replies = 0;
+  while (p->bytes[0]--) {
+    tx_packet(&c->r);
+
+    if (poll_resp(&c->r, p->timeout * 1000 + 50) > 0) {
+      if (isbset(c->r.rx.flags, ST_PING)) {
+        sprintf(c->print_buf, "Ping reply: bytes=%d  TTL=%ds\n", PS_HEADER + p->size, p->timeout);
+        print_view(c, c->print_buf);
+        replies += 1;
+      } else if (isbset(c->r.rx.flags, ST_TIMEOUT)) {
+        sprintf(c->print_buf, "Ping timed out (TTL=%ds)\n", p->timeout);
+        print_view(c, c->print_buf);
+      } 
+    } else {
+      print_view(c, "Device poll timed out\n");
+    }
+  }
+
+  return replies;
+}
+
 void update_client(client_t *c) {
-  int i, key;
+  int i, r, p, key;
 
   // listen for new packets
-  // if (isbclr(c->r.r_flags, R_EXIT)) {
-  //   // if (poll_resp(&c->r, 1000) > 0)
-  //     // print_packet(&c->r.rx);
-  // }
+  if (isbclr(c->r.r_flags, R_EXIT)) {
+    if (poll_resp(&c->r, 1) > 0) {
+      draw_packet(c, &c->r.rx);
+      // process_packet(&c->r, &c->r.rx);
+    }
+  }
 
   // processes user input
   key = wgetch(c->scr);
-
-  if (c->err) {
-    process_error(c, key);
-  } else {
-    if (process_key(c, key)) {                    // returns 1 on key ENTER
-      memset(&c->pargs, 0, sizeof(packet_args));
-      c->err = process_input(c, c->cmd_input);
-      if (!c->err) c->s_flags |= (1 << S_INPUT);
-    }
-
-    draw_circuits(c);
-    draw_input(c);
-  }
 
   // processes client state updates
   for (i = 0; i < 8; i += 1) {
@@ -251,6 +264,13 @@ void update_client(client_t *c) {
         case S_UPCYCLE:
         case S_PING:
           // ping system for nping packets
+          p = c->r.tx.bytes[0];
+          sprintf(c->print_buf, "\nPINGING SYSTEM: n=%d  TTL=%ds\n", p, c->r.tx.timeout);
+          print_view(c, c->print_buf);
+          r = ping(c, &c->r.tx);
+          sprintf(c->print_buf, "\nRECEIVED: %d of %d replies (%.02lf%%)\n", r, p, 100 * (double)r / p);
+          c->s_flags &= ~(1 << S_PING);
+          break;
         case S_RETRY:
           if (isbclr(c->r.r_flags, R_RXINP)) {
             tx_packet(&c->r);
@@ -259,6 +279,19 @@ void update_client(client_t *c) {
           break;
       }
     }
+  }
+
+  if (c->err) {
+    process_error(c, key);
+  } else {
+    if (process_key(c, key)) {                    // returns 1 on key ENTER
+      memset(&c->pargs, 0, sizeof(packet_args));
+      c->err = process_input(c, c->cmd_input);
+      if (!c->err) c->s_flags |= (1 << S_INPUT);
+    }
+
+    draw_circuits(c);
+    draw_input(c);
   }
 }
 

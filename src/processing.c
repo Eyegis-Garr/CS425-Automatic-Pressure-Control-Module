@@ -104,7 +104,8 @@ int process_packet(client_t *c, packet_t *p) {
     case PK_STATUS:
       // if timeout, flag for retransmit?
       if (isbset(p->flags, ST_TIMEOUT)) {
-        ret = -1;
+        c->err = E_RETRY;
+        ret = E_RETRY;
       }
       break;
     default:
@@ -147,6 +148,15 @@ int process_error(client_t *c, int key) {
     case E_ARGUMENT:
       sprintf(c->err_header, "MISSING ARGUMENT (%d)", c->err);
       sprintf(c->err_message, "Option is missing argument.");
+      break;
+    case E_RETRY:
+      sprintf(c->err_header, "PACKET TIMEOUT (%d)", c->err);
+      sprintf(c->err_message, "Packet timed out. Resend? (Y/N)");
+      if (key == 'Y' || key == 'y') {
+        c->s_flags |= (1 << S_RETRY);
+      } else {
+        c->s_flags &= ~(1 << S_RETRY);
+      }
       break;
     default:
       *c->err_header = '\0';
