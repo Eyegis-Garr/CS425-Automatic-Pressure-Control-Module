@@ -196,6 +196,16 @@ double minReclaimerPressure = 50.0;
 //Checksum setup
 CRC8 crc;
 
+//Brightness
+int brightness = 100;
+
+//Preset Names
+String preset1 = "";
+String preset2 = "";
+String preset3 = "";
+String preset4 = "";
+String preset5 = "";
+String preset6 = "";
 
 //-------------------------------------------------------------------------------------------------------------
 //Unit Tests
@@ -416,6 +426,7 @@ void setup()
       lasttg70switchenableState = !tg70switchenableState;
       lasttg70marxenableState = !tg70marxenableState;
       previousSettingFile.close();
+      readPresets();
 
       SaveCurrentSettings();
       myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");  //Need to write to log also
@@ -2668,6 +2679,67 @@ void alarmController(String errorString)
   */
 }
 
+//Read Presets
+void readPresets() {
+  if(SD.exists("Presets.txt")) 
+  {
+    File PresetsFile = SD.open("Presets.txt", FILE_READ);
+    preset1 = PresetsFile.readStringUntil('\n');
+    preset2 = PresetsFile.readStringUntil('\n');
+    preset3 = PresetsFile.readStringUntil('\n');
+    preset4 = PresetsFile.readStringUntil('\n');
+    preset5 = PresetsFile.readStringUntil('\n');
+    preset6 = PresetsFile.readStringUntil('\n');
+    brightness = PresetsFile.readStringUntil('\n').toInt();
+  }
+  else
+  {
+    preset1 = "Preset 1";
+    preset2 = "Preset 2";
+    preset3 = "Preset 3";
+    preset4 = "Preset 4";
+    preset5 = "Preset 5";
+    preset6 = "Preset 6";
+    brightness = 100;
+  }
+
+  myNex.writeStr("page2.t0.txt", preset1);
+  myNex.writeStr("page2.t1.txt", preset2);
+  myNex.writeStr("page2.t2.txt", preset3);
+  myNex.writeStr("page2.t3.txt", preset4);
+  myNex.writeStr("page2.t4.txt", preset5);
+  myNex.writeStr("page2.t5.txt", preset6);
+  myNex.writeStr("dim=" + brightness);
+}
+
+//Write Presets
+void writePresets() 
+{
+  if(SD.exists("Presets.txt")) 
+  {
+    preset1 = myNex.readStr("page2.t0.txt");
+    preset2 = myNex.readStr("page2.t1.txt");
+    preset3 = myNex.readStr("page2.t2.txt");
+    preset4 = myNex.readStr("page2.t3.txt");
+    preset5 = myNex.readStr("page2.t4.txt");
+    preset6 = myNex.readStr("page2.t5.txt");
+    brightness = myNex.readStr("page3.n0.val").toInt();
+
+    File PresetsFile = SD.open("Presets.txt", FILE_WRITE);
+    PresetsFile.println(preset1);
+    PresetsFile.println(preset2);
+    PresetsFile.println(preset3);
+    PresetsFile.println(preset4);
+    PresetsFile.println(preset5);
+    PresetsFile.println(preset6);
+    PresetsFile.println(brightness);
+
+  }
+  else
+  {
+    //make page to say no sd card found
+  }
+}
 
 //--------------------------------------------------------------------------------------------
 //TRIGGERS
@@ -2813,4 +2885,15 @@ void trigger5()
   {
     setReclaimerSafetyDelay(timer);
   }
+}
+
+//Brightness
+void trigger20() {
+  brightness = myNex.readNumber("Global.brightness.val");
+  myNex.writeStr("dim=" + brightness);
+}
+
+//Change Preset Names
+void trigger21() {
+  writePresets();
 }
