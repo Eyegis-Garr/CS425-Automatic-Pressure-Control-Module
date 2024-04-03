@@ -61,7 +61,7 @@
                 ]
             },
             "defines": [
-                "PLATFORMIO=60113",
+                "PLATFORMIO=60114",
                 "ARDUINO_AVR_MEGA2560",
                 "AVR8_BREAKPOINT_MODE=2",
                 "F_CPU=16000000L",
