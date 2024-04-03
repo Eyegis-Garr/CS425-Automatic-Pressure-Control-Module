@@ -83,7 +83,6 @@ int init_remote(remote_t *r, char *path, int speed);
 int connect(remote_t *r);
 int reconnect(remote_t *r, int retries, int timeout);
 
-// size_t rx_packet(int fd, packet_t *p);
 size_t tx_packet(remote_t *r);
 
 int rx_packet(remote_t *r);
