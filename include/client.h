@@ -40,6 +40,7 @@ typedef struct _win_st WINDOW;
 #define E_CONNECT   6
 #define E_PCREATE   7
 #define E_ARGUMENT  8
+#define E_RETRY     9
 
 typedef struct valset_t {
   int op;
@@ -77,6 +78,7 @@ typedef struct client_t {
   char cmd_input[MAX_CMD_LEN];
   char err_header[MAX_CMD_LEN];
   char err_message[MAX_CMD_LEN];
+  char print_buf[MAX_CMD_LEN];
 
   WINDOW *scr;
   WINDOW *view_win;
@@ -98,7 +100,7 @@ extern const char update_opts[];
 extern const char command_opts[];
 extern const char ping_opts[];
 
-int init_client(client_t *c);
+int init_client(client_t *c, char *dev_path);
 
 int process_key(client_t *c, int key);
 int process_packet(client_t *c, packet_t *p);
@@ -120,6 +122,7 @@ int val_cmp_op(const void *a, const void *b);
 int val_cmp_value(const void *a, const void *b);
 
 int construct_packet(client_t *c, packet_t *p, packet_args *pargs);
+int ping(client_t *c, packet_t *p);
 
 void wclrtorng(WINDOW *w, int y, int bx, int ex);
 void center_str(WINDOW *w, int y, const char *str);

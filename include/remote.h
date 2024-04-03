@@ -88,7 +88,6 @@ size_t tx_packet(remote_t *r);
 
 int rx_packet(remote_t *r);
 int poll_resp(remote_t *r, int timeout);
-int ping(remote_t *r, uint8_t ttl, int ntimes);
 
 void print_packet(packet_t *p);
 
