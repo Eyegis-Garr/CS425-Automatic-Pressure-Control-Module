@@ -122,17 +122,17 @@ int init_client(client_t *c, char *dev_path) {
 
 int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
   int i, l, s, ret;
-  uint8_t *pdata = p->bytes;
+  uint8_t *pdata = p->packet.data;
   valset_t *seek, *sort[MAX_VALUES];
 
-  p->type = pargs->op_type;
-  p->flags = pargs->op_flags;
-  p->timeout = pargs->timeout;
+  p->packet.type = pargs->op_type;
+  p->packet.flags = pargs->op_flags;
+  p->packet.timeout = pargs->timeout;
   ret = 0;
 
   switch (pargs->op_type) {
     case PK_UPDATE:
-      if (isbset(p->flags, UP_CIRCUITS)) {
+      if (isbset(p->packet.flags, UP_CIRCUITS)) {
         // store update masks
         *pdata++ = pargs->cmask;
         *pdata++ = pargs->pmask >> 8;
@@ -140,7 +140,7 @@ int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
       }
       break;
     case PK_COMMAND:
-      if (pargs->req_ack) p->flags |= (1 << CMD_RESPND);
+      if (pargs->req_ack) p->packet.flags |= (1 << CMD_RESPND);
 
       for (i = 0; i < 8; i += 1) {
         if (isbset(pargs->op_flags, i)) {
@@ -197,23 +197,23 @@ int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
       break;
   }
 
-  p->size = pdata - p->bytes;
+  p->packet.size = pdata - p->packet.data;
 
   return ret;
 }
 
 int ping(client_t *c, packet_t *p) {
   int replies = 0;
-  while (p->bytes[0]--) {
+  while (p->packet.data[0]--) {
     tx_packet(&c->r);
 
-    if (poll_resp(&c->r, p->timeout * 1000 + 50) > 0) {
-      if (isbset(c->r.rx.flags, ST_PING)) {
-        sprintf(c->print_buf, "Ping reply: bytes=%d  TTL=%ds\n", PS_HEADER + p->size, p->timeout);
+    if (poll_resp(&c->r, p->packet.timeout * 1000) > 0) {
+      if (isbset(c->r.rx.packet.flags, ST_PING)) {
+        sprintf(c->print_buf, "Ping reply: bytes=%d  TTL=%ds\n", PS_HEADER + p->packet.size, p->packet.timeout);
         print_view(c, c->print_buf);
         replies += 1;
-      } else if (isbset(c->r.rx.flags, ST_TIMEOUT)) {
-        sprintf(c->print_buf, "Ping timed out (TTL=%ds)\n", p->timeout);
+      } else if (isbset(c->r.rx.packet.flags, ST_TIMEOUT)) {
+        sprintf(c->print_buf, "Ping timed out (TTL=%ds)\n", p->packet.timeout);
         print_view(c, c->print_buf);
       } 
     } else {
@@ -225,18 +225,9 @@ int ping(client_t *c, packet_t *p) {
 }
 
 void update_client(client_t *c) {
-  int i, r, p, key;
+  int i, r, p;
 
-  // listen for new packets
-  if (isbclr(c->r.r_flags, R_EXIT)) {
-    if (poll_resp(&c->r, 1) > 0) {
-      draw_packet(c, &c->r.rx);
-      // process_packet(&c->r, &c->r.rx);
-    }
-  }
-
-  // processes user input
-  key = wgetch(c->scr);
+  c->key = wgetch(c->scr);
 
   // processes client state updates
   for (i = 0; i < 8; i += 1) {
@@ -245,30 +236,40 @@ void update_client(client_t *c) {
         case S_EXIT:
           // dealloc client stuff
           break;
+        case S_POLL:
+          if (isbclr(c->r.r_flags, R_EXIT)) {
+            if (poll_resp(&c->r, 1) > 0) {
+              process_packet(c, &c->r.rx);
+            }
+          }
+          break;
         case S_INPUT:
+          c->err = process_input(c, c->cmd_input);
+          if (!c->err)  {
+            // construct and transmit packet(s)
+            c->err = construct_packet(c, &c->r.tx, &c->pargs);
+            if (!c->err) {
+              if (isbclr(c->r.r_flags, R_RXINP)) {
+                // draw_packet(c, &c->r.tx);
+                tx_packet(&c->r);
+              } else {
+                c->s_flags |= (1 << S_RETRY);
+              }
+            }
+          }
           c->s_flags &= ~(1 << S_INPUT);
           c->cmd_input[0] = '\0';
           c->cursor = 0;
-          // construct and transmit packet(s)
-          c->err = construct_packet(c, &c->r.tx, &c->pargs);
-          if (!c->err) {
-            if (isbclr(c->r.r_flags, R_RXINP)) {
-              // tx_packet(&c->r);
-              draw_packet(c, &c->r.tx);
-              // exit(1);
-            } else {
-              c->s_flags |= (1 << S_RETRY);
-            }
-          }
           break;
         case S_UPCYCLE:
         case S_PING:
           // ping system for nping packets
-          p = c->r.tx.bytes[0];
-          sprintf(c->print_buf, "\nPINGING SYSTEM: n=%d  TTL=%ds\n", p, c->r.tx.timeout);
+          p = c->r.tx.packet.data[0];
+          sprintf(c->print_buf, "\nPINGING SYSTEM: n=%d  TTL=%ds\n", p, c->r.tx.packet.timeout);
           print_view(c, c->print_buf);
           r = ping(c, &c->r.tx);
           sprintf(c->print_buf, "\nRECEIVED: %d of %d replies (%.02lf%%)\n", r, p, 100 * (double)r / p);
+          print_view(c, c->print_buf);
           c->s_flags &= ~(1 << S_PING);
           break;
         case S_RETRY:
@@ -277,21 +278,19 @@ void update_client(client_t *c) {
             c->s_flags &= ~(1 << S_RETRY);
           }
           break;
+        default:
+          break;
       }
     }
   }
 
+  
   if (c->err) {
-    process_error(c, key);
+    process_error(c);
   } else {
-    if (process_key(c, key)) {                    // returns 1 on key ENTER
-      memset(&c->pargs, 0, sizeof(packet_args));
-      c->err = process_input(c, c->cmd_input);
-      if (!c->err) c->s_flags |= (1 << S_INPUT);
+    if (process_key(c, c->key)) {                    // returns 1 on key ENTER
+      c->s_flags |= (1 << S_INPUT);
     }
-
-    draw_circuits(c);
-    draw_input(c);
   }
 }
 

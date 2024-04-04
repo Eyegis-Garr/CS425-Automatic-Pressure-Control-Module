@@ -25,6 +25,8 @@ int process_key(client_t *c, int key) {
       case 127:
         if (c->cursor > 0) c->cmd_input[--c->cursor] = '\0';
         break;
+      case 9:
+        c->s_flags ^= (1 << S_POLL);
       default:
         break;
     }
@@ -44,6 +46,7 @@ int process_input(client_t *c, char *cmd) {
   if (ac < 0) {
     ret = E_TOKEN;
   } else {
+    memset(&c->pargs, 0, sizeof(packet_args));
     if (strcmp(av[0], "update") == 0) {
 			// parse update input command
       c->pargs.op_type = PK_UPDATE;
@@ -79,31 +82,31 @@ int process_input(client_t *c, char *cmd) {
 }
 
 int process_update(client_t *c, packet_t *p) {
-  uint8_t *bytes = p->bytes;
+  uint8_t *bytes = p->packet.data;
 
-  if (isbset(p->flags, UP_SYSTEM)) {
+  if (isbset(p->packet.flags, UP_SYSTEM)) {
     // load system state variables
     bytes += update_system(c, bytes);
-  } if (isbset(p->flags, UP_CIRCUITS)) {
+  } if (isbset(p->packet.flags, UP_CIRCUITS)) {
     bytes += update_circuits(c, bytes);
-  } if (isbset(p->flags, UP_REMOTE)) {
+  } if (isbset(p->packet.flags, UP_REMOTE)) {
     // load system remote/packet state (not a priority)
   }
 
-  return bytes != p->bytes;
+  return bytes != p->packet.data;
 }
 
 int process_packet(client_t *c, packet_t *p) {
   int ret = 0;
 
-  switch (p->type) {
+  switch (p->packet.type) {
     case PK_UPDATE:
       // filter and push update
       ret = process_update(c, p);
       break;
     case PK_STATUS:
       // if timeout, flag for retransmit?
-      if (isbset(p->flags, ST_TIMEOUT)) {
+      if (isbset(p->packet.flags, ST_TIMEOUT)) {
         c->err = E_RETRY;
         ret = E_RETRY;
       }
@@ -115,7 +118,7 @@ int process_packet(client_t *c, packet_t *p) {
   return ret;
 }
 
-int process_error(client_t *c, int key) {
+int process_error(client_t *c) {
 	switch (c->err) {
 		case E_INPUT:
 			sprintf(c->err_header, "INPUT ERROR (%d)", c->err);
@@ -123,7 +126,7 @@ int process_error(client_t *c, int key) {
 			break;
 		case E_TIMEOUT:
 			sprintf(c->err_header, "PACKET TIMED OUT (%d)", c->err);
-			sprintf(c->err_message, "%s packet timed out. TTL -> %d", pktype_map[c->r.tx.type], c->r.tx.timeout);
+			sprintf(c->err_message, "%s packet timed out. TTL -> %d", pktype_map[c->r.tx.packet.type], c->r.tx.packet.timeout);
 			break;
 		case E_TOKEN:
 			sprintf(c->err_header, "TOKENIZING ERROR (%d)", c->err);
@@ -143,7 +146,7 @@ int process_error(client_t *c, int key) {
       break;
     case E_PCREATE:
       sprintf(c->err_header, "PACKET CONSTRUCT (%d)", c->err);
-      sprintf(c->err_message, "Failed to create %s-type packet.", pktype_map[c->r.tx.type]);
+      sprintf(c->err_message, "Failed to create %s-type packet.", pktype_map[c->r.tx.packet.type]);
       break;
     case E_ARGUMENT:
       sprintf(c->err_header, "MISSING ARGUMENT (%d)", c->err);
@@ -152,7 +155,7 @@ int process_error(client_t *c, int key) {
     case E_RETRY:
       sprintf(c->err_header, "PACKET TIMEOUT (%d)", c->err);
       sprintf(c->err_message, "Packet timed out. Resend? (Y/N)");
-      if (key == 'Y' || key == 'y') {
+      if (c->key == 'Y' || c->key == 'y') {
         c->s_flags |= (1 << S_RETRY);
       } else {
         c->s_flags &= ~(1 << S_RETRY);
@@ -164,15 +167,15 @@ int process_error(client_t *c, int key) {
       break;
 	}
 
-	if (key != ERR) {
-		werase(c->cmd); wrefresh(c->cmd);
-		sprintf(c->err_header, "INPUT");
-		c->cmd_input[0] = '\0';
-		c->cursor = 0;
-		c->err = 0;
-	} else {
-		draw_err(c);
-	}
+  if (c->key != ERR) {
+    werase(c->cmd); wrefresh(c->cmd);
+    sprintf(c->err_header, "INPUT");
+    c->cmd_input[0] = '\0';
+    c->cursor = 0;
+    c->err = 0;
+  } else {
+    draw_err(c);
+  }
 
 	return c->err;	
 }

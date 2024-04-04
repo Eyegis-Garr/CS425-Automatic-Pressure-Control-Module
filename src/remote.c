@@ -22,7 +22,7 @@ int init_remote(remote_t *r, char *path, int speed) {
 int connect(remote_t *r) {
   int ret = 0;
 
-  r->fd = open(r->dev_path, O_RDWR | O_NOCTTY, S_IRUSR | S_IWUSR);
+  r->fd = open(r->dev_path, O_RDWR | O_NOCTTY | O_NDELAY, S_IRUSR | S_IWUSR);
   if (r->fd < 0) {
     printf("ERROR: Could not open port '%s'.\n", r->dev_path);
     ret = -1;
@@ -132,10 +132,10 @@ static size_t cobs_decode(uint8_t *in, size_t length, void *out) {
 }
 
 size_t tx_packet(remote_t *r) {
-  static uint8_t tx_buffer[PS_LENGTH + PS_HEADER];
+  static uint8_t tx_buffer[PS_DATA + PS_HEADER];
   size_t wr = 0;
 
-  wr = cobs_encode(&r->tx, r->tx.size + PS_HEADER, tx_buffer);
+  wr = cobs_encode(&r->tx, r->tx.packet.size + PS_HEADER, tx_buffer);
 
   tx_buffer[wr++] = 0;
 
@@ -145,28 +145,46 @@ size_t tx_packet(remote_t *r) {
 }
 
 int rx_packet(remote_t *r) {
-  static uint8_t rx_buffer[PS_LENGTH + PS_HEADER];
-  int ret = 0, rd;
+  static uint8_t rx_buffer[PS_LENGTH];
+  uint8_t *delim;
+  int ret, rx_len, ex;
 
+  ret = 0;
+  
   if (isbclr(r->r_flags, R_RXINP)) {
     r->rx_head = rx_buffer;
-  } 
-  
-  if (r->rx_head != rx_buffer) {
+  }
+
+  rx_len = read(r->fd, r->rx_head, PS_LENGTH - (r->rx_head - rx_buffer) - 1);
+
+  if (rx_len > 0) {
     r->r_flags |= (1 << R_RXINP);
-  }
+    // search for delimiter in new bytes
+    delim = memchr(r->rx_head, 0, rx_len);
+    if (delim) {
+      r->r_flags &= ~(1 << R_RXINP);
+      // decode the contents of the receive buffer into packet
+      cobs_decode(rx_buffer, delim - rx_buffer + 1, r->rx.bytes);
 
-  rd = read(r->fd, r->rx_head, PS_LENGTH);
+      // rx_head points to current read position (rx_len offset from rx_buffer for prev read)
+      // if delimiter is found, bytes from next packet may have been loaded into rx_buffer
+      // len of extra bytes is -> length of packet bytes - total length of loaded bytes - delimiter byte
+      //                       -> (delim - rx_buffer) - ((r->rx_head + rx_len) - rx_buffer) - 1
+      ex = (r->rx_head + rx_len) - delim - 1;
+      
+      if (ex > 0) {
+        // rx still in progress
+        r->r_flags |= (1 << R_RXINP);
+        // move extra bytes read from next packet to beginning of receive buffer
+        r->rx_head = memmove(rx_buffer, delim + 1, ex) + ex;
+        rx_len = 0;
+      }
 
-  if (rd > 0) {
-    r->rx_head += rd;
-  }
+      ret = 1;
+    }
 
-  if (*(r->rx_head) == 0) {
-    cobs_decode(rx_buffer, r->rx_head - rx_buffer, &r->rx);
-    r->rx_head = rx_buffer;
-    r->r_flags &= ~(1 << R_RXINP);
-    ret = 1;
+    // advance receive head
+    r->rx_head += rx_len; 
   }
 
   return ret;
@@ -176,7 +194,7 @@ int poll_resp(remote_t *r, int timeout) {
   int ready, ret = 0;
 
   while (ret == 0) {
-    ready = poll(r->pfds, 1, timeout);
+    ready = poll(r->pfds, 1, timeout * 2);
 
     if (ready) {
       if (r->pfds->revents & POLLIN) {
@@ -196,18 +214,18 @@ int poll_resp(remote_t *r, int timeout) {
 void print_packet(packet_t *p) {
   printf("===== header =====\n");
 
-  printf("PK TYPE         : %u\n", p->type);
-  printf("PK FLAGS        : %u\n", p->flags);
-  printf("PK SIZE         : %u\n", p->size);
-  printf("PK TIMEOUT      : %u\n", p->timeout);
+  printf("PK TYPE         : %u\n", p->packet.type);
+  printf("PK FLAGS        : %u\n", p->packet.flags);
+  printf("PK SIZE         : %u\n", p->packet.size);
+  printf("PK TIMEOUT      : %u\n", p->packet.timeout);
 
   printf("\t---- data ----\n");
-  for (int i = 0; i < p->size; i += 1) {
-    printf("PK DATA[%d]     : %u\n", i, p->bytes[i]);
+  for (int i = 0; i < p->packet.size; i += 1) {
+    printf("PK DATA[%d]     : %u\n", i, p->packet.data[i]);
   }
   printf("\t---- data ----\n");
 
   printf("===== header =====\n");
 
-  printf("TOTAL BYTES: %d\n", p->size + 3);
+  printf("TOTAL BYTES: %d\n", p->packet.size + 3);
 }
