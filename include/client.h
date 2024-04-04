@@ -31,6 +31,7 @@ typedef struct _win_st WINDOW;
 #define S_UPCYCLE   2
 #define S_PING      3
 #define S_RETRY     4
+#define S_POLL      5
 
 #define E_INPUT     1
 #define E_TIMEOUT   2
@@ -74,6 +75,7 @@ typedef struct client_t {
   remote_t r;
   packet_args pargs;
 
+  int key;
   int cursor;
   char cmd_input[MAX_CMD_LEN];
   char err_header[MAX_CMD_LEN];
@@ -106,7 +108,7 @@ int process_key(client_t *c, int key);
 int process_packet(client_t *c, packet_t *p);
 int process_input(client_t *c, char *cmd);
 int process_update(client_t *c, packet_t *p);
-int process_error(client_t *c, int key);
+int process_error(client_t *c);
 
 int parse_update(packet_args *pargs, int ac, char *av[]);
 int parse_command(packet_args *pargs, int ac, char *av[]);

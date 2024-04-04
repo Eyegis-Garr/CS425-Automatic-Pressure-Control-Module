@@ -16,8 +16,9 @@
 #define SOTX        0xAA
 #define EOTX        0x55
 
-#define PS_LENGTH  255
+#define PS_DATA    255
 #define PS_HEADER  4
+#define PS_LENGTH  (PS_DATA + PS_HEADER)
 // packet type
 #define PK_UPDATE   0  // state update packet (required response)
 #define PK_COMMAND  1  // state config packet (specified response)
@@ -54,12 +55,17 @@
 #define isbset(d, b) (((d) & (1 << (b))) != 0)
 #define isbclr(d, b) (((d) & (1 << (b))) == 0)
 
-typedef struct packet_t {
+struct packet_s {
   uint8_t type;
   uint8_t flags;
   uint8_t size;
   uint8_t timeout;
 
+  uint8_t data[PS_DATA];
+};
+
+typedef union packet_t {
+  struct packet_s packet;
   uint8_t bytes[PS_LENGTH];
 } packet_t;
 
