@@ -87,14 +87,12 @@ int rx_packet(remote_t *r) {
 size_t tx_packet(packet_t *p, Stream *s) {
   static uint8_t tx_buffer[PS_LENGTH + PS_HEADER];
   size_t wr = 0;
-
-  wr = cobs_encode(p, p->packet.size + PS_HEADER, tx_buffer);
+  
+  wr = cobs_encode(p->bytes, p->packet.size + PS_HEADER, tx_buffer);
 
   tx_buffer[wr++] = 0;
 
   wr = s->write(tx_buffer, wr);
-
-  Serial.write(tx_buffer, wr);
 
   return wr;
 }

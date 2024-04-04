@@ -10,7 +10,7 @@ volatile uint8_t *DDR_L   = (volatile uint8_t *) 0x10A;
 volatile uint8_t *PIN_L   = (volatile uint8_t *) 0x109;
 
 void sim_setup() {
-  // init_ui(&sys.ui);
+  init_ui(&sys.ui);
   init_system();
   init_io();
 
@@ -34,7 +34,7 @@ void init_system() {
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    3,                  // pressure rate-of-change
+    1,                  // pressure rate-of-change
     { A7, 13, 13, 53, 49, 2, 3 },    // pins
     NULL
   };
@@ -49,7 +49,7 @@ void init_system() {
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    5,                  // pressure rate-of-change
+    1,                  // pressure rate-of-change
     { A7, 43, 39, 53, 49, 4, 5 },    // pins
     NULL
   };
@@ -64,7 +64,7 @@ void init_system() {
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    6,                  // pressure rate-of-change
+    0.5,                  // pressure rate-of-change
     { A7, 40, 13, 53, 49, 6, 7 },    // pins
     NULL
   };
@@ -79,7 +79,7 @@ void init_system() {
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    4.5,                  // pressure rate-of-change
+    2.5,                  // pressure rate-of-change
     { A7, 16, 17, 53, 49, 8, 9 },    // pins
     NULL
   };
@@ -94,7 +94,7 @@ void init_system() {
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    5,                  // pressure rate-of-change
+    0.5,                  // pressure rate-of-change
     { A7, 20, 21, 53, 49, 11, 12 },    // pins
     NULL
   };
@@ -112,10 +112,10 @@ void init_system() {
     c->disp->clear();
   }
   
-  sys.up_types = 0;
-  sys.uptime = 0;
+  sys.up_types = (1 << UP_CIRCUITS);
+  sys.c_flags = (1 << C_NUM_CIRCUITS) - 1;
+  sys.p_flags = (1 << C_NUM_PARAM) - 1;
 
-  Serial1.begin(9600);
   init_remote(&sys.remote, &Serial1);
 }
 
@@ -141,23 +141,22 @@ void init_io() {
   *DDR_L |= (1 << C_MARX) | (1 << C_MTG70) | (1 << C_MTG) | (1 << C_SWITCH) | (1 << C_SWTG70);
   *PORT_L |= (1 << C_MARX) | (1 << C_MTG70) | (1 << C_MTG) | (1 << C_SWITCH) | (1 << C_SWTG70);
 
-  // 500Hz button input polling timer (prescalar -> 8, output comare -> 4000 - 1)
-  TCCR1A = 0; // normal timer operation
-  TCCR1B |= (1 << WGM12); // clear timer on compare
-  TCCR1B |= (1 << CS11); // clock select -> 64 prescalar
-  OCR1A = 3999; // top value for timer used for comparisons
-  TIMSK1 |= (1 << OCIE1A);  // compare match interrupt enable for timer 1A
-
-  init_remote(&sys.remote, &Serial1);
+  // 100Hz button input polling timer
+  TCCR1A = 0;                           // normal timer operation
+  TCCR1B = (1 << CS11) | (1 << CS10);                 // clock select -> 8 prescalar
+  OCR1A = (F_CPU / (100 * 8)) - 1;      // top value for timer used for comparisons
+  TIMSK1 |= (1 << TOIE1);               // timer overflow interrupt enable for timer 1A
 }
 
 void poll_device(remote_t *r) {
   if (rx_packet(r) > 0) {
     process_packet(r);
+  } else {
+    issue_updates(r);
   }
 }
 
-ISR(TIMER1_COMPA_vect) {
+ISR(TIMER1_OVF_vect) {
   static uint16_t state[C_NUM_CIRCUITS];
   uint8_t i;
 
@@ -214,6 +213,8 @@ void modify_circuit(circuit_t *c, uint32_t dt, uint8_t in, uint8_t out) {
       c->params[P_PRESSURE] -= c->roc * ((double)dt / 1000);
     }
   }
+
+  c->params[P_PRESSURE] = clamp(0, 255, c->params[P_PRESSURE]);
 
   if (in || out) {
     c->disp->showNumberDecEx(c->params[P_PRESSURE], 0x40, false, 2, 0);

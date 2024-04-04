@@ -20,12 +20,6 @@ int process_packet(remote_t *r) {
           sys.p_flags |= (uint16_t) *rd++;
         }
       }
-
-      if (isbset(r->rx.packet.flags, UP_REFRESH)) {
-        ret = issue_updates(r);
-      } else {
-        ret = ack_packet(r, &r->rx);
-      }
       break;
     case PK_COMMAND:
       ret = process_command(r->rx.packet.flags, rd);
@@ -38,6 +32,7 @@ int process_packet(remote_t *r) {
       break;
     case PK_STATUS:
       if (isbset(r->rx.packet.flags, ST_PING)) {
+        r->rx.packet.timeout = 0;
         ret = tx_packet(&r->rx, r->s); // echo ping back
       }
       break;
@@ -110,9 +105,7 @@ size_t issue_updates(remote_t *r) {
     r->tx.packet.type = PK_UPDATE;
     r->tx.packet.flags = sys.up_types;
     r->tx.packet.size = 0;
-
-    // no timeout for update-request responses
-    *pdata++ = 0;
+    r->tx.packet.timeout = 0;
     
     if (isbset(sys.up_types, UP_SYSTEM)) {
       pdata += packetize_system(pdata);
@@ -123,12 +116,12 @@ size_t issue_updates(remote_t *r) {
     }
   }
 
-  r->tx.packet.size = pdata - r->tx.bytes;
+  r->tx.packet.size = pdata - r->tx.packet.data;
 
   // send packet over configured remote device
   tx_packet(&r->tx, r->s);
 
-  return pdata - r->tx.bytes;
+  return pdata - r->tx.packet.data;
 }
 
 /**
