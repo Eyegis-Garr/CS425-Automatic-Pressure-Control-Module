@@ -68,7 +68,7 @@ size_t process_command(uint8_t flags, uint8_t *bytes) {
           break;
         case CMD_PARSET:
           cmask = *cbytes++;
-          pmask = (uint16_t) *cbytes++;
+          pmask = *cbytes++;
           pmask <<= 8;
           pmask |= (uint16_t) *cbytes++;
           bytes += packetize_circuits(cbytes, cmask, pmask, 0);
