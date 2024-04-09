@@ -3,7 +3,7 @@
 //Vladislav Petrov
 //Sean Rolandelli
 //Bradley Sullivan
-//Last modification March 21, 2024
+//Last modification April 9, 2024
 //-------------------------------------------------------------------------------------------------------------
 
 
@@ -1808,138 +1808,13 @@ String FileRemover(int presetNumber)
 
 
 //-------------------------------------------------------------------------------------------------------------
-//Set the pressure of a given circuit to the current reading.
+//Set the pressure of a given circuit to the user specified value in PSI
 //-------------------------------------------------------------------------------------------------------------
-/*
-void SetPressure(int selection)  
+void SetCircuitPressure(int selection, float pressureValue)  
 {
-  bool selecting = true;
-  bool set = true;
-  int oldValue = 0;
-  int newValuePin = 0;
-  String selString = " >SET<  CANCEL  ";
-
-      ControlButtonStateManager();
-
-  lcd.setCursor(0,0);
+  /*
   switch (selection)
-  {
-    //Marx
-    case 0:
-      newValuePin = marxanaloginPin;
-      oldValue = int(Marxsetpoint);
-      break;
-
-    //Marx TG70
-    case 1:
-      newValuePin = tg70marxanaloginPin;
-      oldValue = int(TG70Marxsetpoint);
-      break;
-
-    //MTG
-    case 2:
-      newValuePin = mtganaloginPin;
-      oldValue = int(MTGsetpoint);
-      break;
-
-    //Switch
-    case 3:
-      newValuePin = switchanaloginPin;
-      oldValue = int(Switchsetpoint);
-      break;
-
-    //Switch TG70
-    case 4:
-      newValuePin = tg70switchanaloginPin;
-      oldValue = int(TG70Switchsetpoint);
-      break;
-
-    //Recaimer On
-    case 5:
-      newValuePin = reclaimeranaloginPin;
-      oldValue = int(maxReclaimerPressure);
-      break;
-
-    //Reclaimer Off
-    case 6:
-      newValuePin = reclaimeranaloginPin;
-      oldValue = int(minReclaimerPressure);
-      break;
-
-    //Minimum Supply
-    case 7:
-      newValuePin = bottleanaloginPin;
-      oldValue = int(minBottlePressure);
-      break;
-  }
-  
-  while(selecting)
-  {         
-    //lcd.print(String("NEW:" + String(int(analogRead(newValuePin))) + "                 "));  //Will be used for LOG FUNCTION
-    lcd.setCursor(8,0);
-    //lcd.print(String(" OLD:" + String(oldValue) + "                 "));   //Will be used for LOG FUNCTION
-    lcd.setCursor(0,1);
-    //lcd.print(selString);  //Will be used for LOG FUNCTION
-    
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-      
-      case '4': //Left
-        selString = " >SET<  CANCEL  ";
-        set = true;
-        break;
-        
-      case '5': //Right
-        selString = "  SET  >CANCEL< ";
-        set = false;
-        break;
-      }
-    }
-  }
-  
-  if(!set)
-  {
-    return;
-  }
-  
-  lcd.setCursor(0,0);
-  //lcd.print("SETTING:        ");   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-  
-  //Selection of which circuit the user would like to save
-  switch (selection)
-  {
-    case 0:
-      Marxsetpoint = analogRead(marxanaloginPin);
-      //lcd.print(String("MARX: " + String(Marxsetpoint) + "                "));   //Will be used for LOG FUNCTION
-      break;
-    
-    case 1:
-      TG70Marxsetpoint = analogRead(tg70marxanaloginPin);
-      //lcd.print(String("MARX TG70: " + String(TG70Marxsetpoint) + "                "));  //Will be used for LOG FUNCTION
-      break;
-      
-    case 2:
-      MTGsetpoint = analogRead(mtganaloginPin);
-      //lcd.print(String("MTG: " + String(MTGsetpoint) + "                "));   //Will be used for LOG FUNCTION
-      break;
-      
-    case 3:
-      Switchsetpoint = analogRead(switchanaloginPin);
-      //lcd.print(String("SWITCH: " + String(Switchsetpoint) + "                "));   //Will be used for LOG FUNCTION
-      break;
-            
-    case 4:
-      TG70Switchsetpoint = analogRead(tg70switchanaloginPin);
-      //lcd.print(String("SWITCH TG70: " + String(TG70Switchsetpoint) + "                "));  //Will be used for LOG FUNCTION
-      break;
-      
+  {   
     case 5:
       if((analogRead(reclaimeranaloginPin) - minReclaimerPressure <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
       {
@@ -1989,11 +1864,55 @@ void SetPressure(int selection)
       //lcd.print(String("MIN SUPPLY: " + String(minBottlePressure) + "                "));  //Will be used for LOG FUNCTION
       break;
   }
-  delay(3000);
+  */
+  
+  float pressureVoltage = 0;
+  float pressureSetpoint = 0;
+
+  ControlButtonStateManager();
+  myNex.writeStr("page Confirm_Pressure");
+
+  //Convert the PSI value to voltage value
+  pressureVoltage = (pressureValue * (4 / 150)) + 0.5;
+  //Convert voltage value to analog
+  pressureSetpoint = pressureVoltage * (1023 / 5);
+
+  //Set the new pressure setpoint to the correct circuit
+  switch(selection)
+  {
+    case 0:
+      Marxsetpoint = pressureSetpoint;
+      myNex.writeStr("Confirm_Pressure.t0.txt", String("Marx setpoint set to " + String(Marxsetpoint) + String(" PSI.")));
+      break;         
+    case 1:
+      TG70Marxsetpoint = pressureSetpoint;
+      myNex.writeStr("Confirm_Pressure.t0.txt", String("TG70 setpoint set to " + String(TG70Marxsetpoint) + String(" PSI.")));
+      break; 
+    case 2:
+      MTGsetpoint = pressureSetpoint;
+      myNex.writeStr("Confirm_Pressure.t0.txt", String("MTG setpoint set to " + String(MTGsetpoint) + String(" PSI.")));
+      break;     
+    case 3:
+      Switchsetpoint = pressureSetpoint;
+      myNex.writeStr("Confirm_Pressure.t0.txt", String("Switch setpoint set to " + String(Switchsetpoint) + String(" PSI.")));
+      break;           
+    case 4:
+      TG70Switchsetpoint = pressureSetpoint;
+      myNex.writeStr("Confirm_Pressure.t0.txt", String("Switch TG70 setpoint set to " + String(TG70Switchsetpoint) + String(" PSI.")));
+      break;
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeNum("Confirm_Pressure.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_Pressure.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page Circuit_Select");
+      return;
+  }
   SaveCurrentSettings();
+  delay(1500);
+  myNex.writeStr("page Circuit_Select");
   return;
 }
-*/
 
 //-------------------------------------------------------------------------------------------------------------
 //Manually controls the reclaimer
@@ -2918,6 +2837,30 @@ void trigger5()
   else
   {
     setReclaimerSafetyDelay(timer);
+  }
+}
+
+//Set Pressure
+void trigger6()
+{
+  int circuitNum = 0;
+  float pressureValue = 0;
+  circuitNum = myNex.readNumber("Global.Circuit.val");
+  pressureValue = myNex.readNumber("Enter_Float.float.val");
+
+  //Check if serial communication is successful, then map to function
+  if(pressureValue == 777777 || circuitNum == 777777)
+  {
+    myNex.writeStr("page Confirm_Press");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Circuit_Select");
+    return;
+  }
+  else
+  {
+    SetCircuitPressure(circuitNum, pressureValue);
   }
 }
 
