@@ -199,6 +199,7 @@ CRC8 crc;
 //Brightness
 int brightness = 100;
 
+/*
 //Preset Names
 String preset1 = "";
 String preset2 = "";
@@ -206,6 +207,7 @@ String preset3 = "";
 String preset4 = "";
 String preset5 = "";
 String preset6 = "";
+*/
 
 //Background color
 int color = 0;
@@ -429,7 +431,7 @@ void setup()
       lasttg70switchenableState = !tg70switchenableState;
       lasttg70marxenableState = !tg70marxenableState;
       previousSettingFile.close();
-      readPresets();
+//      readPresets();
 
       SaveCurrentSettings();
       myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");  //Need to write to log also
@@ -463,6 +465,8 @@ void setup()
 void loop() 
 {
   aunit::TestRunner::run();  //Run unit tests
+
+ Serial.println(analogRead(tg70marxanaloginPin));
 
   //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
   ControlButtonStateManager();
@@ -1812,98 +1816,43 @@ String FileRemover(int presetNumber)
 //-------------------------------------------------------------------------------------------------------------
 void SetCircuitPressure(int selection, float pressureValue)  
 {
-  /*
-  switch (selection)
-  {   
-    case 5:
-      if((analogRead(reclaimeranaloginPin) - minReclaimerPressure <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
-      {
-        lcd.setCursor(0,0);
-        //lcd.print("ERROR: RECLAIMER");   //Will be used for LOG FUNCTION
-        lcd.setCursor(0,1);
-        //lcd.print("WINDOW TOO SMALL");   //Will be used for LOG FUNCTION    
-      }
-      if(analogRead(reclaimeranaloginPin) - minReclaimerPressure < 0)
-      {
-        lcd.setCursor(0,0);
-        //lcd.print("ERROR: RECLAIMER");   //Will be used for LOG FUNCTION
-        lcd.setCursor(0,1);
-        //lcd.print("WINDOW NEGATIVE ");   //Will be used for LOG FUNCTION
-      }
-      else
-      {
-        maxReclaimerPressure = analogRead(reclaimeranaloginPin);
-        //lcd.print(String("RECL. ON: " + String(maxReclaimerPressure) + "                "));   //Will be used for LOG FUNCTION
-      }
-      break;
-                  
-    case 6:
-      if((maxReclaimerPressure - analogRead(reclaimeranaloginPin) <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
-      {
-        lcd.setCursor(0,0);
-        //lcd.print("ERROR: RECLAIMER");   //Will be used for LOG FUNCTION
-        lcd.setCursor(0,1);
-        //lcd.print("WINDOW TOO SMALL");    //Will be used for LOG FUNCTION  
-      }
-      if(maxReclaimerPressure - analogRead(reclaimeranaloginPin)< 0)
-      {
-        lcd.setCursor(0,0);
-        //lcd.print("ERROR: RECLAIMER");   //Will be used for LOG FUNCTION
-        lcd.setCursor(0,1);
-        //lcd.print("WINDOW NEGATIVE ");     //Will be used for LOG FUNCTION  
-      }
-      else
-      {
-        minReclaimerPressure = analogRead(reclaimeranaloginPin);
-        //lcd.print(String("RECL. OFF: " + String(minReclaimerPressure) + "                "));  //Will be used for LOG FUNCTION
-      }
-      break;
-
-    case 7:
-      minBottlePressure = analogRead(bottleanaloginPin);
-      //lcd.print(String("MIN SUPPLY: " + String(minBottlePressure) + "                "));  //Will be used for LOG FUNCTION
-      break;
-  }
-  */
-  
-  float pressureVoltage = 0;
-  float pressureSetpoint = 0;
+  double pressureSetpoint = 0;
 
   ControlButtonStateManager();
-  myNex.writeStr("page Confirm_Pressure");
-
-  //Convert the PSI value to voltage value
-  pressureVoltage = (pressureValue * (4 / 150)) + 0.5;
-  //Convert voltage value to analog
-  pressureSetpoint = pressureVoltage * (1023 / 5);
+  myNex.writeStr("page Confirm_Press");
 
   //Set the new pressure setpoint to the correct circuit
   switch(selection)
   {
     case 0:
+      pressureSetpoint = (pressureValue / 10) * 20.078;
       Marxsetpoint = pressureSetpoint;
-      myNex.writeStr("Confirm_Pressure.t0.txt", String("Marx setpoint set to " + String(Marxsetpoint) + String(" PSI.")));
+      myNex.writeStr("Confirm_Press.t0.txt", String("Marx setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;         
     case 1:
+      pressureSetpoint = (pressureValue / 10) * 20.089;
       TG70Marxsetpoint = pressureSetpoint;
-      myNex.writeStr("Confirm_Pressure.t0.txt", String("TG70 setpoint set to " + String(TG70Marxsetpoint) + String(" PSI.")));
+      myNex.writeStr("Confirm_Press.t0.txt", String("TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break; 
     case 2:
+      pressureSetpoint = (pressureValue / 10) * 20;
       MTGsetpoint = pressureSetpoint;
-      myNex.writeStr("Confirm_Pressure.t0.txt", String("MTG setpoint set to " + String(MTGsetpoint) + String(" PSI.")));
+      myNex.writeStr("Confirm_Press.t0.txt", String("MTG setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;     
     case 3:
+      pressureSetpoint = (pressureValue / 10) * 20.13;
       Switchsetpoint = pressureSetpoint;
-      myNex.writeStr("Confirm_Pressure.t0.txt", String("Switch setpoint set to " + String(Switchsetpoint) + String(" PSI.")));
+      myNex.writeStr("Confirm_Press.t0.txt", String("Switch setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;           
     case 4:
+      pressureSetpoint = (pressureValue / 10) * 20.094;
       TG70Switchsetpoint = pressureSetpoint;
-      myNex.writeStr("Confirm_Pressure.t0.txt", String("Switch TG70 setpoint set to " + String(TG70Switchsetpoint) + String(" PSI.")));
+      myNex.writeStr("Confirm_Press.t0.txt", String("Switch TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;
     default:  //Error condition
       //Switch to error screen indicating that the setting has failed.
-      myNex.writeNum("Confirm_Pressure.Warning_Image.aph", 127);
-      myNex.writeStr("Confirm_Pressure.t0.txt", "WARNING: Setting has failed!");
+      myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_Press.t0.txt", "WARNING: Setting has failed!");
       delay(1500);
       myNex.writeStr("page Circuit_Select");
       return;
@@ -1913,6 +1862,92 @@ void SetCircuitPressure(int selection, float pressureValue)
   myNex.writeStr("page Circuit_Select");
   return;
 }
+
+
+//-------------------------------------------------------------------------------------------------------------
+//Set the pressure of reclaimer to the user specified value in PSI
+//-------------------------------------------------------------------------------------------------------------
+void SetReclaimerPressure(int selection, float pressureValue)  
+{ 
+  double pressureSetpoint = 0;
+
+  ControlButtonStateManager();
+  myNex.writeStr("page Confirm_Press");
+
+  //Set the new pressure setpoint to the correct circuit
+  switch(selection)
+  {
+    case 0: //Rec On
+      pressureSetpoint = (pressureValue / 10) * 20;
+      //Sanity check
+      if((analogRead(reclaimeranaloginPin) - minReclaimerPressure <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
+      {
+        myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
+        myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window is too small!");
+        delay(1500);
+        myNex.writeStr("page Reclaimer");
+        return;    
+      }
+      if(analogRead(reclaimeranaloginPin) - minReclaimerPressure < 0)
+      {
+        myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
+        myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window cannot be negative!");
+        delay(1500);
+        myNex.writeStr("page Reclaimer");
+        return; 
+      }
+      else
+      {
+        maxReclaimerPressure = pressureSetpoint;
+        myNex.writeStr("Confirm_Press.t0.txt", String("Reclaimer auto on set to " + String(pressureValue / 10) + String(" PSI.")));
+        break;    
+      }     
+
+      
+    case 1: //Rec Off
+      if((maxReclaimerPressure - analogRead(reclaimeranaloginPin) <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
+      {
+        myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
+        myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window is too small!");
+        delay(1500);
+        myNex.writeStr("page Reclaimer");
+        return;     
+      }
+      if(maxReclaimerPressure - analogRead(reclaimeranaloginPin)< 0)
+      {
+        myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
+        myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window cannot be negative!");
+        delay(1500);
+        myNex.writeStr("page Reclaimer");
+        return;  
+      }
+      else
+      {
+        pressureSetpoint = (pressureValue / 10) * 20;
+        minReclaimerPressure = pressureSetpoint;
+        myNex.writeStr("Confirm_Press.t0.txt", String("Reclaimer auto off set to " + String(pressureValue / 10) + String(" PSI.")));
+        break; 
+      }
+    case 2: //Supply
+      pressureSetpoint = (pressureValue / 10) * 20;
+      minBottlePressure = pressureSetpoint;
+      myNex.writeStr("Confirm_Press.t0.txt", String("Reclaimer min supply set to " + String(pressureValue / 10) + String(" PSI.")));
+      break; 
+          
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_Press.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page Reclaimer");
+      return;
+  }
+  SaveCurrentSettings();
+  delay(1500);
+  myNex.writeStr("page Reclaimer");
+  return;
+}
+
 
 //-------------------------------------------------------------------------------------------------------------
 //Manually controls the reclaimer
@@ -2031,17 +2066,15 @@ bool automaticReclaimerControl()
 //-------------------------------------------------------------------------------------------------------------
 void checkSupply()
 {
-  /*
   double bottlePressure;
   bottlePressure = analogRead(bottleanaloginPin);
   
   //Check if the bottle pressure is too low, signal alarm.
   if(bottlePressure < minBottlePressure)
   {
-    errorState = true;
-    alarmController(String("LOW SUPPLY"));
-  }
-  */
+   // errorState = true;
+   // alarmController(String("LOW SUPPLY"));
+  } 
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -2602,6 +2635,7 @@ void alarmController(String errorString)
 }
 
 //Read Presets
+/*
 void readPresets() {
   if(SD.exists("Presets.txt")) 
   {
@@ -2663,8 +2697,10 @@ void readPresets() {
   myNex.writeStr("Color.bco=" + color);
   myNex.writeStr("Preset_Rename.bco=" + color);
 }
+*/
 
 //Write Presets
+/*
 void writePresets() 
 {
   if(SD.exists("Presets.txt")) 
@@ -2693,6 +2729,7 @@ void writePresets()
     //make page to say no sd card found
   }
 }
+*/
 
 //--------------------------------------------------------------------------------------------
 //TRIGGERS
@@ -2864,6 +2901,30 @@ void trigger6()
   }
 }
 
+//Set Reclaimer Pressure
+void trigger7()
+{
+  int circuitNum = 0;
+  float pressureValue = 0;
+  circuitNum = myNex.readNumber("Global.Circuit.val");
+  pressureValue = myNex.readNumber("Enter_Float.float.val");
+
+  //Check if serial communication is successful, then map to function
+  if(pressureValue == 777777 || circuitNum == 777777)
+  {
+    myNex.writeStr("page Confirm_Press");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Reclaimer");
+    return;
+  }
+  else
+  {
+    SetReclaimerPressure(circuitNum, pressureValue);
+  }
+}
+
 //Brightness
 void trigger20() {
   brightness = myNex.readNumber("Global.brightness.val");
@@ -2872,9 +2933,10 @@ void trigger20() {
 
 //Change Preset Names
 void trigger21() {
-  writePresets();
+//  writePresets();
 }
 
+/*
 void trigger22() {
   color = myNex.readNUmber("Global.color.val");
   myNex.writeStr("Global.bco=" + color);
@@ -2906,3 +2968,4 @@ void trigger22() {
   writePresets();
   
 }
+*/
