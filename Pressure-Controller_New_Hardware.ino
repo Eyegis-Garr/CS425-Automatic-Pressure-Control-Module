@@ -193,6 +193,40 @@ double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoi
 double maxReclaimerPressure = 500.0;
 double minReclaimerPressure = 50.0;
 
+#define C_NUM_CIRCUITS 7
+#define MOD(a, b) (((a) % (b) + (b)) % (b))
+#define CIRC_IDX(n) (MOD((n),C_NUM_CIRCUITS))
+#define FLOAT_DEC(f,n) (((f) - (int)(f)) * pow(10,(n)))
+
+// CIRCUIT STRING MAP
+const char *circuit_map[] = {
+  "MARX",
+  "MARX TG70",
+  "MTG",
+  "SWITCH",
+  "SWITCH TG70",
+  "RECLAIMER",
+  "MIN. SUPPLY"
+};
+
+// CIRCUIT CALIBRATION COEFFICIENTS
+double Marxcalibration,MTGcalibration,Switchcalibration,TG70Switchcalibration,TG70Marxcalibration = 0.00;
+double Reclaimcalibration, Minsupplycalibration = 0.00;
+
+// CIRCUIT CALIBRATION MAP
+double *calibration_map[] = {
+  &Marxcalibration,
+  &TG70Marxcalibration,
+  &MTGcalibration,
+  &Switchcalibration,
+  &TG70Switchcalibration,
+  &Reclaimcalibration,
+  &Minsupplycalibration,
+};
+
+// CIRCUIT ANALOG PIN MAP
+int analog_map[] = { A0, A3, A2, A1, A4, A5, A6 };
+
 //Checksum setup
 CRC8 crc;
 
@@ -1821,31 +1855,33 @@ void SetCircuitPressure(int selection, float pressureValue)
   ControlButtonStateManager();
   myNex.writeStr("page Confirm_Press");
 
+  pressureSetpoint = (pressureValue / 10) * (*calibration_map[selection]);
+
   //Set the new pressure setpoint to the correct circuit
   switch(selection)
   {
     case 0:
-      pressureSetpoint = (pressureValue / 10) * 20.078;
+      // pressureSetpoint = (pressureValue / 10) * 20.078;
       Marxsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Marx setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;         
     case 1:
-      pressureSetpoint = (pressureValue / 10) * 20.089;
+      // pressureSetpoint = (pressureValue / 10) * 20.089;
       TG70Marxsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break; 
     case 2:
-      pressureSetpoint = (pressureValue / 10) * 20;
+      // pressureSetpoint = (pressureValue / 10) * 20;
       MTGsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("MTG setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;     
     case 3:
-      pressureSetpoint = (pressureValue / 10) * 20.13;
+      // pressureSetpoint = (pressureValue / 10) * 20.13;
       Switchsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Switch setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;           
     case 4:
-      pressureSetpoint = (pressureValue / 10) * 20.094;
+      // pressureSetpoint = (pressureValue / 10) * 20.094;
       TG70Switchsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Switch TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;
@@ -1874,11 +1910,13 @@ void SetReclaimerPressure(int selection, float pressureValue)
   ControlButtonStateManager();
   myNex.writeStr("page Confirm_Press");
 
+  pressureSetpoint = (pressureValue / 10) * (*calibration_map[(selection == 2) ? 6 : 5]);
+
   //Set the new pressure setpoint to the correct circuit
   switch(selection)
   {
     case 0: //Rec On
-      pressureSetpoint = (pressureValue / 10) * 20;
+      // pressureSetpoint = (pressureValue / 10) * 20;
       //Sanity check
       if((analogRead(reclaimeranaloginPin) - minReclaimerPressure <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
       {
@@ -1923,13 +1961,13 @@ void SetReclaimerPressure(int selection, float pressureValue)
       }
       else
       {
-        pressureSetpoint = (pressureValue / 10) * 20;
+        // pressureSetpoint = (pressureValue / 10) * 20;
         minReclaimerPressure = pressureSetpoint;
         myNex.writeStr("Confirm_Press.t0.txt", String("Reclaimer auto off set to " + String(pressureValue / 10) + String(" PSI.")));
         break; 
       }
     case 2: //Supply
-      pressureSetpoint = (pressureValue / 10) * 20;
+      // pressureSetpoint = (pressureValue / 10) * 20;
       minBottlePressure = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Reclaimer min supply set to " + String(pressureValue / 10) + String(" PSI.")));
       break; 
@@ -2924,6 +2962,61 @@ void trigger7()
     SetReclaimerPressure(circuitNum, pressureValue);
   }
 }
+
+/* CIRCUIT CALIBRATION TRIGGERS */
+
+// main calibration computation and setting
+void trigger8() {
+  int cidx;
+  double pressure, prev, ar;
+  char sbuf[64];
+
+  // read user-input current circuit PSI
+  pressure = myNex.readNumber("Calibration.float.val");
+  pressure /= 10;
+  // get circuit selection from Circuit.val as a circuit-map index
+  cidx = CIRC_IDX(myNex.readNumber("Global.Circuit.val"));
+
+  // store previous calibration coefficient
+  prev = *calibration_map[cidx];
+  // read current pressure-analog value
+  ar = analogRead(analog_map[cidx]);
+
+  // if input is non-zero
+  if (pressure >= 0.1) {
+    // calculate slope/calibration-coefficient
+    *calibration_map[cidx] = ar / pressure;
+    // set successful status message
+    sprintf(sbuf, "CALIBRATION SUCCESSFUL!");
+    myNex.writeStr("Calibrated.status.txt", sbuf);
+
+  } else {
+    // set failed status message
+    sprintf(sbuf, "CALIBRATION FAILED. (divide by zero)");
+    myNex.writeStr("Calibrated.status.txt", sbuf);
+  }
+
+  // state calibration changes to Calibrated page
+  sprintf(sbuf, "Previous Calibration > %d.%d", prev, FLOAT_DEC(prev, 1));
+  myNex.writeStr("Calibrated.t0.txt", sbuf);
+  sprintf(sbuf, "Current Calibration > %d.%d", *calibration_map[cidx], FLOAT_DEC(*calibration_map[cidx], 1));
+  myNex.writeStr("Calibrated.t1.txt", sbuf);
+
+  // page to calibration-status page
+  myNex.writeStr("page Calibrated");
+}
+
+// calibration circuit selection
+void trigger9() {
+  int cidx;
+
+  // get circuit-index from current selection
+  cidx = CIRC_IDX(myNex.readNumber("Global.Circuit.val"));
+
+  // update calibration-circuit-name from circuit-string map
+  myNex.writeStr("Calibration.Circuit_Disp.txt", circuit_map[cidx]);
+}
+
 
 //Brightness
 void trigger20() {
