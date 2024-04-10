@@ -22,7 +22,7 @@ int init_remote(remote_t *r, char *path, int speed) {
 int connect(remote_t *r) {
   int ret = 0;
 
-  r->fd = open(r->dev_path, O_RDWR | O_NOCTTY | O_NDELAY, S_IRUSR | S_IWUSR);
+  r->fd = open(r->dev_path, O_RDWR | O_NOCTTY, S_IRUSR | S_IWUSR);
   if (r->fd < 0) {
     printf("ERROR: Could not open port '%s'.\n", r->dev_path);
     ret = -1;

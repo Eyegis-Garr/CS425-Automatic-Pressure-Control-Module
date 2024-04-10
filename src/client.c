@@ -93,29 +93,30 @@ int init_client(client_t *c, char *dev_path) {
   c->s_flags = 0;
   c->cursor = 0;
 
-  // init curses
-  c->scr = initscr();
-  noecho();
-  cbreak();
-  keypad(c->scr, TRUE);
-  nodelay(c->scr, TRUE);
-  curs_set(0);
-  start_color();
-
-  int i;
-  for (i = 0; i < C_NUM_CIRCUITS; i += 1) {
-    c->circuit[i].w = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH, i * CWIN_HEIGHT, 0);
-    wborder(c->circuit[i].w, 0, 0, 0, 0, 0, 0, 0, 0);
-  }
-
-  c->view_win = subwin(c->scr, SWIN_HEIGHT, SWIN_WIDTH - 2, CWIN_HEIGHT, CWIN_WIDTH + 1);
-  c->view = subwin(c->scr, SWIN_HEIGHT - 2, SWIN_WIDTH - 4, CWIN_HEIGHT + 1, CWIN_WIDTH + 2);
-  wborder(c->view_win, 0, 0, 0, 0, 0, 0, 0, 0);
-  scrollok(c->view, TRUE);
-
-  c->cmd = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH - 2, 0, CWIN_WIDTH + 1);
-
   ret = init_remote(&c->r, dev_path, B9600);
+  if (ret >= 0) {
+    // init curses
+    c->scr = initscr();
+    noecho();
+    cbreak();
+    keypad(c->scr, TRUE);
+    nodelay(c->scr, TRUE);
+    curs_set(0);
+    start_color();
+
+    int i;
+    for (i = 0; i < C_NUM_CIRCUITS; i += 1) {
+      c->circuit[i].w = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH, i * CWIN_HEIGHT, 0);
+      wborder(c->circuit[i].w, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    c->view_win = subwin(c->scr, SWIN_HEIGHT, SWIN_WIDTH - 2, CWIN_HEIGHT, CWIN_WIDTH + 1);
+    c->view = subwin(c->scr, SWIN_HEIGHT - 2, SWIN_WIDTH - 4, CWIN_HEIGHT + 1, CWIN_WIDTH + 2);
+    wborder(c->view_win, 0, 0, 0, 0, 0, 0, 0, 0);
+    scrollok(c->view, TRUE);
+
+    c->cmd = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH - 2, 0, CWIN_WIDTH + 1);
+  }
 
   return ret;
 }
