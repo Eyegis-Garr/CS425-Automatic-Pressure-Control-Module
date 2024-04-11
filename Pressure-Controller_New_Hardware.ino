@@ -3,7 +3,7 @@
 //Vladislav Petrov
 //Sean Rolandelli
 //Bradley Sullivan
-//Last modification April 9, 2024
+//Last modification April 11, 2024
 //-------------------------------------------------------------------------------------------------------------
 
 
@@ -189,12 +189,16 @@ int reclaimerSafetyTime = 30000;
 unsigned long int previousReclaimerSafetyTime = 0;
 
 //Setpoints
-double Marxsetpoint,MTGsetpoint,Switchsetpoint,TG70Switchsetpoint,TG70Marxsetpoint = 0.00;
+double Marxsetpoint = 100.00;
+double MTGsetpoint = 100.00;
+double Switchsetpoint = 100.00;
+double TG70Switchsetpoint = 100.00;
+double TG70Marxsetpoint = 100.00;
 double maxReclaimerPressure = 500.0;
 double minReclaimerPressure = 50.0;
 
 #define C_NUM_CIRCUITS 7
-#define MOD(a, b) (((a) % (b) + (b)) % (b))
+#define MOD(a, b) (((a)%(b))<0?((a)%(b)+b):((a)%(b)))
 #define CIRC_IDX(n) (MOD((n),C_NUM_CIRCUITS))
 #define FLOAT_DEC(f,n) (((f) - (int)(f)) * pow(10,(n)))
 
@@ -210,8 +214,13 @@ const char *circuit_map[] = {
 };
 
 // CIRCUIT CALIBRATION COEFFICIENTS
-double Marxcalibration,MTGcalibration,Switchcalibration,TG70Switchcalibration,TG70Marxcalibration = 0.00;
-double Reclaimcalibration, Minsupplycalibration = 0.00;
+double Marxcalibration = 20.00;
+double MTGcalibration = 20.00;
+double Switchcalibration = 20.00;
+double TG70Switchcalibration = 20.00;
+double TG70Marxcalibration = 20.00;
+double Reclaimcalibration = 20.00;
+double Minsupplycalibration = 20.00;
 
 // CIRCUIT CALIBRATION MAP
 double *calibration_map[] = {
@@ -395,7 +404,7 @@ void setup()
   //Check if SD card exists
   myNex.writeStr("bootText.txt+", "Checking SD Card...\r\n");  //Need to write to log also
   myNex.writeNum("Progress_Bar.val", 80);
-  if(!SD.begin(csPin))//No sd card is found. Set the circuit pressure to whatever they happen to be at the time
+  if(!SD.begin())//No sd card is found. Set the circuit pressure to whatever they happen to be at the time
   { 
     sdCard = false;
     myNex.writeStr("bootText.txt+", "WARNING: SD card not found!\r\n");  //Need to write to log also
@@ -458,7 +467,13 @@ void setup()
       kp_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
       ki_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
       kd_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-//      reclaimerSafetyTime = previousSettingFile.readStringUntil('\n').toInt();
+      reclaimerSafetyTime = previousSettingFile.readStringUntil('\n').toInt();
+
+      // load circuit calibrations
+      for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+        previousSettingFile.readStringUntil('\n').toDouble();
+      }
+      
       lastmarxenableState = !marxenableState;
       lastmtgenableState = !mtgenableState;
       lastswitchenableState = !switchenableState;
@@ -481,7 +496,6 @@ void setup()
       Switchsetpoint = analogRead(switchanaloginPin);
       TG70Switchsetpoint = analogRead(tg70switchanaloginPin);
       TG70Marxsetpoint = analogRead(tg70marxanaloginPin);
-      SaveCurrentSettings();
       delay(1500);
     } 
   }
@@ -499,8 +513,6 @@ void setup()
 void loop() 
 {
   aunit::TestRunner::run();  //Run unit tests
-
- Serial.println(analogRead(tg70marxanaloginPin));
 
   //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
   ControlButtonStateManager();
@@ -1533,6 +1545,11 @@ void SaveCurrentSettings()
     lastPresetFile.println(ki_MarxTG70);
     lastPresetFile.println(kd_MarxTG70);
     lastPresetFile.println(reclaimerSafetyTime);
+
+    // save circuit calibrations
+    for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+      lastPresetFile.println(*calibration_map[i]);
+    }
     lastPresetFile.close();
   }
   return;
@@ -1652,12 +1669,20 @@ String FileWriter(int presetNumber)
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 90);
     presetFile.println(reclaimerSafetyTime);
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 92);
+
+    // save circuit calibrations
+    for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+      presetFile.println(*calibration_map[i]);
+    }
+    
     presetFile.close();
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 94);
     SaveCurrentSettings();
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 98);
 
     //Checksum test goes here
+
+    
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 100);
     return String("Preset " + String(presetNumber) + String(" saved!"));  //Also log this
   }
@@ -1791,12 +1816,20 @@ String FileReader(int presetNumber)
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 96);
       lasttg70marxenableState = !tg70marxenableState;
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 97);
+
+      // read circuit calibrations
+      for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+        *calibration_map[i] = presetFile.readStringUntil('\n').toDouble();
+      }
+      
       presetFile.close();
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 98);
       SaveCurrentSettings();
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 99);
 
       //Checksum test goes here
+
+      
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 100);
       return String("Preset " + String(presetNumber) + String(" loaded!"));  //Also log this
     } 
@@ -1918,7 +1951,7 @@ void SetReclaimerPressure(int selection, float pressureValue)
     case 0: //Rec On
       // pressureSetpoint = (pressureValue / 10) * 20;
       //Sanity check
-      if((analogRead(reclaimeranaloginPin) - minReclaimerPressure <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
+      if((pressureSetpoint - minReclaimerPressure <= 100) && (pressureSetpoint - minReclaimerPressure >= 0))
       {
         myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
         myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window is too small!");
@@ -1926,7 +1959,7 @@ void SetReclaimerPressure(int selection, float pressureValue)
         myNex.writeStr("page Reclaimer");
         return;    
       }
-      if(analogRead(reclaimeranaloginPin) - minReclaimerPressure < 0)
+      if(pressureSetpoint - minReclaimerPressure < 0)
       {
         myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
         myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window cannot be negative!");
@@ -1943,7 +1976,7 @@ void SetReclaimerPressure(int selection, float pressureValue)
 
       
     case 1: //Rec Off
-      if((maxReclaimerPressure - analogRead(reclaimeranaloginPin) <= 100) && (analogRead(reclaimeranaloginPin) - minReclaimerPressure >= 0))
+      if((maxReclaimerPressure - pressureSetpoint <= 100) && (pressureSetpoint - minReclaimerPressure >= 0))
       {
         myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
         myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window is too small!");
@@ -1951,7 +1984,7 @@ void SetReclaimerPressure(int selection, float pressureValue)
         myNex.writeStr("page Reclaimer");
         return;     
       }
-      if(maxReclaimerPressure - analogRead(reclaimeranaloginPin)< 0)
+      if((maxReclaimerPressure - pressureSetpoint)< 0)
       {
         myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
         myNex.writeStr("Confirm_Press.t0.txt", "ERROR: Reclaimer window cannot be negative!");
@@ -2511,60 +2544,6 @@ void setPID(int selection, int tuneVariable)
 }
 */
 
-
-//-------------------------------------------------------------------------------------------------------------
-//Alarm on/off
-//-------------------------------------------------------------------------------------------------------------
-/*
-void setAlarmOnOff()  
-{
-  bool selecting = true;  
-  ControlButtonStateManager();
- 
-  while(selecting)
-  {
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-      
-      case '4': //Left
-        lcd.setCursor(0,1);
-        //lcd.print("  >ON<    OFF   ");   //Will be used for LOG FUNCTION
-        alarmEnable = true;
-        break;
-        
-      case '5': //Right
-        lcd.setCursor(0,1);
-        //lcd.print("   ON    >OFF<  ");   //Will be used for LOG FUNCTION
-        alarmEnable = false;
-        break;
-      }
-    }
-  }
-  
-  SaveCurrentSettings();
-  lcd.setCursor(0,0);
-  //lcd.print("  ALARM SOUND:  ");   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-  if(alarmEnable)
-  {
-    //lcd.print("       ON       ");   //Will be used for LOG FUNCTION
-  }
-  else
-  {
-    //lcd.print("      OFF       ");   //Will be used for LOG FUNCTION
-  }
-  delay(3000);
-  return;
-}
-*/
-
-
 //-------------------------------------------------------------------------------------------------------------
 //Alarm configuration function for circuit timeout
 //-------------------------------------------------------------------------------------------------------------
@@ -3030,6 +3009,7 @@ void trigger8() {
   // read user-input current circuit PSI
   pressure = myNex.readNumber("Calibration.float.val");
   pressure /= 10;
+
   // get circuit selection from Circuit.val as a circuit-map index
   cidx = CIRC_IDX(myNex.readNumber("Global.Circuit.val"));
 
@@ -3037,6 +3017,9 @@ void trigger8() {
   prev = *calibration_map[cidx];
   // read current pressure-analog value
   ar = analogRead(analog_map[cidx]);
+
+    // page to calibration-status page
+  myNex.writeStr("page Calibrated");
 
   // if input is non-zero
   if (pressure >= 0.1) {
@@ -3053,13 +3036,8 @@ void trigger8() {
   }
 
   // state calibration changes to Calibrated page
-  sprintf(sbuf, "Previous Calibration > %d.%d", prev, FLOAT_DEC(prev, 1));
-  myNex.writeStr("Calibrated.t0.txt", sbuf);
-  sprintf(sbuf, "Current Calibration > %d.%d", *calibration_map[cidx], FLOAT_DEC(*calibration_map[cidx], 1));
-  myNex.writeStr("Calibrated.t1.txt", sbuf);
-
-  // page to calibration-status page
-  myNex.writeStr("page Calibrated");
+  myNex.writeStr("Calibrated.t0.txt", String("Previous Calibration > " + String(prev)));
+  myNex.writeStr("Calibrated.t1.txt", String("Current Calibration > " + String(*calibration_map[cidx])));
 }
 
 // calibration circuit selection
@@ -3072,6 +3050,23 @@ void trigger9() {
   // update calibration-circuit-name from circuit-string map
   myNex.writeStr("Calibration.Circuit_Disp.txt", circuit_map[cidx]);
 }
+
+
+//Alarm sound configuration
+void trigger10()
+{
+  //User has selected to change the alarm sound on or off. Send command to screen
+  myNex.writeStr("On_Off.t0.txt", "Alarm Sound");
+  myNex.writeStr("On_Off.t1.txt", "Toggle alarm sound");
+  myNex.writeNum("On_Off.sw1.val", alarmEnable);
+}
+
+void trigger11()
+{
+  alarmEnable = myNex.readNumber("On_Off.sw1.val");
+  SaveCurrentSettings();
+}
+
 
 
 //Brightness
