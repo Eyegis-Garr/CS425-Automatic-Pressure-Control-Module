@@ -3,7 +3,7 @@
 //Vladislav Petrov
 //Sean Rolandelli
 //Bradley Sullivan
-//Last modification April 11, 2024
+//Last modification April 16, 2024
 //-------------------------------------------------------------------------------------------------------------
 
 
@@ -60,8 +60,8 @@ const int tg70switchenablePin = 20;
 const int tg70marxenablePin = 21;
 
 //Set pins for automatic reclaimer control
-const int reclaimerstopenablePin = 3;
-const int reclaimerstartenablePin = 4;
+const int reclaimerstopenablePin = 4;
+const int reclaimerstartenablePin =3;
 
 //Set pin for controlling alarm sound
 const int alarmsoundPin = 16;
@@ -76,6 +76,7 @@ const int alarmLEDPin = 43;
 const int abortLEDPin = 44;
 const int shotmodeLEDPin = 45;
 const int purgeLEDPin = 46;
+
 const int startLEDPin = 47;
 const int stopLEDPin = 48;
 const int automatereclaimerLEDPin = 49;
@@ -468,11 +469,14 @@ void setup()
       ki_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
       kd_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
       reclaimerSafetyTime = previousSettingFile.readStringUntil('\n').toInt();
-
-      // load circuit calibrations
-      for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
-        previousSettingFile.readStringUntil('\n').toDouble();
-      }
+      
+      Marxcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+      MTGcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+      Switchcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+      TG70Switchcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+      TG70Marxcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+      Reclaimcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+      Minsupplycalibration = previousSettingFile.readStringUntil('\n').toDouble();
       
       lastmarxenableState = !marxenableState;
       lastmtgenableState = !mtgenableState;
@@ -1545,11 +1549,18 @@ void SaveCurrentSettings()
     lastPresetFile.println(ki_MarxTG70);
     lastPresetFile.println(kd_MarxTG70);
     lastPresetFile.println(reclaimerSafetyTime);
+    lastPresetFile.println(Marxcalibration);
+    lastPresetFile.println(MTGcalibration);
+    lastPresetFile.println(Switchcalibration);
+    lastPresetFile.println(TG70Switchcalibration);
+    lastPresetFile.println(TG70Marxcalibration);
+    lastPresetFile.println(Reclaimcalibration);
+    lastPresetFile.println(Minsupplycalibration);
 
     // save circuit calibrations
-    for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
-      lastPresetFile.println(*calibration_map[i]);
-    }
+    //for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
+    //  lastPresetFile.println(*(calibration_map[i]));
+   //}
     lastPresetFile.close();
   }
   return;
@@ -1668,17 +1679,24 @@ String FileWriter(int presetNumber)
     presetFile.println(kd_MarxTG70);
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 90);
     presetFile.println(reclaimerSafetyTime);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 91);
+    presetFile.println(Marxcalibration);
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 92);
-
-    // save circuit calibrations
-    for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
-      presetFile.println(*calibration_map[i]);
-    }
-    
-    presetFile.close();
+    presetFile.println(MTGcalibration);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 93);
+    presetFile.println(Switchcalibration);
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 94);
-    SaveCurrentSettings();
+    presetFile.println(TG70Switchcalibration);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 95);
+    presetFile.println(TG70Marxcalibration);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 96);
+    presetFile.println(Reclaimcalibration);
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 97);
+    presetFile.println(Minsupplycalibration);
+    presetFile.close();
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 98);
+    SaveCurrentSettings();
+    myNex.writeNum("Confirm_Preset.Progress_Bar.val", 99);
 
     //Checksum test goes here
 
@@ -1804,8 +1822,17 @@ String FileReader(int presetNumber)
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 88);
       kd_MarxTG70 = presetFile.readStringUntil('\n').toDouble();
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 90);
-      //reclaimerSafetyTime = presetFile.readStringUntil('\n').toInt();
+      reclaimerSafetyTime = presetFile.readStringUntil('\n').toInt();
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 92);
+      
+      Marxcalibration = presetFile.readStringUntil('\n').toDouble();
+      MTGcalibration = presetFile.readStringUntil('\n').toDouble();
+      Switchcalibration = presetFile.readStringUntil('\n').toDouble();
+      TG70Switchcalibration = presetFile.readStringUntil('\n').toDouble();
+      TG70Marxcalibration = presetFile.readStringUntil('\n').toDouble();
+      Reclaimcalibration = presetFile.readStringUntil('\n').toDouble();
+      Minsupplycalibration = presetFile.readStringUntil('\n').toDouble();
+      
       lastmarxenableState = !marxenableState;
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 93);
       lastmtgenableState = !mtgenableState;
@@ -1816,11 +1843,6 @@ String FileReader(int presetNumber)
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 96);
       lasttg70marxenableState = !tg70marxenableState;
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 97);
-
-      // read circuit calibrations
-      for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
-        *calibration_map[i] = presetFile.readStringUntil('\n').toDouble();
-      }
       
       presetFile.close();
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 98);
@@ -1888,33 +1910,33 @@ void SetCircuitPressure(int selection, float pressureValue)
   ControlButtonStateManager();
   myNex.writeStr("page Confirm_Press");
 
-  pressureSetpoint = (pressureValue / 10) * (*calibration_map[selection]);
+  //pressureSetpoint = (pressureValue / 10) * (*calibration_map[selection]);
 
   //Set the new pressure setpoint to the correct circuit
   switch(selection)
   {
     case 0:
-      // pressureSetpoint = (pressureValue / 10) * 20.078;
+      pressureSetpoint = (pressureValue / 10) * Marxcalibration; //20.078
       Marxsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Marx setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;         
     case 1:
-      // pressureSetpoint = (pressureValue / 10) * 20.089;
+      pressureSetpoint = (pressureValue / 10) * TG70Marxcalibration; //20.089
       TG70Marxsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break; 
     case 2:
-      // pressureSetpoint = (pressureValue / 10) * 20;
+      pressureSetpoint = (pressureValue / 10) * MTGcalibration; //20
       MTGsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("MTG setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;     
     case 3:
-      // pressureSetpoint = (pressureValue / 10) * 20.13;
+      pressureSetpoint = (pressureValue / 10) * Switchcalibration; //20.13
       Switchsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Switch setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;           
     case 4:
-      // pressureSetpoint = (pressureValue / 10) * 20.094;
+      // pressureSetpoint = (pressureValue / 10) * TG70Switchcalibration; //20.094
       TG70Switchsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Switch TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;
@@ -1943,13 +1965,13 @@ void SetReclaimerPressure(int selection, float pressureValue)
   ControlButtonStateManager();
   myNex.writeStr("page Confirm_Press");
 
-  pressureSetpoint = (pressureValue / 10) * (*calibration_map[(selection == 2) ? 6 : 5]);
+  //pressureSetpoint = (pressureValue / 10) * (*calibration_map[(selection == 2) ? 6 : 5]);
 
   //Set the new pressure setpoint to the correct circuit
   switch(selection)
   {
     case 0: //Rec On
-      // pressureSetpoint = (pressureValue / 10) * 20;
+      pressureSetpoint = (pressureValue / 10) * Reclaimcalibration; //20
       //Sanity check
       if((pressureSetpoint - minReclaimerPressure <= 100) && (pressureSetpoint - minReclaimerPressure >= 0))
       {
@@ -1994,13 +2016,13 @@ void SetReclaimerPressure(int selection, float pressureValue)
       }
       else
       {
-        // pressureSetpoint = (pressureValue / 10) * 20;
+        pressureSetpoint = (pressureValue / 10) * Reclaimcalibration; //20
         minReclaimerPressure = pressureSetpoint;
         myNex.writeStr("Confirm_Press.t0.txt", String("Reclaimer auto off set to " + String(pressureValue / 10) + String(" PSI.")));
         break; 
       }
     case 2: //Supply
-      // pressureSetpoint = (pressureValue / 10) * 20;
+      pressureSetpoint = (pressureValue / 10) * Minsupplycalibration; //20
       minBottlePressure = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Reclaimer min supply set to " + String(pressureValue / 10) + String(" PSI.")));
       break; 
@@ -2261,24 +2283,17 @@ void setReclaimerSafetyDelay(long int setTime)
 //-------------------------------------------------------------------------------------------------------------
 //Set the selected PID variables for a given circuit
 //-------------------------------------------------------------------------------------------------------------
-/*
-void setPID(int selection, int tuneVariable)
+void setPID(int selection, int tuneVariable, float setPID)
 {
-
-  String circuit;
   String PIDvariableName;
   double kp = 0;
   double ki = 0;
   double kd = 0;
-  int setPID = 0;
-  int digit = 0;
-  int decimal = 9;
-  long int number[4] = {0,0,0,0};
-  bool selecting = true;
-  bool displayDigit = true;
+  double newPID = 0;
 
-    ControlButtonStateManager();
-    
+  ControlButtonStateManager();
+  myNex.writeStr("page Confirm_PID");
+
   //Check which circuit we are setting the PID for, and retrieve the corresponidng value
   switch (selection)
   {
@@ -2286,263 +2301,122 @@ void setPID(int selection, int tuneVariable)
       kp = kp_Marx;
       ki = ki_Marx;
       kd = kd_Marx;
-      circuit = "MARX";
       break;
     
     case 1:
       kp = kp_MarxTG70;
       ki = ki_MarxTG70;
       kd = kd_MarxTG70;
-      circuit = "MARX TG70";
       break;
       
     case 2:
       kp = kp_MTG;
       ki = ki_MTG;
       kd = kd_MTG;
-      circuit = "MTG";
       break;
       
     case 3:
       kp = kp_Switch;
       ki = ki_Switch;
       kd = kd_Switch;
-      circuit = "SWITCH";
       break;
             
     case 4:
       kp = kp_SwitchTG70;
       ki = ki_SwitchTG70;
       kd = kd_SwitchTG70;
-      circuit = "SWITCH TG70";
       break;
+
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeNum("Confirm_PID.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_PID.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page PID");
+      return;
   }
-
-  //Set the correct PID variable to change
-  switch (tuneVariable)
-  {
-    case 0:
-      setPID = kp * 100;
-      PIDvariableName = " KP: ";
-      break;
-      
-    case 1:
-      setPID = ki * 100;
-      PIDvariableName = " KI: ";
-      break;
-
-    case 2:
-      setPID = kd * 100;
-      PIDvariableName = " KD: ";
-      break;
-  }
-
-  
-  //lcd.print(String(String("SET " + circuit) + PIDvariableName));   //Will be used for LOG FUNCTION
-
-  //Break the given time into individual digits
-  number[0] = (setPID / 1000) % 10;
-  number[1] = (setPID / 100) % 10;
-  number[2] = (setPID / 10) % 10;
-  number[3] = (setPID / 1) % 10;
-
-  //Put the individual digitso nto the LCD
-  lcd.setCursor(0,1);
-  //lcd.print(PIDvariableName);    //Will be used for LOG FUNCTION
-  lcd.setCursor(5,1);
-  //lcd.print(String(number[0]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(6,1);
-  //lcd.print(String(number[1]));  //Will be used for LOG FUNCTION
-  lcd.setCursor(7,1);
-  //lcd.print(".");  //Will be used for LOG FUNCTION
-  lcd.setCursor(8,1);
-  //lcd.print(String(number[2]));    //Will be used for LOG FUNCTION 
-  lcd.setCursor(9,1);
-  //lcd.print(String(number[3]));      //Will be used for LOG FUNCTION
-  lcd.setCursor(decimal, 1); 
-
-  digit = number[3];
-
-  //Set the time based on user input
-  while(selecting)
-  {
-    char key = keypad.getKey();
-    if(key)
-    {
-      switch (key)
-      {
-      case '1': //Select
-        selecting = false;
-        break;
-        
-      case '2': //Down
-        digit--;
-        if(digit < 0)
-        {
-          digit = 9;
-        }
-        if(digit > 9)
-        {
-          digit = 0;
-        }
-        if(decimal <= 6)
-        {
-          number[decimal - 5] = digit;
-        }
-        else
-        {
-          number[decimal - 6] = digit;
-        }
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '3': //Up
-        digit++;
-        if(digit > 9)
-        {
-          digit = 0;
-        }
-        if(decimal <= 6)
-        {
-          number[decimal - 5] = digit;
-        }
-        else
-        {
-          number[decimal - 6] = digit;
-        }
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        break;
-        
-      case '4': //Left
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal--;
-        if(decimal < 5)
-        {
-          decimal = 5;
-        }
-        if(decimal == 7)
-        {
-          decimal = 6;
-        }
-        if(decimal <= 6)
-        {
-          digit = number[decimal - 5];
-        }
-        else
-        {
-          digit = number[decimal - 6];
-        }
-        break;
-        
-      case '5': //Right
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-        decimal++;
-        if(decimal > 9)
-        {
-          decimal = 9;
-        }
-        if(decimal == 7)
-        {
-          decimal = 8;
-        }
-        if(decimal <= 6)
-        {
-          digit = number[decimal - 5];
-        }
-        else
-        {
-          digit = number[decimal - 6];
-        }
-        break;
-      }
-    }
-    
-    lcd.setCursor(7,1);
-    //lcd.print(".");  //Will be used for LOG FUNCTION
-    lcd.setCursor(decimal, 1);
-
-    //Blink the character space to let the user know what digit they are setting
-    unsigned long currentTime = millis();
-    if(currentTime - previousTime >= 500)
-    {
-      previousTime = currentTime;
-      if(displayDigit)
-      {
-        displayDigit = false;
-        //lcd.print("_");  //Will be used for LOG FUNCTION
-      }
-      else
-      {
-        displayDigit = true;
-        //lcd.print(digit);  //Will be used for LOG FUNCTION
-      }
-    }
-  }
-
-  //Calculate the new time from the selection
-  double newPID = (number[0]*10 + number[1] + number[2]/10 + number[3]/100);
   
   //Set the correct PID variable
+
+  newPID = setPID / 10;
+  
   switch (tuneVariable)
   {
     case 0:
       kp = newPID;
+      PIDvariableName = " KP set to: ";
       break;
       
     case 1:
       ki = newPID;
+      PIDvariableName = " KI set to: ";
       break;
 
     case 2:
       kd = newPID;
+      PIDvariableName = " KD set to: ";
       break;
+      
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeNum("Confirm_PID.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_PID.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page PID");
+      return;
   }
+  
     switch (selection)
   {
     case 0:
       kp_Marx = kp;
       ki_Marx = ki;
       kd_Marx = kd;
+      myNex.writeStr("Confirm_PID.t0.txt", String("Marx PID" + PIDvariableName + String(newPID) + String(".")));
       break;
     
     case 1:
       kp_MarxTG70 = kp;
       ki_MarxTG70 = ki;
       kd_MarxTG70 = kd;
+      myNex.writeStr("Confirm_PID.t0.txt", String("Marx TG70 PID" + PIDvariableName + String(newPID) + String(".")));
       break;
       
     case 2:
       kp_MTG = kp;
       ki_MTG = ki;
       kd_MTG = kd;
+      myNex.writeStr("Confirm_PID.t0.txt", String("MTG PID" + PIDvariableName + String(newPID) + String(".")));
       break;
       
     case 3:
       kp_Switch = kp;
       ki_Switch = ki;
       kd_Switch = kd;
+      myNex.writeStr("Confirm_PID.t0.txt", String("Switch PID" + PIDvariableName + String(newPID) + String(".")));
       break;
             
     case 4:
       kp_SwitchTG70 = kp;
       ki_SwitchTG70 = ki;
       kd_SwitchTG70 = kd;
+      myNex.writeStr("Confirm_PID.t0.txt", String("Switch TG70 PID" + PIDvariableName + String(newPID) + String(".")));
       break;
+
+    default:  //Error condition
+      //Switch to error screen indicating that the setting has failed.
+      myNex.writeNum("Confirm_PID.Warning_Image.aph", 127);
+      myNex.writeStr("Confirm_PID.t0.txt", "WARNING: Setting has failed!");
+      delay(1500);
+      myNex.writeStr("page PID");
+      return;
   }
   SaveCurrentSettings();
-  
-  //Set the new PID parameter to the correct circuit PID
-  lcd.setCursor(0,0);
-  //lcd.print(String(String(circuit + PIDvariableName) + "                "));   //Will be used for LOG FUNCTION
-  lcd.setCursor(0,1);
-  //lcd.print("                ");   //Will be used for LOG FUNCTION
-  lcd.setCursor(6,1);
-  //lcd.print(newPID);   //Will be used for LOG FUNCTION
-  
-  delay(3000);
+  delay(1500);
+  myNex.writeStr("page PID");
   return;
 }
-*/
+
 
 //-------------------------------------------------------------------------------------------------------------
 //Alarm configuration function for circuit timeout
@@ -3003,7 +2877,8 @@ void trigger7()
 // main calibration computation and setting
 void trigger8() {
   int cidx;
-  double pressure, prev, ar;
+  double pressure, prev;
+  int ar;
   char sbuf[64];
 
   // read user-input current circuit PSI
@@ -3011,8 +2886,19 @@ void trigger8() {
   pressure /= 10;
 
   // get circuit selection from Circuit.val as a circuit-map index
-  cidx = CIRC_IDX(myNex.readNumber("Global.Circuit.val"));
+  cidx = myNex.readNumber("Global.Circuit.val");
 
+  if (pressure == 777777 || cidx == 777777) {
+    myNex.writeStr("page Confirm_Press");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page Calibration");
+    return;
+  }
+
+  cidx = CIRC_IDX(cidx);
+  
   // store previous calibration coefficient
   prev = *calibration_map[cidx];
   // read current pressure-analog value
@@ -3024,7 +2910,8 @@ void trigger8() {
   // if input is non-zero
   if (pressure >= 0.1) {
     // calculate slope/calibration-coefficient
-    *calibration_map[cidx] = ar / pressure;
+    *(calibration_map)[cidx] = ar;
+    *(calibration_map)[cidx] /= pressure;
     // set successful status message
     sprintf(sbuf, "CALIBRATION SUCCESSFUL!");
     myNex.writeStr("Calibrated.status.txt", sbuf);
@@ -3037,7 +2924,8 @@ void trigger8() {
 
   // state calibration changes to Calibrated page
   myNex.writeStr("Calibrated.t0.txt", String("Previous Calibration > " + String(prev)));
-  myNex.writeStr("Calibrated.t1.txt", String("Current Calibration > " + String(*calibration_map[cidx])));
+  myNex.writeStr("Calibrated.t1.txt", String("Current Calibration > " + String(*calibration_map[cidx])) + String(cidx));
+  SaveCurrentSettings();
 }
 
 // calibration circuit selection
@@ -3067,6 +2955,31 @@ void trigger11()
   SaveCurrentSettings();
 }
 
+//PIG Config trigger
+void trigger12()
+{
+  int circuitNum = 0;
+  int tuneVariable = 0;
+  float newPID = 0;
+  circuitNum = myNex.readNumber("Global.Circuit.val");
+  tuneVariable = myNex.readNumber("Global.pidVar.val");
+  newPID = myNex.readNumber("Enter_Float.float.val");
+
+  //Check if serial communication is successful, then map to function
+  if(tuneVariable == 777777 || circuitNum == 777777 || newPID == 777777)
+  {
+    myNex.writeStr("page Confirm_PID");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    delay(1500);
+    myNex.writeStr("page PID");
+    return;
+  }
+  else
+  {
+     setPID(selection, tuneVariable, newPID);
+  }
+}
 
 
 //Brightness
