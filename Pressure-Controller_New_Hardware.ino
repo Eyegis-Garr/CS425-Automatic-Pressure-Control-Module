@@ -3,7 +3,7 @@
 //Vladislav Petrov
 //Sean Rolandelli
 //Bradley Sullivan
-//Last modification April 16, 2024
+//Last modification April 18, 2024
 //-------------------------------------------------------------------------------------------------------------
 
 
@@ -316,20 +316,26 @@ void setup()
   Serial3.begin(9600);
   myNex.begin(9600);  //For touchscreen comms
 
+  SD.begin();
+  SD.remove("Log.txt");
+
   //Start the initial boot screen
   myNex.writeStr("page Boot_Page");
-  myNex.writeStr("bootText.txt", "INITIALIZING...\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt", "INITIALIZING...\r\n");
+  sysLog(millis(), "INITIALIZING.");
   myNex.writeNum("Progress_Bar.val", 0);
 
   //Unit test setup
-  myNex.writeStr("bootText.txt+", "Setting up unit tests...\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Setting up unit tests...\r\n");
+  sysLog(millis(), "Setting up unit tests.");
   aunit::TestRunner::setPrinter(&Serial);  //I would like to set this to output onto the screen eventually
   aunit::TestRunner::setTimeout(10);
   myNex.writeNum("Progress_Bar.val", 10);
     
   //Set alarm pin to OUTPUT mode.
   pinMode(alarmsoundPin, OUTPUT);
-  myNex.writeStr("bootText.txt+", "Alarm pin set.\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Alarm pin set.\r\n");
+  sysLog(millis(), "Alarm pin set.");
   myNex.writeNum("Progress_Bar.val", 20);
 
   //Set solenoid pins to OUTPUT mode.
@@ -345,12 +351,14 @@ void setup()
   pinMode(tg70marxoutPin, OUTPUT);
   pinMode(reclaimerstartPin, OUTPUT);
   pinMode(reclaimerstopPin, OUTPUT);
-  myNex.writeStr("bootText.txt+", "Solenoid pins set.\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Solenoid pins set.\r\n");
+  sysLog(millis(), "Solenoid pins set.");
   myNex.writeNum("Progress_Bar.val", 30);
 
   //Set SDcard pin to OUTPUT mode.
   pinMode(csPin, OUTPUT);
   myNex.writeStr("bootText.txt+", "SD pin set.\r\n");  //Need to write to log also
+  sysLog(millis(), "SD pin set.");
   myNex.writeNum("Progress_Bar.val", 40);
 
   //Set LED pins to OUTPUT mode.
@@ -366,7 +374,8 @@ void setup()
   pinMode(startLEDPin, OUTPUT);
   pinMode(stopLEDPin, OUTPUT);
   pinMode(abortLEDPin, OUTPUT);
-  myNex.writeStr("bootText.txt+", "LED pins set.\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "LED pins set.\r\n");
+  sysLog(millis(), "LED pins set.");
   myNex.writeNum("Progress_Bar.val", 50);
 
   //Set button pins to INPUT mode.
@@ -382,7 +391,8 @@ void setup()
   pinMode(reclaimerstartenablePin, INPUT);
   pinMode(reclaimerstopenablePin, INPUT);
   pinMode(abortbuttonPin, INPUT);
-  myNex.writeStr("bootText.txt+", "Button pins set.\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Button pins set.\r\n");
+  sysLog(millis(), "Setting up unit tests.");
   myNex.writeNum("Progress_Bar.val", 60);
 
   //Turn on the internal pullup resistor on all buttons.
@@ -398,17 +408,20 @@ void setup()
   pinMode(reclaimerstartenablePin, INPUT_PULLUP);
   pinMode(reclaimerstopenablePin, INPUT_PULLUP);
   pinMode(abortbuttonPin, INPUT_PULLUP);
-  myNex.writeStr("bootText.txt+", "Button pullup resistors activated.\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Button pullup resistors activated.\r\n");
+  sysLog(millis(), "Button pullup resistors activated.");
   myNex.writeNum("Progress_Bar.val", 70);
 
   //Startup process. Load the last used settings. If none are found, create some defaults.
   //Check if SD card exists
-  myNex.writeStr("bootText.txt+", "Checking SD Card...\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Checking SD Card...\r\n");
+  sysLog(millis(), "Checking SD Card.");
   myNex.writeNum("Progress_Bar.val", 80);
   if(!SD.begin())//No sd card is found. Set the circuit pressure to whatever they happen to be at the time
   { 
     sdCard = false;
-    myNex.writeStr("bootText.txt+", "WARNING: SD card not found!\r\n");  //Need to write to log also
+    myNex.writeStr("bootText.txt+", "WARNING: SD card not found!\r\n");
+    sysLog(millis(), "WARNING: SD card not found!");
     myNex.writeNum("Progress_Bar.val", 90);
     Marxsetpoint = analogRead(marxanaloginPin);                    
     MTGsetpoint = analogRead(mtganaloginPin);
@@ -419,7 +432,8 @@ void setup()
   }
   else
   {
-    myNex.writeStr("bootText.txt+", "Loading previous settings...\r\n");  //Need to write to log also
+    myNex.writeStr("bootText.txt+", "Loading previous settings...\r\n");
+    sysLog(millis(), "Loading previous settings.");
     sdCard = true;
     if(SD.exists("Setting.txt")) //Previous settings are found. Load the previous settings into the controller.
     {
@@ -487,13 +501,15 @@ void setup()
 //      readPresets();
 
       SaveCurrentSettings();
-      myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");  //Need to write to log also
+      myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");
+      sysLog(millis(), "Previous settings loaded successfully!");
       myNex.writeNum("Progress_Bar.val", 90);
       delay(1500);
     }
     else //No previous settings are found. Set the circuit pressure to whatever they happen to be at the time
     {
-      myNex.writeStr("bootText.txt+", "No previous settings found. Using default settings...\r\n");  //Need to write to log also
+      myNex.writeStr("bootText.txt+", "No previous settings found. Using default settings...\r\n");
+      sysLog(millis(), "No previous settings found. Using default settings.");
       myNex.writeNum("Progress_Bar.val", 90);
       Marxsetpoint = analogRead(marxanaloginPin);                    
       MTGsetpoint = analogRead(mtganaloginPin);
@@ -504,7 +520,8 @@ void setup()
     } 
   }
   
-  myNex.writeStr("bootText.txt+", "Boot complete!\r\n");  //Need to write to log also
+  myNex.writeStr("bootText.txt+", "Boot complete!\r\n");
+  sysLog(millis(), "Boot complete.");
   myNex.writeNum("Progress_Bar.val", 100);
   delay(3000);
   myNex.writeStr("page Main_Menu");
@@ -1494,13 +1511,29 @@ void ControlButtonLEDStateCheck(bool buttonState, const int ledPin)
     digitalWrite(ledPin, buttonState);
 }
 
+
+//-------------------------------------------------------------------------------------------------------------
+//System log function
+//-------------------------------------------------------------------------------------------------------------
+void sysLog(unsigned long timeStamp, String logString)
+{
+  //Check is an SD card is present and active. If one is present, save the log data. If not skip to return.
+  File logFile = SD.open("Log.txt", FILE_WRITE);  //Save the log string
+  logFile.seek(logFile.size());
+  logFile.print(String(timeStamp / (1000*60*60)) + ":" + String(timeStamp / (1000*60)) + ":" + String(timeStamp / 1000));
+  logFile.println(String(": " + logString));
+  logFile.close();
+  return;
+}
+
+
 //-------------------------------------------------------------------------------------------------------------
 //Updates the current settings to the file that is used when starting the program
 //-------------------------------------------------------------------------------------------------------------
 void SaveCurrentSettings()
 {
   //Check is an SD card is present and active. If one is present, save the data. If not skip to return.
-  if(sdCard && SD.begin(csPin))
+  if(sdCard)
   {
     SD.remove("Setting.txt");
     File lastPresetFile = SD.open("Setting.txt", FILE_WRITE);  //Save the setting
@@ -1563,6 +1596,7 @@ void SaveCurrentSettings()
    //}
     lastPresetFile.close();
   }
+  sysLog(millis(), "System settings updated.");
   return;
 }
 
@@ -1579,7 +1613,7 @@ String FileWriter(int presetNumber)
 
 
   //Save the selected preset
-  if(sdCard && SD.begin(csPin))
+  if(sdCard)
   { 
     //Display progress bar
     myNex.writeNum("Confirm_Preset.Progress_Bar.aph", 127);
@@ -1702,11 +1736,13 @@ String FileWriter(int presetNumber)
 
     
     myNex.writeNum("Confirm_Preset.Progress_Bar.val", 100);
+    sysLog(millis(), String("Preset " + String(presetNumber) + String(" saved!")));
     return String("Preset " + String(presetNumber) + String(" saved!"));  //Also log this
   }
   else //SD card is not found.
   {
     myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
+    sysLog(millis(), "ERROR: SD card not found!");
     return "ERROR: SD card not found!";
   }
 }
@@ -1722,7 +1758,7 @@ String FileReader(int presetNumber)
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
   
-  if(sdCard && SD.begin(csPin))
+  if(sdCard)
   {
     if(SD.exists(file)) //File is found.
     {
@@ -1853,17 +1889,20 @@ String FileReader(int presetNumber)
 
       
       myNex.writeNum("Confirm_Preset.Progress_Bar.val", 100);
+      sysLog(millis(), String("Preset " + String(presetNumber) + String(" loaded!")));
       return String("Preset " + String(presetNumber) + String(" loaded!"));  //Also log this
     } 
     else //No file is found, display error and return
     {
       myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
-      return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
+      sysLog(millis(), String(presetNumber) + String(" not found!"));
+      return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));
     }
   }
   else //SD card is not found.
   {
     myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
+    sysLog(millis(), "ERROR: SD card not found!");
     return "ERROR: SD card not found!";
   }
 }
@@ -1879,22 +1918,25 @@ String FileRemover(int presetNumber)
   String preset = String("Preset_" + String(presetNumber));
   String file = String(preset + ".txt");
   
-  if(sdCard && SD.begin(csPin)) //Check for SD card
+  if(sdCard) //Check for SD card
   {
     if(SD.exists(file)) //File is found.
     {  
       SD.remove(file);
-      return String("Preset " + String(presetNumber) + String(" deleted!"));  //Also log this
+      sysLog(millis(), String("Preset " + String(presetNumber) + String(" deleted!")));
+      return String("Preset " + String(presetNumber) + String(" deleted!"));
     }
     else //No file is found, display error and return
     {
       myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
-      return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));  //Also log this
+      sysLog(millis(), String("ERROR: Preset " + String(presetNumber) + String(" not found!")));
+      return String("ERROR: Preset " + String(presetNumber) + String(" not found!"));
     }
   }
   else //SD card is not found.
   {
     myNex.writeNum("Confirm_Preset.Warning_Image.aph", 127);
+    sysLog(millis(), "ERROR: SD card not found!");
     return "ERROR: SD card not found!";
   }
 }
@@ -1919,31 +1961,37 @@ void SetCircuitPressure(int selection, float pressureValue)
       pressureSetpoint = (pressureValue / 10) * Marxcalibration; //20.078
       Marxsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Marx setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
+      sysLog(millis(), String("Marx setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;         
     case 1:
       pressureSetpoint = (pressureValue / 10) * TG70Marxcalibration; //20.089
       TG70Marxsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
+      sysLog(millis(), String("TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break; 
     case 2:
       pressureSetpoint = (pressureValue / 10) * MTGcalibration; //20
       MTGsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("MTG setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
+      sysLog(millis(), String("MTG setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;     
     case 3:
       pressureSetpoint = (pressureValue / 10) * Switchcalibration; //20.13
       Switchsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Switch setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
+      sysLog(millis(), String("Switch setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;           
     case 4:
       // pressureSetpoint = (pressureValue / 10) * TG70Switchcalibration; //20.094
       TG70Switchsetpoint = pressureSetpoint;
       myNex.writeStr("Confirm_Press.t0.txt", String("Switch TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
+      sysLog(millis(), String("Switch TG70 setpoint set to " + String(pressureValue / 10) + String(" PSI.")));
       break;
     default:  //Error condition
       //Switch to error screen indicating that the setting has failed.
       myNex.writeNum("Confirm_Press.Warning_Image.aph", 127);
       myNex.writeStr("Confirm_Press.t0.txt", "WARNING: Setting has failed!");
+      sysLog(millis(), "WARNING: Setting has failed!");
       delay(1500);
       myNex.writeStr("page Circuit_Select");
       return;
@@ -2052,6 +2100,7 @@ void manualReclaimerControl()
   {
     if(!reclaimerRunning)
     {
+      sysLog(millis(), "Reclaimer manually turned on.");
       stopreclaimerState = false;
       digitalWrite(reclaimerstartPin, HIGH);
       delay(100);
@@ -2065,6 +2114,7 @@ void manualReclaimerControl()
   {
     if(reclaimerRunning)
     {
+      sysLog(millis(), "Reclaimer manually turned off.");
       startreclaimerState = false;
       digitalWrite(reclaimerstopPin, HIGH);
       delay(100);
@@ -2095,6 +2145,7 @@ bool automaticReclaimerControl()
       delay(100);
       if(reclaimerPressure <= analogRead(reclaimeranaloginPin))
       {
+        sysLog(millis(), "Reclaimer automoatically turned on.");
         reclaimerRunning = true;
         stopreclaimerState = false;
         startreclaimerState = true;
@@ -2109,6 +2160,7 @@ bool automaticReclaimerControl()
   //Turn off the reclaimer automatically if the pressure is too low
   if(reclaimerRunning && (reclaimerPressure < minReclaimerPressure) && automatereclaimerState)
   {
+    sysLog(millis(), "Reclaimer automoatically turned off.");
     previousReclaimerSafetyTime = currentReclaimerTime;
     reclaimerRunning = false;
     stopreclaimerState = true;
@@ -2273,6 +2325,7 @@ void setReclaimerSafetyDelay(long int setTime)
   //Set and save the new delay time
   reclaimerSafetyTime = setTime * 1000;
   myNex.writeStr("Confirm_Number.t0.txt", String("Reclaimer safety delay set to " + String(setTime) + String(" seconds.")));
+  sysLog(millis(), String("Reclaimer safety delay set to " + String(setTime) + String(" seconds.")));
   SaveCurrentSettings();
   delay(1500);
   myNex.writeStr("page Timers");
@@ -2432,27 +2485,33 @@ void alarmConfig(int selection, long int setTime)
     case 0:
       marxmaxTime = setTime * 1000;
       myNex.writeStr("Confirm_Number.t0.txt", String("Marx alarm time set to " + String(setTime) + String(" seconds.")));
+      sysLog(millis(), String("Marx alarm time set to " + String(setTime) + String(" seconds.")));
       break;         
     case 1:
       tg70marxmaxTime = setTime * 1000;
       myNex.writeStr("Confirm_Number.t0.txt", String("TG70 alarm time set to " + String(setTime) + String(" seconds.")));
+      sysLog(millis(), String("TG70 alarm time set to " + String(setTime) + String(" seconds.")));
       break; 
     case 2:
       mtgmaxTime = setTime * 1000;
       myNex.writeStr("Confirm_Number.t0.txt", String("MTG alarm time set to " + String(setTime) + String(" seconds.")));
+      sysLog(millis(), String("MTG alarm time set to " + String(setTime) + String(" seconds.")));
       break;     
     case 3:
       switchmaxTime = setTime * 1000;
       myNex.writeStr("Confirm_Number.t0.txt", String("Switch alarm time set to " + String(setTime) + String(" seconds.")));
+      sysLog(millis(), String("Switch alarm time set to " + String(setTime) + String(" seconds.")));
       break;           
     case 4:
       tg70switchmaxTime = setTime * 1000;
       myNex.writeStr("Confirm_Number.t0.txt", String("Switch TG70 alarm time set to " + String(setTime) + String(" seconds.")));
+      sysLog(millis(), String("Switch TG70 alarm time set to " + String(setTime) + String(" seconds.")));
       break;
     default:  //Error condition
       //Switch to error screen indicating that the setting has failed.
       myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
       myNex.writeStr("Confirm_Number.t0.txt", "WARNING: Setting has failed!");
+      sysLog(millis(), "WARNING: Setting has failed!");
       delay(1500);
       myNex.writeStr("page Cir_Alarm_Sel");
       return;
@@ -2695,7 +2754,8 @@ void trigger1()
   //Check if serial communication is successful, then map to function
   if(action == "ERROR" || presetNum == 777777)
   {
-    myNex.writeStr("Confirm_Preset.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Preset.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communications failure!");
     delay(1500);
     myNex.writeStr("page Presets_Menu");
     return;
@@ -2705,20 +2765,24 @@ void trigger1()
     //Map to the correct function
     if(action == "SAVE")
     {
+      sysLog(millis(), "Entered SAVE PRESET menu.");
       myNex.writeStr("Confirm_Preset.t0.txt", FileWriter(presetNum));
     }
     else if(action == "LOAD")
     {
+      sysLog(millis(), "Entered LOAD PRESET menu.");
       myNex.writeStr("Confirm_Preset.t0.txt", FileReader(presetNum));  
     }
     else if(action == "DELETE")
     {
+      sysLog(millis(), "Entered DELETE PRSET menu.");
       myNex.writeStr("Confirm_Preset.t0.txt", FileRemover(presetNum)); 
     }
     else
     {
       myNex.writeStr("vis Confirm_Preset.Warning_Icon,1");
-      myNex.writeStr("Confirm_Preset.t0.txt", "ERROR: Could not execute command!"); //Log this
+      myNex.writeStr("Confirm_Preset.t0.txt", "ERROR: Could not execute command!");
+      sysLog(millis(), "ERROR: COuld not execute command!");
       delay(1500);
       myNex.writeStr("page Presets_Menu");
       return;
@@ -2743,13 +2807,15 @@ void trigger2()
   {
     myNex.writeStr("page Confirm_Number");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page Cir_Purge_Sel");
     return;
   }
   else
   {
+    sysLog(millis(), "Entered purge config menu.");
     purgeConfig(circuitNum, timer);
   }
 }
@@ -2767,13 +2833,15 @@ void trigger3()
   {
     myNex.writeStr("page Confirm_Number");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page Cir_Delay_Sel");
     return;
   }
   else
   {
+    sysLog(millis(), "Entered circuit delay config menu.");
     circuitDelay(circuitNum, timer);
   }
 }
@@ -2791,13 +2859,15 @@ void trigger4()
   {
     myNex.writeStr("page Confirm_Number");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page Cir_Alarm_Sel");
     return;
   }
   else
   {
+    sysLog(millis(), "Entered circuit alarm config menu.");
     alarmConfig(circuitNum, timer);
   }
 }
@@ -2813,13 +2883,15 @@ void trigger5()
   {
     myNex.writeStr("page Confirm_Number");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page Timers");
     return;
   }
   else
   {
+    sysLog(millis(), "Entered reclaimer safety delay menu.");
     setReclaimerSafetyDelay(timer);
   }
 }
@@ -2837,13 +2909,15 @@ void trigger6()
   {
     myNex.writeStr("page Confirm_Press");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page Circuit_Select");
     return;
   }
   else
   {
+    sysLog(millis(), "Entered circuit pressure config menu.");
     SetCircuitPressure(circuitNum, pressureValue);
   }
 }
@@ -2861,13 +2935,15 @@ void trigger7()
   {
     myNex.writeStr("page Confirm_Press");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page Reclaimer");
     return;
   }
   else
   {
+    sysLog(millis(), "Entered reclaimer pressure config menu.");
     SetReclaimerPressure(circuitNum, pressureValue);
   }
 }
@@ -2891,11 +2967,13 @@ void trigger8() {
   if (pressure == 777777 || cidx == 777777) {
     myNex.writeStr("page Confirm_Press");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page Calibration");
     return;
   }
+  sysLog(millis(), "Entered calibration menu.");
 
   cidx = CIRC_IDX(cidx);
   
@@ -2914,11 +2992,13 @@ void trigger8() {
     *(calibration_map)[cidx] /= pressure;
     // set successful status message
     sprintf(sbuf, "CALIBRATION SUCCESSFUL!");
+    sysLog(millis(), String("Successfully calibrated " + String(circuit_map[cidx]) + " from " + String(prev) + " to " + String(*calibration_map[cidx])));
     myNex.writeStr("Calibrated.status.txt", sbuf);
 
   } else {
     // set failed status message
     sprintf(sbuf, "CALIBRATION FAILED. (divide by zero)");
+    sysLog(millis(), String("Failed to set calibration for PSI of " + String(pressure)));
     myNex.writeStr("Calibrated.status.txt", sbuf);
   }
 
@@ -2947,6 +3027,14 @@ void trigger10()
   myNex.writeStr("On_Off.t0.txt", "Alarm Sound");
   myNex.writeStr("On_Off.t1.txt", "Toggle alarm sound");
   myNex.writeNum("On_Off.sw1.val", alarmEnable);
+  if(alarmEnable)
+  {
+    sysLog(millis(), "Alarm sound enabled.");
+  }
+  else
+  {
+    sysLog(millis(), "Alarm sound disabled.");
+  }
 }
 
 void trigger11()
@@ -2970,14 +3058,44 @@ void trigger12()
   {
     myNex.writeStr("page Confirm_PID");
     myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
-    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!"); //Log this
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog(millis(), "ERROR: Serial communication failure!");
     delay(1500);
     myNex.writeStr("page PID");
     return;
   }
   else
   {
+    sysLog(millis(), "Entered PID config menu.");
      setPID(selection, tuneVariable, newPID);
+  }
+}
+
+//Event log display
+void trigger13()
+{
+  ControlButtonStateManager();
+
+  if(sdCard)
+  {
+    if(SD.exists("Log.txt")) //File is found.
+    { 
+      File logFile = SD.open("Log.txt", FILE_READ);
+      while(logFile.position() != logFile.size())
+      {
+        myNex.writeStr("Log_Page.BootText.txt+", String(logFile.readStringUntil('\n')));
+        myNex.writeStr("Log_Page.BootText.txt+", "\r\n"); 
+      }
+      logFile.close();
+    }
+    else //File not found
+    {
+      myNex.writeStr("Log_Page.BootText.txt+", "WARNING: Log file not found!");
+    }
+  }
+  else //SD card is not found.
+  {
+    myNex.writeStr("Log_Page.BootText.txt+", "WARNING: SD Card not found!");
   }
 }
 
