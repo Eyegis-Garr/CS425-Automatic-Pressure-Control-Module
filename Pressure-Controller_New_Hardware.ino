@@ -498,7 +498,7 @@ void setup()
       lasttg70switchenableState = !tg70switchenableState;
       lasttg70marxenableState = !tg70marxenableState;
       previousSettingFile.close();
-//      readPresets();
+      readPresets();
 
       SaveCurrentSettings();
       myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");
@@ -2585,7 +2585,7 @@ void alarmController(String errorString)
 }
 
 //Read Presets
-/*
+
 void readPresets() {
   if(SD.exists("Presets.txt")) 
   {
@@ -2598,6 +2598,19 @@ void readPresets() {
     preset6 = PresetsFile.readStringUntil('\n');
     brightness = PresetsFile.readStringUntil('\n').toInt();
     color = PresetsFile.readStringUntil('\n').toInt();
+    PresetsFile.close();
+  }
+  else if(sdCard && SD.begin(csPin)) {
+    File PresetsFile = SD.open("Presets.txt", FILE_WRITE);
+    preset1 = String("Preset 1");
+    preset2 = String("Preset 2");
+    preset3 = String("Preset 3");
+    preset4 = String("Preset 4");
+    preset5 = String("Preset 5");
+    preset6 = String("Preset 6");
+    brightness = 100;
+    color = 65535;
+    PresetsFile.close();
   }
   else
   {
@@ -2623,90 +2636,59 @@ void readPresets() {
   myNex.writeStr("Global.bco=" + color);
   
   myNex.writeStr("Main_Menu.bco=" + color);
-  myNex.writeStr("Main_Menu.t0.bco=" + color);
   
   myNex.writeStr("Presets_Select.bco=" + color);
   
   myNex.writeStr("Presets_Menu.bco=" + color);
-  myNex.writeStr("Presets_Menu.t0.bco=" + color);
 
   myNex.writeStr("Timers.bco=" + color);
-  myNex.writeStr("Timers.t0.bco=" + color);
   
   myNex.writeStr("PID.bco=" + color);
-  myNex.writeStr("PID.t0.bco=" + color);
   
   myNex.writeStr("Circuit_Select.bco=" + color);
-  myNex.writeStr("Circuit_Select.t0.bco=" + color);
   
   myNex.writeStr("Alarms.bco=" + color);
-  myNex.writeStr("Alarms..t0.bco=" + color);
 
   myNex.writeStr("Reclaimer.bco=" + color);
-  myNex.writeStr("Reclaimer.t0.bco=" + color);
   
   myNex.writeStr("On_Off.bco=" + color);
-  myNex.writeStr("On_Off.t0.bco=" + color);
   
   myNex.writeStr("Enter_Numbers.bco=" + color);
-  myNex.writeStr("Enter_Numbers.t0.bco=" + color);
-  myNex.writeStr("Enter_Numbers.stringNum.bco=" + color);
   
   myNex.writeStr("Confirm_Presets.bco=" + color);
-  myNex.writeStr("Confirm_Presets.t0.bco=" + color);
   
   myNex.writeStr("Confirm_Press.bco=" + color);
-  myNex.writeStr("Confirm_Press.t0.bco=" + color);
-  myNex.writeStr("Confirm_Press.t1.bco=" + color);
   
   myNex.writeStr("Confirm_On_Off.bco=" + color);
-  myNex.writeStr("Confirm_On_Off.t0.bco=" + color);
-  myNex.writeStr("Confirm_On_Off.t1.bco=" + color);
 
   myNex.writeStr("Confirm_Set.bco=" + color);
-  myNex.writeStr("Confirm_Set.t0.bco=" + color);
-  myNex.writeStr("Confirm_Set.t1.bco=" + color);
   
   myNex.writeStr("Boot_Page.bco=" + color);
-  myNex.writeStr("Boot_Page.bootText.bco=" + color);
   
   myNex.writeStr("Log_Page.bco=" + color);
-  myNex.writeStr("Log_Page.t0.bco=" + color);
-  myNex.writeStr("Log_Page.bootText.bco=" + color);
   
   myNex.writeStr("Preset_Yes_No.bco=" + color);
-  myNex.writeStr("Preset_Yes_No.t0.bco=" + color);
   
   myNex.writeStr("Cir_Purge_Sel.bco=" + color);
-  myNex.writeStr("Cir_Purge_Sel.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Confirm_Number.bco=" + color);
-  myNex.writeStr("Confirm_Number.t0.bco=" + color);
   
   myNex.writeStr("Cir_Delay_Sel.bco=" + color);
-  myNex.writeStr("Cir_Delay_Sel.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Cir_Alarm_Sel.bco=" + color);
-  myNex.writeStr("Cir_Alarm_Sel.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Options.bco=" + color);
-  myNex.writeStr("Options.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Brightness.bco=" + color);
-  myNex.writeStr("Brightness.t0.bco=" + color);
-  myNex.writeStr("Brightness.t1.bco=" + color);
-  myNex.writeStr("Brightness.n0.bco=" + color);
   
   myNex.writeStr("Color.bco=" + color);
-  myNex.writeStr("Color.t0.bco=" + color);
-  
+]  
   myNex.writeStr("Preset_Rename.bco=" + color);
-  myNex.writeStr("Preset_Rename.t0.bco=" + color);
-}
-*/
+\}
+
 
 //Write Presets
-/*
+
 void writePresets() 
 {
   if(SD.exists("Presets.txt")) 
@@ -2718,6 +2700,7 @@ void writePresets()
     preset5 = myNex.readStr("Preset_Rename.t5.txt");
     preset6 = myNex.readStr("Preset_Rename.t6.txt");
     brightness = myNex.readNumber("Brightness.n0.val");
+    color = myNex.readNumber("Gobal.color.val");
 
     File PresetsFile = SD.open("Presets.txt", FILE_WRITE);
     PresetsFile.println(preset1);
@@ -2728,6 +2711,7 @@ void writePresets()
     PresetsFile.println(preset6);
     PresetsFile.println(brightness);
     PresetsFile.println(color);
+    PresetsFile.close();
 
   }
   else
@@ -2735,7 +2719,7 @@ void writePresets()
     //make page to say no sd card found
   }
 }
-*/
+
 
 //--------------------------------------------------------------------------------------------
 //TRIGGERS
@@ -3101,104 +3085,73 @@ void trigger13()
 
 
 //Brightness
+/*
 void trigger20() {
   brightness = myNex.readNumber("Global.brightness.val");
   myNex.writeStr("dim=" + brightness);
 }
+*/
 
 //Change Preset Names
 void trigger21() {
-//  writePresets();
+  writePresets();
 }
 
-/*
 void trigger22() {
   color = myNex.readNUmber("Global.color.val");
 
   myNex.writeStr("Global.bco=" + color);
   
   myNex.writeStr("Main_Menu.bco=" + color);
-  myNex.writeStr("Main_Menu.t0.bco=" + color);
   
   myNex.writeStr("Presets_Select.bco=" + color);
   
   myNex.writeStr("Presets_Menu.bco=" + color);
-  myNex.writeStr("Presets_Menu.t0.bco=" + color);
 
   myNex.writeStr("Timers.bco=" + color);
-  myNex.writeStr("Timers.t0.bco=" + color);
   
   myNex.writeStr("PID.bco=" + color);
-  myNex.writeStr("PID.t0.bco=" + color);
   
   myNex.writeStr("Circuit_Select.bco=" + color);
-  myNex.writeStr("Circuit_Select.t0.bco=" + color);
   
   myNex.writeStr("Alarms.bco=" + color);
-  myNex.writeStr("Alarms..t0.bco=" + color);
 
   myNex.writeStr("Reclaimer.bco=" + color);
-  myNex.writeStr("Reclaimer.t0.bco=" + color);
   
   myNex.writeStr("On_Off.bco=" + color);
-  myNex.writeStr("On_Off.t0.bco=" + color);
   
   myNex.writeStr("Enter_Numbers.bco=" + color);
-  myNex.writeStr("Enter_Numbers.t0.bco=" + color);
-  myNex.writeStr("Enter_Numbers.stringNum.bco=" + color);
   
   myNex.writeStr("Confirm_Presets.bco=" + color);
-  myNex.writeStr("Confirm_Presets.t0.bco=" + color);
   
   myNex.writeStr("Confirm_Press.bco=" + color);
-  myNex.writeStr("Confirm_Press.t0.bco=" + color);
-  myNex.writeStr("Confirm_Press.t1.bco=" + color);
   
   myNex.writeStr("Confirm_On_Off.bco=" + color);
-  myNex.writeStr("Confirm_On_Off.t0.bco=" + color);
-  myNex.writeStr("Confirm_On_Off.t1.bco=" + color);
 
   myNex.writeStr("Confirm_Set.bco=" + color);
-  myNex.writeStr("Confirm_Set.t0.bco=" + color);
-  myNex.writeStr("Confirm_Set.t1.bco=" + color);
   
   myNex.writeStr("Boot_Page.bco=" + color);
-  myNex.writeStr("Boot_Page.bootText.bco=" + color);
   
   myNex.writeStr("Log_Page.bco=" + color);
-  myNex.writeStr("Log_Page.t0.bco=" + color);
-  myNex.writeStr("Log_Page.bootText.bco=" + color);
   
   myNex.writeStr("Preset_Yes_No.bco=" + color);
-  myNex.writeStr("Preset_Yes_No.t0.bco=" + color);
   
   myNex.writeStr("Cir_Purge_Sel.bco=" + color);
-  myNex.writeStr("Cir_Purge_Sel.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Confirm_Number.bco=" + color);
-  myNex.writeStr("Confirm_Number.t0.bco=" + color);
   
   myNex.writeStr("Cir_Delay_Sel.bco=" + color);
-  myNex.writeStr("Cir_Delay_Sel.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Cir_Alarm_Sel.bco=" + color);
-  myNex.writeStr("Cir_Alarm_Sel.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Options.bco=" + color);
-  myNex.writeStr("Options.t0.bco=" + color);
-  
+\  
   myNex.writeStr("Brightness.bco=" + color);
-  myNex.writeStr("Brightness.t0.bco=" + color);
-  myNex.writeStr("Brightness.t1.bco=" + color);
-  myNex.writeStr("Brightness.n0.bco=" + color);
   
   myNex.writeStr("Color.bco=" + color);
-  myNex.writeStr("Color.t0.bco=" + color);
-  
+]  
   myNex.writeStr("Preset_Rename.bco=" + color);
-  myNex.writeStr("Preset_Rename.t0.bco=" + color);
   
   writePresets();
   
 }
-*/
