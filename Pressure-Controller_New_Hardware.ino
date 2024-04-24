@@ -1578,6 +1578,63 @@ void SaveCurrentSettings()
     lastPresetFile.println(Reclaimcalibration);
     lastPresetFile.println(Minsupplycalibration);
     lastPresetFile.close();
+
+
+    SD.remove("Checksum.txt");
+    File ChecksumFile = SD.open("Checksum.txt", FILE_WRITE);  //Save the setting
+    ChecksumFile.println(calcCRC8(alarmEnable, 9));
+    ChecksumFile.println(calcCRC8(Marxsetpoint, 9));
+    ChecksumFile.println(calcCRC8(MTGsetpoint, 9));
+    ChecksumFile.println(calcCRC8(switchsetpoint, 9));
+    ChecksumFile.println(calcCRC8(TG70Switchsetpoint, 9));
+    ChecksumFile.println(calcCRC8(TG70Marxsetpoint, 9));
+    ChecksumFile.println(calcCRC8(maxReclaimerPressure, 9));
+    ChecksumFile.println(calcCRC8(minReclaimerPressure, 9));
+    ChecksumFile.println(calcCRC8(marxenableState, 9));
+    ChecksumFile.println(calcCRC8(mtgenableState, 9));
+    ChecksumFile.println(calcCRC8(switchenableState, 9));
+    ChecksumFile.println(calcCRC8(tg70switchenableState, 9));
+    ChecksumFile.println(calcCRC8(tg70marxenableState, 9));
+    ChecksumFile.println(calcCRC8(marxmaxTime, 9));
+    ChecksumFile.println(calcCRC8(mtgmaxTime, 9));
+    ChecksumFile.println(calcCRC8(switchmaxTime, 9));
+    ChecksumFile.println(calcCRC8(tg70switchmaxTime, 9));
+    ChecksumFile.println(calcCRC8(tg70marxmaxTime, 9));
+    ChecksumFile.println(calcCRC8(marxDelay, 9));
+    ChecksumFile.println(calcCRC8(mtgDelay, 9));
+    ChecksumFile.println(calcCRC8(switchDelay, 9));
+    ChecksumFile.println(calcCRC8(tg70marxDelay, 9));
+    ChecksumFile.println(calcCRC8(tg70switchDelay, 9));
+    ChecksumFile.println(calcCRC8(marxPurgeTime, 9));
+    ChecksumFile.println(calcCRC8(mtgPurgeTime, 9));
+    ChecksumFile.println(calcCRC8(switchPurgeTime, 9));
+    ChecksumFile.println(calcCRC8(tg70switchPurgeTime, 9));
+    ChecksumFile.println(calcCRC8(tg70marxPurgeTime, 9));
+    ChecksumFile.println(calcCRC8(minBottlePressure, 9));
+    ChecksumFile.println(calcCRC8(kp_Marx, 9));
+    ChecksumFile.println(calcCRC8(ki_Marx, 9));
+    ChecksumFile.println(calcCRC8(kd_Marx, 9));
+    ChecksumFile.println(calcCRC8(kp_MTG, 9));
+    ChecksumFile.println(calcCRC8(ki_MTG, 9));
+    ChecksumFile.println(calcCRC8(kd_MTG, 9));
+    ChecksumFile.println(calcCRC8(kp_Switch, 9));
+    ChecksumFile.println(calcCRC8(ki_Switch, 9));
+    ChecksumFile.println(calcCRC8(kd_Switch, 9));
+    ChecksumFile.println(calcCRC8(kp_SwitchTG70, 9));
+    ChecksumFile.println(calcCRC8(ki_SwitchTG70, 9));
+    ChecksumFile.println(calcCRC8(kd_SwitchTG70, 9));
+    ChecksumFile.println(calcCRC8(kp_MarxTG70, 9));
+    ChecksumFile.println(calcCRC8(ki_MarxTG70, 9));
+    ChecksumFile.println(calcCRC8(kd_MarxTG70, 9));
+    ChecksumFile.println(calcCRC8(reclaimerSafetyTime, 9));
+    ChecksumFile.println(calcCRC8(Marxcalibration, 9));
+    ChecksumFile.println(calcCRC8(MTGcalibration, 9));
+    ChecksumFile.println(calcCRC8(Switchcalibration, 9));
+    ChecksumFile.println(calcCRC8(TG70Switchcalibration, 9));
+    ChecksumFile.println(calcCRC8(TG70Marxcalibration, 9));
+    ChecksumFile.println(calcCRC8(Reclaimcalibration, 9));
+    ChecksumFile.println(calcCRC8(Minsupplycalibration, 9));
+    ChecksumFile.close();
   }
   return;
 }
@@ -2705,6 +2762,7 @@ void writePresets()
     brightness = myNex.readNumber("Brightness.n0.val");
     color = myNex.readNumber("Gobal.color.val");
 
+    SD.remove("Presets.txt");
     File PresetsFile = SD.open("Presets.txt", FILE_WRITE);
     PresetsFile.println(preset1);
     PresetsFile.println(preset2);
@@ -2722,6 +2780,395 @@ void writePresets()
     //make page to say no sd card found
   }
 }
+
+
+//Checksum
+
+int Checksum() {
+  char *oldSettings[];
+  char *currentSettings[];
+
+
+  File checksumFile = SD.open("Checksum.txt", FILE_READ);
+
+  int alarmEnable = checksumFile.readStringUntil('\n').toInt();
+	oldSettings[0] = alarmEnable;
+
+  int isCouple = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[1] = isCouple;
+
+	int Marxsetpoint = checksumFile.readStringUntil('\n').toInt();
+	oldSettings[2] = Marxsetpoint;
+    
+	int MTGsetpoint = checksumFile.readStringUntil('\n').toInt();
+	oldSettings[3] = MTGsetpoint;
+    
+	int Switchsetpoint = checksumFile.readStringUntil('\n').toInt();
+	oldSettings[4] = Switchsetpoint;
+    
+	int TG70Switchsetpoint = checksumFile.readStringUntil('\n').toInt();
+	oldSettings[5] = TG70Switchsetpoint;
+    
+	int TG70Marxsetpoint = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[6] = TG70Marxsetpoint;
+
+	int maxReclaimerPressure = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[7] = maxReclaimerPressure;
+
+	int minReclaimerPressure = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[8] = minReclaimerPressure;
+
+	int marxenableState = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[9] = marxenableState;
+	
+	int mtgenableState = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[10] = mtgenableState;
+
+	int switchenableState = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[11] = switchenableState;
+
+	int tg70switchenableState = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[12] = tg70switchenableState;
+
+	int tg70marxenableState = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[13] = tg70marxenableState;
+
+	int marxmaxTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[14] = marxmaxTime;
+ 
+	int mtgmaxTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[15] = mtgmaxTime;
+
+	int switchmaxTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[16] = switchmaxTime;
+
+	int tg70switchmaxTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[17] = tg70switchmaxTime
+
+	int tg70marxmaxTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[18] = tg70marxmaxTime
+
+	int marxDelay = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[19] = marxDelay
+
+	int mtgDelay = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[20] = mtgDelay
+
+	int switchDelay = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[21] = switchDelay
+
+	int tg70marxDelay = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[22] = tg70marxDelay;
+
+	int tg70switchDelay = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[23] = tg70switchDelay;
+
+	int marxPurgeTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[24] = marxPurgeTime;
+
+	int mtgPurgeTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[25] = mtgPurgeTime;
+
+	int switchPurgeTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[26] = switchPurgeTime;
+
+	int tg70switchPurgeTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[27] = tg70switchPurgeTime;
+
+	int tg70marxPurgeTime = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[28] = tg70marxPurgeTime;
+
+	int minBottlePressure = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[29] = minBottlePressure;
+
+	int kp_Marx = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[30] = kp_Marx;
+
+	int ki_Marx = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[31] = ki_Marx;
+
+	int kd_Marx = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[32] = kd_Marx;
+
+	int kp_MTG = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[33] = kp_MTG;
+
+	int ki_MTG = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[34] = ki_MTG;
+
+	int kd_MTG = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[35] = kd_MTG;
+
+	int kp_Switch = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[36] = kp_Switch;
+
+	int ki_Switch = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[37] = ki_Switch;
+
+	int kd_Switch = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[38] = kd_Switch;
+
+	int kp_SwitchTG70 = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[39] = kp_SwitchTG70
+
+	int ki_SwitchTG70 = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[40] = ki_SwitchTG70;
+
+	int kd_SwitchTG70 = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[41] = kd_SwitchTG70;
+
+	int kp_MarxTG70 = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[42] = kp_MarxTG70;
+
+	int ki_MarxTG70 = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[43] = ki_MarxTG70;
+
+	int kd_MarxTG70 = checksumFile.readStringUntil('\n').toInt();	
+	oldSettings[44] = kd_MarxTG70;
+
+  reclaimerSafetyTime = checksumFile.readStringUntil('\n').toInt();
+  currentSoldSettingsettings[44] = reclaimerSafetyTime;
+
+  Marxcalibration = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[44] = Marxcalibration;
+
+  MTGcalibration = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[44] = MTGcalibration;
+
+  Switchcalibration = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[44] = Switchcalibration;
+
+  TG70Switchcalibration = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[44] = TG70Switchcalibration;
+
+  TG70Marxcalibration = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[44] = TG70Marxcalibration;
+
+  Reclaimcalibration = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[44] = Reclaimcalibration;
+
+  Minsupplycalibration = checksumFile.readStringUntil('\n').toInt();
+  oldSettings[44] = Minsupplycalibration;
+
+  lastmarxenableState = !marxenableState;
+  oldSettings[44] = calcCRC8(lastmarxenableState, 9);
+
+  lastmtgenableState = !mtgenableState;
+  oldSettings[44] = calcCRC8(lastmtgenableState, 9);
+
+  lastswitchenableState = !switchenableState;
+  oldSettings[44] = calcCRC8(lastswitchenableState, 9);
+
+  lasttg70switchenableState = !tg70switchenableState;
+  oldSettings[44] = calcCRC8(lasttg70switchenableState, 9);
+
+  lasttg70marxenableState = !tg70marxenableState;
+  oldSettings[44] = calcCRC8(lasttg70marxenableState, 9);
+
+
+
+  File previousSettingFile = SD.open("Setting.txt", FILE_READ);
+
+  int alarmEnable = previousSettingFile.readStringUntil('\n').toInt();
+	currentSettings[0] = alarmEnable;
+
+  int isCouple = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[1] = isCouple;
+
+	int Marxsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
+	currentSettings[2] = Marxsetpoint;
+    
+	int MTGsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
+	currentSettings[3] = MTGsetpoint;
+    
+	int Switchsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
+	currentSettings[4] = Switchsetpoint;
+    
+	int TG70Switchsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
+	currentSettings[5] = TG70Switchsetpoint;
+    
+	int TG70Marxsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[6] = TG70Marxsetpoint;
+
+	int maxReclaimerPressure = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[7] = maxReclaimerPressure;
+
+	int minReclaimerPressure = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[8] = minReclaimerPressure;
+
+	int marxenableState = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[9] = marxenableState;
+	
+	int mtgenableState = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[10] = mtgenableState;
+
+	int switchenableState = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[11] = switchenableState;
+
+	int tg70switchenableState = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[12] = tg70switchenableState;
+
+	int tg70marxenableState = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[13] = tg70marxenableState;
+
+	int marxmaxTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[14] = marxmaxTime;
+ 
+	int mtgmaxTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[15] = mtgmaxTime;
+
+	int switchmaxTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[16] = switchmaxTime;
+
+	int tg70switchmaxTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[17] = tg70switchmaxTime
+
+	int tg70marxmaxTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[18] = tg70marxmaxTime
+
+	int marxDelay = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[19] = marxDelay
+
+	int mtgDelay = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[20] = mtgDelay
+
+	int switchDelay = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[21] = switchDelay
+
+	int tg70marxDelay = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[22] = tg70marxDelay;
+
+	int tg70switchDelay = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[23] = tg70switchDelay;
+
+	int marxPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[24] = marxPurgeTime;
+
+	int mtgPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[25] = mtgPurgeTime;
+
+	int switchPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[26] = switchPurgeTime;
+
+	int tg70switchPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[27] = tg70switchPurgeTime;
+
+	int tg70marxPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[28] = tg70marxPurgeTime;
+
+	int minBottlePressure = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[29] = minBottlePressure;
+
+	int kp_Marx = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[30] = kp_Marx;
+
+	int ki_Marx = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[31] = ki_Marx;
+
+	int kd_Marx = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[32] = kd_Marx;
+
+	int kp_MTG = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[33] = kp_MTG;
+
+	int ki_MTG = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[34] = ki_MTG;
+
+	int kd_MTG = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[35] = kd_MTG;
+
+	int kp_Switch = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[36] = kp_Switch;
+
+	int ki_Switch = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[37] = ki_Switch;
+
+	int kd_Switch = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[38] = kd_Switch;
+
+	int kp_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[39] = kp_SwitchTG70
+
+	int ki_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[40] = ki_SwitchTG70;
+
+	int kd_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[41] = kd_SwitchTG70;
+
+	int kp_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[42] = kp_MarxTG70;
+
+	int ki_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[43] = ki_MarxTG70;
+
+	int kd_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();	
+	currentSettings[44] = kd_MarxTG70;
+
+  reclaimerSafetyTime = previousSettingFile.readStringUntil('\n').toInt();
+  currentSettings[44] = reclaimerSafetyTime;
+
+  Marxcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[44] = Marxcalibration;
+
+  MTGcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[44] = MTGcalibration;
+
+  Switchcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[44] = Switchcalibration;
+
+  TG70Switchcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[44] = TG70Switchcalibration;
+
+  TG70Marxcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[44] = TG70Marxcalibration;
+
+  Reclaimcalibration = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[44] = Reclaimcalibration;
+
+  Minsupplycalibration = previousSettingFile.readStringUntil('\n').toDouble();
+  currentSettings[44] = Minsupplycalibration;
+
+  lastmarxenableState = !marxenableState;
+  currentSettings[44] = lastmarxenableState;
+
+  lastmtgenableState = !mtgenableState;
+  currentSettings[44] = lastmtgenableState;
+
+  lastswitchenableState = !switchenableState;
+  currentSettings[44] = lastswitchenableState;
+
+  lasttg70switchenableState = !tg70switchenableState;
+  currentSettings[44] = lasttg70switchenableState;
+
+  lasttg70marxenableState = !tg70marxenableState;
+  currentSettings[44] = lasttg70marxenableState;
+
+  previousSettingFile.close();
+
+
+  int result = CalcChecksum(*oldSettings, *currentSettings);
+
+  return result;
+}
+
+int CalcChecksum(char *oldSettings, char *currentSettings) {
+  
+  int old = 0, current = 0, i = 0;
+
+  while(i < sizeof(oldSettings)/sizeof(int)) {
+    old = oldSettings[i];
+    current = calcCRC8((uint8_t *)currentSettings[i], 9);
+    i++;
+
+    if(old != current) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+
+
 
 
 //--------------------------------------------------------------------------------------------
