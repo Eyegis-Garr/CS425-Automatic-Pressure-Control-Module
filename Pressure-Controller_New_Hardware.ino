@@ -114,6 +114,9 @@ double kd_MarxTG70 = 10;
 
 //Boolean for if SD card is present
 bool sdCard = false;
+
+//Menu flag bool
+bool menuFlag = true;
   
 //Create variables for storing state of buttons and starting conditions for buttons, these are global
 bool marxenableState = false;
@@ -234,6 +237,14 @@ double *calibration_map[] = {
   &Minsupplycalibration,
 };
 
+double *pid_map[][3] = {
+  {&kp_Marx, &ki_Marx, &kd_Marx},
+  {&kp_MarxTG70, &ki_MarxTG70, &kd_MarxTG70},
+  {&kp_MTG, &ki_MTG, &kd_MTG},
+  {&kp_Switch, &ki_Switch, &kd_Switch},
+  {&kp_SwitchTG70, &ki_SwitchTG70, &kd_SwitchTG70}
+};
+
 // CIRCUIT ANALOG PIN MAP
 int analog_map[] = { A0, A3, A2, A1, A4, A5, A6 };
 
@@ -315,6 +326,11 @@ test(Checksum)
 //-------------------------------------------------------------------------------------------------------------
 void setup() 
 {
+//    // 100Hz button input polling timer
+//  TCCR1A = 0;                           // normal timer operation
+//  TCCR1B = (1 << CS11) | (1 << CS10);                 // clock select -> 8 prescalar
+//  OCR1A = (F_CPU / (100 * 8)) - 1;      // top value for timer used for comparisons
+//  TIMSK1 |= (1 << TOIE1);               // timer overflow interrupt enable for timer 1A
   Serial.begin(9600); //This is just for debugging
   Serial3.begin(9600);
   myNex.begin(9600);  //For touchscreen comms
@@ -395,7 +411,7 @@ void setup()
   pinMode(reclaimerstopenablePin, INPUT);
   pinMode(abortbuttonPin, INPUT);
   myNex.writeStr("bootText.txt+", "Button pins set.\r\n");
-  sysLog("Setting up unit tests.");
+  sysLog("Button pins set.");
   myNex.writeNum("Progress_Bar.val", 60);
 
   //Turn on the internal pullup resistor on all buttons.
@@ -501,7 +517,7 @@ void setup()
       lasttg70switchenableState = !tg70switchenableState;
       lasttg70marxenableState = !tg70marxenableState;
       previousSettingFile.close();
-      readPresets();
+//      readPresets();
 
       SaveCurrentSettings();
       myNex.writeStr("bootText.txt+", "Previous settings loaded successfully!\r\n");
@@ -540,13 +556,18 @@ void loop()
 
   //Check the state of the buttons. This allows a user to press buttons at almost any time. You will see this function call everywhere.
   ControlButtonStateManager();
+
+  if(menuFlag)
+  {
+    myNex.writeStr("page Main_Menu");
+    menuFlag = false;
+  }
  
   //Start shotmode pressure setting sequence
   if(shotmodeState && automaticMode)
   {
     ShotPressure(false);
   }
-
   
   //Start purge sequence for all enabled systems
   if(purgeState && automaticMode)
@@ -562,8 +583,9 @@ void loop()
     while(purgeState && (marxFlag || MTGFlag || switchFlag || tg70switchFlag || tg70marxFlag))
     {
       ControlButtonStateManager();
+      myNex.writeStr("page PurgeMode");
       sysLog("Starting purge cycle.");
-
+      
       if(tg70marxenableState && purgeState && tg70marxFlag)
       {
         sysLog("Purging Marx TG70.");
@@ -571,7 +593,6 @@ void loop()
         Purge(tg70marxenableState, tg70marxinPin, tg70marxoutPin);
         sysLog("Marx TG70 purge complete.");
       }
-
       else if(tg70switchenableState && purgeState && tg70switchFlag)
       {
         sysLog("Purging Switch TG70.");
@@ -579,7 +600,6 @@ void loop()
         Purge(tg70switchenableState, tg70switchinPin, tg70switchoutPin);
         sysLog("Switch TG70 purge complete.");
       }
-
       else if(mtgenableState && purgeState && MTGFlag)
       {
         sysLog("Purging MTG.");
@@ -587,7 +607,6 @@ void loop()
         Purge(mtgenableState, mtginPin, mtgoutPin);
         sysLog("MTG Purge complete.");
       }
-      
       else if(marxenableState && purgeState && marxFlag)
       {
         sysLog("Purging Marx.");
@@ -595,7 +614,6 @@ void loop()
         Purge(marxenableState, marxinPin, marxoutPin);
         sysLog("Marx purge complete.");
       }
-
       else if(switchenableState  && purgeState && switchFlag)
       {
         sysLog("Purging switch.");
@@ -603,9 +621,9 @@ void loop()
         Purge(switchenableState, switchinPin, switchoutPin);
         sysLog("Switch purge complete.");
       }
-
       else
       {
+        menuFlag = true;
         break;
       }
     }
@@ -617,13 +635,11 @@ void loop()
     }
 
     //Display messege to user that the purge is completed
-    if(marxenableState || mtgenableState || switchenableState || tg70switchenableState || tg70marxenableState)
-    {
-      sysLog("Purge cycle complete.");
-    }
+    sysLog("Purge cycle complete.");
     purgeState = false;
     standbyMode = true;
   }
+  
   //Start abort pressure setting sequence
   if(abortState && automaticMode)
   {
@@ -651,39 +667,53 @@ void ShotPressure(bool half)
   double SwitchHIGH = Switchsetpoint + range, SwitchLOW = Switchsetpoint - range;
   double TG70SwitchHIGH = TG70Switchsetpoint + range, TG70SwitchLOW = TG70Switchsetpoint - range;
   double TG70MarxHIGH = TG70Marxsetpoint + range, TG70MarxLOW = TG70Marxsetpoint - range;
-  
-  //Set the acceptable range around setpoints when in standby mode
-  if(half)
-  {
-    MarxHIGH = Marxsetpoint/divisor + range; 
-    MarxLOW = Marxsetpoint/divisor - range;
-    MTGHIGH = MTGsetpoint/divisor + range; 
-    MTGLOW = MTGsetpoint/divisor - range;
-    SwitchHIGH = Switchsetpoint/divisor + range; 
-    SwitchLOW = Switchsetpoint/divisor - range;
-    TG70SwitchHIGH = TG70Switchsetpoint/divisor + range; 
-    TG70SwitchLOW = TG70Switchsetpoint/divisor - range;
-    TG70MarxHIGH = TG70Marxsetpoint/divisor + range; 
-    TG70MarxLOW = TG70Marxsetpoint/divisor - range;
-  }
-  
-  
+
   //Create input/output variables for PID functions
   double Marxinput,MTGinput,Switchinput,TG70Switchinput,TG70Marxinput;
   double Marxincreaseoutput,MTGincreaseoutput,Switchincreaseoutput,TG70Switchincreaseoutput,TG70Marxincreaseoutput;
   double Marxdecreaseoutput,MTGdecreaseoutput,Switchdecreaseoutput,TG70Switchdecreaseoutput,TG70Marxdecreaseoutput;
-  
-  //Crease PID functions, one for pressure increase and one for pressure decrease
-  PID MarxIncreasePID(&Marxinput, &Marxincreaseoutput, &Marxsetpoint, kp_Marx, ki_Marx, kd_Marx, DIRECT);
-  PID MarxDecreasePID(&Marxinput, &Marxdecreaseoutput, &Marxsetpoint, kp_Marx, ki_Marx, kd_Marx, REVERSE); 
-  PID MTGIncreasePID(&MTGinput, &MTGincreaseoutput, &MTGsetpoint, kp_MTG, ki_MTG, kd_MTG, DIRECT);
-  PID MTGDecreasePID(&MTGinput, &MTGdecreaseoutput, &MTGsetpoint, kp_MTG, ki_MTG, kd_MTG, REVERSE); 
-  PID SwitchIncreasePID(&Switchinput, &Switchincreaseoutput, &Switchsetpoint, kp_Switch, ki_Switch, kd_Switch, DIRECT);
-  PID SwitchDecreasePID(&Switchinput, &Switchdecreaseoutput, &Switchsetpoint, kp_Switch, ki_Switch, kd_Switch, REVERSE); 
-  PID TG70SwitchIncreasePID(&TG70Switchinput, &TG70Switchincreaseoutput, &TG70Switchsetpoint, kp_SwitchTG70, ki_SwitchTG70, kd_SwitchTG70, DIRECT);
-  PID TG70SwitchDecreasePID(&TG70Switchinput, &TG70Switchdecreaseoutput, &TG70Switchsetpoint, kp_SwitchTG70, ki_SwitchTG70, kd_SwitchTG70, REVERSE); 
-  PID TG70MarxIncreasePID(&TG70Marxinput, &TG70Marxincreaseoutput, &TG70Marxsetpoint, kp_MarxTG70, ki_MarxTG70, kd_MarxTG70, DIRECT);
-  PID TG70MarxDecreasePID(&TG70Marxinput, &TG70Marxdecreaseoutput, &TG70Marxsetpoint, kp_MarxTG70, ki_MarxTG70, kd_MarxTG70, REVERSE); 
+
+  double MarxsetpointPID = Marxsetpoint;
+  double MTGsetpointPID = MTGsetpoint;
+  double SwitchsetpointPID = Switchsetpoint;
+  double TG70SwitchsetpointPID = TG70Switchsetpoint;
+  double TG70MarxsetpointPID = TG70Marxsetpoint;
+
+  if(half)
+  {
+    MarxsetpointPID = MarxsetpointPID / divisor;
+    MTGsetpointPID = MTGsetpointPID / divisor;
+    SwitchsetpointPID = SwitchsetpointPID / divisor;
+    TG70SwitchsetpointPID = TG70SwitchsetpointPID / divisor;
+    TG70MarxsetpointPID = TG70MarxsetpointPID / divisor;
+
+    MarxHIGH = MarxsetpointPID + range;
+    MarxLOW = MarxsetpointPID - range;
+    MTGHIGH = MTGsetpointPID + range;
+    MTGLOW = MTGsetpointPID - range;
+    SwitchHIGH = SwitchsetpointPID + range;
+    SwitchLOW = SwitchsetpointPID - range;
+    TG70SwitchHIGH = TG70SwitchsetpointPID + range;
+    TG70SwitchLOW = TG70SwitchsetpointPID - range;
+    TG70MarxHIGH = TG70MarxsetpointPID + range;
+    TG70MarxLOW = TG70MarxsetpointPID - range;
+  }
+  else
+  {
+    myNex.writeStr("page Shotmode");
+  }
+
+  //Create PID functions, one for pressure increase and one for pressure decrease
+  PID MarxIncreasePID(&Marxinput, &Marxincreaseoutput, &MarxsetpointPID, kp_Marx, ki_Marx, kd_Marx, DIRECT);
+  PID MarxDecreasePID(&Marxinput, &Marxdecreaseoutput, &MarxsetpointPID, kp_Marx, ki_Marx, kd_Marx, REVERSE); 
+  PID MTGIncreasePID(&MTGinput, &MTGincreaseoutput, &MTGsetpointPID, kp_MTG, ki_MTG, kd_MTG, DIRECT);
+  PID MTGDecreasePID(&MTGinput, &MTGdecreaseoutput, &MTGsetpointPID, kp_MTG, ki_MTG, kd_MTG, REVERSE); 
+  PID SwitchIncreasePID(&Switchinput, &Switchincreaseoutput, &SwitchsetpointPID, kp_Switch, ki_Switch, kd_Switch, DIRECT);
+  PID SwitchDecreasePID(&Switchinput, &Switchdecreaseoutput, &SwitchsetpointPID, kp_Switch, ki_Switch, kd_Switch, REVERSE); 
+  PID TG70SwitchIncreasePID(&TG70Switchinput, &TG70Switchincreaseoutput, &TG70SwitchsetpointPID, kp_SwitchTG70, ki_SwitchTG70, kd_SwitchTG70, DIRECT);
+  PID TG70SwitchDecreasePID(&TG70Switchinput, &TG70Switchdecreaseoutput, &TG70SwitchsetpointPID, kp_SwitchTG70, ki_SwitchTG70, kd_SwitchTG70, REVERSE); 
+  PID TG70MarxIncreasePID(&TG70Marxinput, &TG70Marxincreaseoutput, &TG70MarxsetpointPID, kp_MarxTG70, ki_MarxTG70, kd_MarxTG70, DIRECT);
+  PID TG70MarxDecreasePID(&TG70Marxinput, &TG70Marxdecreaseoutput, &TG70MarxsetpointPID, kp_MarxTG70, ki_MarxTG70, kd_MarxTG70, REVERSE); 
   
   //Set PIDs to automatic
   MarxIncreasePID.SetMode(AUTOMATIC);
@@ -698,7 +728,7 @@ void ShotPressure(bool half)
   TG70MarxDecreasePID.SetMode(AUTOMATIC);
    
   //Set maximum solenoid open time(in Milliseconds)
-  const int WindowSize = 5000;
+  const int WindowSize = 10000;
   
   //Set upper and lower limits on how long a solenoid can open for
   MarxIncreasePID.SetOutputLimits(0, WindowSize);
@@ -720,7 +750,10 @@ void ShotPressure(bool half)
   {
     //Check the state of the front panel buttons
     ControlButtonStateManager();
-    
+
+    menuFlag = false;
+    bool flag = false;
+
     //Check the pressures 
     Marxcurrentpressure = analogRead(marxanaloginPin);                    
     MTGcurrentpressure = analogRead(mtganaloginPin);
@@ -731,50 +764,51 @@ void ShotPressure(bool half)
     //Check If pressures are too low, if so call RaisePressure for each system that is low and enabled.
     if (Marxcurrentpressure < MarxLOW && marxenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkMarxTime >= marxDelay)
       {
         sysLog("Raising Marx pressure.");
-        RaisePressure(marxenableState, divisor, half, Marxcurrentpressure, Marxsetpoint, marxinPin, marxanaloginPin, WindowSize, Marxinput, Marxincreaseoutput, MarxIncreasePID);
+        RaisePressure(marxenableState, Marxcurrentpressure, MarxsetpointPID, marxinPin, marxanaloginPin, WindowSize, Marxinput, Marxincreaseoutput, MarxIncreasePID);
         checkMarxTime = millis(); 
       }
     }
-  
     if (MTGcurrentpressure < MTGLOW && mtgenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkMTGTime >= mtgDelay)
       {
         sysLog("Raising MTG pressure.");
-        RaisePressure(mtgenableState, divisor, half, MTGcurrentpressure, MTGsetpoint, mtginPin, mtganaloginPin, WindowSize, MTGinput, MTGincreaseoutput, MTGIncreasePID);
+        RaisePressure(mtgenableState, MTGcurrentpressure, MTGsetpointPID, mtginPin, mtganaloginPin, WindowSize, MTGinput, MTGincreaseoutput, MTGIncreasePID);
         checkMTGTime = millis();
       }
     }
-  
     if (Switchcurrentpressure < SwitchLOW && switchenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkSwitchTime >= switchDelay)
       {
         sysLog("Raising Switch pressure.");
-        RaisePressure(switchenableState, divisor, half, Switchcurrentpressure, Switchsetpoint, switchinPin, switchanaloginPin, WindowSize, Switchinput, Switchincreaseoutput, SwitchIncreasePID);
+        RaisePressure(switchenableState, Switchcurrentpressure, SwitchsetpointPID, switchinPin, switchanaloginPin, WindowSize, Switchinput, Switchincreaseoutput, SwitchIncreasePID);
         checkSwitchTime = millis();
       }
     }
- 
     if (TG70Switchcurrentpressure < TG70SwitchLOW && tg70switchenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkTG70SwitchTime >= tg70switchDelay)
       {
         sysLog("Raising Switch TG70 pressure.");
-        RaisePressure(tg70switchenableState, divisor, half, TG70Switchcurrentpressure, TG70Switchsetpoint, tg70switchinPin, tg70switchanaloginPin, WindowSize, TG70Switchinput, TG70Switchincreaseoutput, TG70SwitchIncreasePID);
+        RaisePressure(tg70switchenableState, TG70Switchcurrentpressure, TG70SwitchsetpointPID, tg70switchinPin, tg70switchanaloginPin, WindowSize, TG70Switchinput, TG70Switchincreaseoutput, TG70SwitchIncreasePID);
         checkTG70SwitchTime = millis();
       }
     }
-  
     if (TG70Marxcurrentpressure < TG70MarxLOW && tg70marxenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkTG70MarxTime >= tg70marxDelay)
       {
         sysLog("Raising Marx TG70 pressure.");
-        RaisePressure(tg70marxenableState, divisor, half, TG70Marxcurrentpressure, TG70Marxsetpoint, tg70marxinPin, tg70marxanaloginPin, WindowSize, TG70Marxinput, TG70Marxincreaseoutput, TG70MarxIncreasePID);
+        RaisePressure(tg70marxenableState, TG70Marxcurrentpressure, TG70MarxsetpointPID, tg70marxinPin, tg70marxanaloginPin, WindowSize, TG70Marxinput, TG70Marxincreaseoutput, TG70MarxIncreasePID);
         checkTG70MarxTime = millis();
       }
     }
@@ -782,81 +816,61 @@ void ShotPressure(bool half)
     //Check if pressures are too high, if so call ReducePressure for each system that is high and enabled. 
     if (Marxcurrentpressure > MarxHIGH && marxenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkMarxTime >= marxDelay)
       {
         sysLog("Lowering Marx pressure.");
-        ReducePressure(marxenableState, divisor, half, Marxcurrentpressure, Marxsetpoint, marxoutPin, marxanaloginPin, WindowSize, Marxinput, Marxdecreaseoutput, MarxDecreasePID);
+        ReducePressure(marxenableState, Marxcurrentpressure, MarxsetpointPID, marxoutPin, marxanaloginPin, WindowSize, Marxinput, Marxdecreaseoutput, MarxDecreasePID);
         checkMarxTime = millis();
       }
     }
-  
     if (MTGcurrentpressure > MTGHIGH && mtgenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkMTGTime >= mtgDelay)
       {
         sysLog("Lowering MTG pressure.");
-        ReducePressure(mtgenableState, divisor, half, MTGcurrentpressure, MTGsetpoint, mtgoutPin, mtganaloginPin, WindowSize, MTGinput, MTGdecreaseoutput, MTGDecreasePID);
+        ReducePressure(mtgenableState, MTGcurrentpressure, MTGsetpointPID, mtgoutPin, mtganaloginPin, WindowSize, MTGinput, MTGdecreaseoutput, MTGDecreasePID);
         checkMTGTime = millis();
       }
     }
-    
     if (Switchcurrentpressure > SwitchHIGH && switchenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkSwitchTime >= switchDelay)
       {
         sysLog("Lowering Switch pressure.");
-        ReducePressure(switchenableState, divisor, half, Switchcurrentpressure, Switchsetpoint, switchoutPin, switchanaloginPin,WindowSize, Switchinput, Switchdecreaseoutput, SwitchDecreasePID);
+        ReducePressure(switchenableState, Switchcurrentpressure, SwitchsetpointPID, switchoutPin, switchanaloginPin,WindowSize, Switchinput, Switchdecreaseoutput, SwitchDecreasePID);
         checkSwitchTime = millis();
       }
     }
-  
     if (TG70Switchcurrentpressure > TG70SwitchHIGH && tg70switchenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkTG70SwitchTime >= tg70switchDelay)
       {
         sysLog("Lowering Switch TG70 pressure.");
-        ReducePressure(tg70switchenableState, divisor, half, TG70Switchcurrentpressure, TG70Switchsetpoint, tg70switchoutPin, tg70switchanaloginPin, WindowSize, TG70Switchinput, TG70Switchdecreaseoutput, TG70SwitchDecreasePID);
+        ReducePressure(tg70switchenableState, TG70Switchcurrentpressure, TG70SwitchsetpointPID, tg70switchoutPin, tg70switchanaloginPin, WindowSize, TG70Switchinput, TG70Switchdecreaseoutput, TG70SwitchDecreasePID);
         checkTG70SwitchTime = millis();
       }
     }
-    
     if (TG70Marxcurrentpressure > TG70MarxHIGH && tg70marxenableState && ((shotmodeState && !purgeState) || (purgeState && half)))
     {
+      flag = true;
       if(millis() - checkTG70MarxTime >= tg70marxDelay)
       {
         sysLog("Lowering Marx TG70 pressure.");
-        ReducePressure(tg70marxenableState, divisor, half, TG70Marxcurrentpressure, TG70Marxsetpoint, tg70marxoutPin, tg70marxanaloginPin, WindowSize, TG70Marxinput, TG70Marxdecreaseoutput, TG70MarxDecreasePID);
+        ReducePressure(tg70marxenableState, TG70Marxcurrentpressure, TG70MarxsetpointPID, tg70marxoutPin, tg70marxanaloginPin, WindowSize, TG70Marxinput, TG70Marxdecreaseoutput, TG70MarxDecreasePID);
         checkTG70MarxTime = millis();
       }
     }
-    
-    // If all pressure is in correct range
-    else
-    {      
-      //In shot mode, simple wait and adjust pressure if needed
-      if(!half && ((millis() - checkMarxTime >= marxDelay * 2) && (millis() - checkMTGTime >= mtgDelay * 2) && (millis() - checkSwitchTime >= switchDelay * 2) && (millis() - checkTG70SwitchTime >= tg70switchDelay * 2) && (millis() - checkTG70MarxTime >= tg70marxDelay * 2)))
-      {
-        ControlButtonStateManager();
-        //lcd.print("CIRCUITS AT     ");   //Will be used for LOG FUNCTION
-        //lcd.print("SET PRESSURE    ");   //Will be used for LOG FUNCTION
-      }
-      //In standby mode, break the loop when pressure is set
-      else if( half && ((millis() - checkMarxTime >= marxDelay * 2) && (millis() - checkMTGTime >= mtgDelay * 2) && (millis() - checkSwitchTime >= switchDelay * 2) && (millis() - checkTG70SwitchTime >= tg70switchDelay * 2) && (millis() - checkTG70MarxTime >= tg70marxDelay * 2)))
-      {
-        ControlButtonStateManager();
-        //lcd.print("CIRCUITS AT     ");   //Will be used for LOG FUNCTION
-        //lcd.print("HALF PRESSURE   ");   //Will be used for LOG FUNCTION
-        delay(3000);
-        break;
-      }
-      //Still setting pressure
-      else
-      {
-        ControlButtonStateManager();
-        //lcd.print("SETTING PRESSURE");   //Will be used for LOG FUNCTION
-      }
+    if(half && !flag)
+    {
+      break;
     }
   }
+
+  menuFlag = true;
 
   //Ensure all solenoids are closed
   digitalWrite(marxinPin, LOW);
@@ -885,22 +899,28 @@ void abortShot()
   double divisor = 2.00;
 
  //Create small acceptable range around setpoints
-  double MarxHIGH = Marxsetpoint/divisor + range; 
-  double MTGHIGH = MTGsetpoint/divisor + range; 
-  double SwitchHIGH = Switchsetpoint/divisor + range; 
-  double TG70SwitchHIGH = TG70Switchsetpoint/divisor + range; 
-  double TG70MarxHIGH = TG70Marxsetpoint/divisor + range; 
+  double Marxsetpointabort = Marxsetpoint/divisor; 
+  double MTGsetpointabort = MTGsetpoint/divisor; 
+  double Switchsetpointabort = Switchsetpoint/divisor; 
+  double TG70Switchsetpointabort = TG70Switchsetpoint/divisor; 
+  double TG70Marxsetpointabort = TG70Marxsetpoint/divisor; 
+  
+  double MarxHIGH = Marxsetpointabort + range; 
+  double MTGHIGH = MTGsetpointabort + range; 
+  double SwitchHIGH = Switchsetpointabort + range; 
+  double TG70SwitchHIGH = TG70Switchsetpointabort + range; 
+  double TG70MarxHIGH = TG70Marxsetpointabort + range; 
  
   //Create input/output variables for PID functions
   double Marxinput,MTGinput,Switchinput,TG70Switchinput,TG70Marxinput;
   double Marxdecreaseoutput,MTGdecreaseoutput,Switchdecreaseoutput,TG70Switchdecreaseoutput,TG70Marxdecreaseoutput;
 
-  //Crease PID functions
-  PID MarxDecreasePID(&Marxinput, &Marxdecreaseoutput, &Marxsetpoint, kp_Marx, ki_Marx, kd_Marx, REVERSE); 
-  PID MTGDecreasePID(&MTGinput, &MTGdecreaseoutput, &MTGsetpoint, kp_MTG, ki_MTG, kd_MTG, REVERSE); 
-  PID SwitchDecreasePID(&Switchinput, &Switchdecreaseoutput, &Switchsetpoint, kp_Switch, ki_Switch, kd_Switch, REVERSE); 
-  PID TG70SwitchDecreasePID(&TG70Switchinput, &TG70Switchdecreaseoutput, &TG70Switchsetpoint, kp_SwitchTG70, ki_SwitchTG70, kd_SwitchTG70, REVERSE); 
-  PID TG70MarxDecreasePID(&TG70Marxinput, &TG70Marxdecreaseoutput, &TG70Marxsetpoint, kp_MarxTG70, ki_MarxTG70, kd_MarxTG70, REVERSE); 
+  //Create PID functions
+  PID MarxDecreasePID(&Marxinput, &Marxdecreaseoutput, &Marxsetpointabort, kp_Marx, ki_Marx, kd_Marx, REVERSE); 
+  PID MTGDecreasePID(&MTGinput, &MTGdecreaseoutput, &MTGsetpointabort, kp_MTG, ki_MTG, kd_MTG, REVERSE); 
+  PID SwitchDecreasePID(&Switchinput, &Switchdecreaseoutput, &Switchsetpointabort, kp_Switch, ki_Switch, kd_Switch, REVERSE); 
+  PID TG70SwitchDecreasePID(&TG70Switchinput, &TG70Switchdecreaseoutput, &TG70Switchsetpointabort, kp_SwitchTG70, ki_SwitchTG70, kd_SwitchTG70, REVERSE); 
+  PID TG70MarxDecreasePID(&TG70Marxinput, &TG70Marxdecreaseoutput, &TG70Marxsetpointabort, kp_MarxTG70, ki_MarxTG70, kd_MarxTG70, REVERSE); 
 
   //Set PIDs to automatic
   MarxDecreasePID.SetMode(AUTOMATIC);
@@ -910,7 +930,7 @@ void abortShot()
   TG70MarxDecreasePID.SetMode(AUTOMATIC);
  
   //Set maximum solenoid open time(in Milliseconds)
-  const int WindowSize = 5000;
+  const int WindowSize = 10000;
 
   //Set upper and lower limits on how long a solenoid can open for
   MarxDecreasePID.SetOutputLimits(0, WindowSize);
@@ -935,76 +955,56 @@ void abortShot()
     TG70Switchcurrentpressure = analogRead(tg70switchanaloginPin);
     TG70Marxcurrentpressure = analogRead(tg70marxanaloginPin);
 
-  //Check if pressures are too high, if so call ReducePressure for each system that is high and enabled. 
-  if (Marxcurrentpressure > MarxHIGH && marxenableState)
-  {
-    if(millis() - checkMarxTime >= marxDelay)
+    //Check if pressures are too high, if so call ReducePressure for each system that is high and enabled. 
+    if (Marxcurrentpressure > MarxHIGH && marxenableState)
     {
-      sysLog("Lowering Marx pressure.");
-      ReducePressure(marxenableState, divisor, true, Marxcurrentpressure, Marxsetpoint, marxoutPin, marxanaloginPin, WindowSize, Marxinput, Marxdecreaseoutput, MarxDecreasePID);
-      checkMarxTime = millis();
+      if(millis() - checkMarxTime >= marxDelay)
+      {
+        sysLog("Lowering Marx pressure.");
+        ReducePressure(marxenableState, Marxcurrentpressure, Marxsetpointabort, marxoutPin, marxanaloginPin, WindowSize, Marxinput, Marxdecreaseoutput, MarxDecreasePID);
+        checkMarxTime = millis();
+      }
     }
-  }
-
-  if (MTGcurrentpressure > MTGHIGH && mtgenableState)
-  {
-    if(millis() - checkMTGTime >= mtgDelay)
+    else if (MTGcurrentpressure > MTGHIGH && mtgenableState)
     {
-      sysLog("Lowering MTG pressure.");
-      ReducePressure(mtgenableState, divisor, true, MTGcurrentpressure, MTGsetpoint, mtgoutPin, mtganaloginPin, WindowSize, MTGinput, MTGdecreaseoutput, MTGDecreasePID);
-      checkMTGTime = millis();
+      if(millis() - checkMTGTime >= mtgDelay)
+      {
+        sysLog("Lowering MTG pressure.");
+        ReducePressure(mtgenableState, MTGcurrentpressure, MTGsetpointabort, mtgoutPin, mtganaloginPin, WindowSize, MTGinput, MTGdecreaseoutput, MTGDecreasePID);
+        checkMTGTime = millis();
+      }
     }
-  }
-  
-  if (Switchcurrentpressure > SwitchHIGH && switchenableState)
-  {
-    if(millis() - checkSwitchTime >= switchDelay)
+    else if (Switchcurrentpressure > SwitchHIGH && switchenableState)
     {
-      sysLog("Lowering Switch pressure.");
-      ReducePressure(switchenableState, divisor, true, Switchcurrentpressure, Switchsetpoint, switchoutPin, switchanaloginPin,WindowSize, Switchinput, Switchdecreaseoutput, SwitchDecreasePID);
-      checkSwitchTime = millis();
+      if(millis() - checkSwitchTime >= switchDelay)
+      {
+        sysLog("Lowering Switch pressure.");
+        ReducePressure(switchenableState, Switchcurrentpressure, Switchsetpointabort, switchoutPin, switchanaloginPin,WindowSize, Switchinput, Switchdecreaseoutput, SwitchDecreasePID);
+        checkSwitchTime = millis();
+      }
     }
-  }
-  
-  if (TG70Switchcurrentpressure > TG70SwitchHIGH && tg70switchenableState)
-  {
-    if(millis() - checkTG70SwitchTime >= tg70switchDelay)
+    else if (TG70Switchcurrentpressure > TG70SwitchHIGH && tg70switchenableState)
     {
-      sysLog("Lowering Switch TG70 pressure.");
-      ReducePressure(tg70switchenableState, divisor, true, TG70Switchcurrentpressure, TG70Switchsetpoint, tg70switchoutPin, tg70switchanaloginPin, WindowSize, TG70Switchinput, TG70Switchdecreaseoutput, TG70SwitchDecreasePID);
-      checkTG70SwitchTime = millis();
-    }
-  }
-  
-  if (TG70Marxcurrentpressure > TG70MarxHIGH && tg70marxenableState)
-  {
-    if(millis() - checkTG70MarxTime >= tg70marxDelay)
+      if(millis() - checkTG70SwitchTime >= tg70switchDelay)
+      {
+        sysLog("Lowering Switch TG70 pressure.");
+        ReducePressure(tg70switchenableState, TG70Switchcurrentpressure, TG70Switchsetpointabort, tg70switchoutPin, tg70switchanaloginPin, WindowSize, TG70Switchinput, TG70Switchdecreaseoutput, TG70SwitchDecreasePID);
+        checkTG70SwitchTime = millis();
+      }
+    }  
+    else if (TG70Marxcurrentpressure > TG70MarxHIGH && tg70marxenableState)
     {
-      sysLog("Lowering Marx TG70 pressure.");
-      ReducePressure(tg70marxenableState, divisor, true, TG70Marxcurrentpressure, TG70Marxsetpoint, tg70marxoutPin, tg70marxanaloginPin, WindowSize, TG70Marxinput, TG70Marxdecreaseoutput, TG70MarxDecreasePID);
-      checkTG70MarxTime = millis();
+      if(millis() - checkTG70MarxTime >= tg70marxDelay)
+      {
+        sysLog("Lowering Marx TG70 pressure.");
+        ReducePressure(tg70marxenableState, TG70Marxcurrentpressure, TG70Marxsetpointabort, tg70marxoutPin, tg70marxanaloginPin, WindowSize, TG70Marxinput, TG70Marxdecreaseoutput, TG70MarxDecreasePID);
+        checkTG70MarxTime = millis();
+      }
     }
-  }
-
-  //Check is pressure is reached
-  else
-  {      
-    //In shot mode, simple wait and adjust pressure if needed
-    if((millis() - checkMarxTime >= marxDelay * 2) && (millis() - checkMTGTime >= mtgDelay * 2) && (millis() - checkSwitchTime >= switchDelay * 2) && (millis() - checkTG70SwitchTime >= tg70switchDelay * 2) && (millis() - checkTG70MarxTime >= tg70marxDelay * 2))
-    {
-      ControlButtonStateManager();
-      //lcd.print("CIRCUITS AT     ");   //Will be used for LOG FUNCTION
-      //lcd.print("HALF PRESSURE   ");   //Will be used for LOG FUNCTION
-      break;
-    }
-    //Still setting pressure
     else
     {
-      ControlButtonStateManager();
-      //lcd.print("SETTING TO      ");   //Will be used for LOG FUNCTION
-      //lcd.print("HALF PRESSURE   ");   //Will be used for LOG FUNCTION
+      break;
     }
-  }
   }
 
   //Ensure all solenoids are closed
@@ -1028,27 +1028,22 @@ void abortShot()
 //-------------------------------------------------------------------------------------------------------------
 //Function for raising pressure using PID control
 //-------------------------------------------------------------------------------------------------------------
-void RaisePressure(bool& circuitState, double divisor, bool half, double &currentpressure, double Threshold,const int relayPin,const int analogPin,const int WindowSize, double& input, double& output,  PID& System)
+void RaisePressure(bool& circuitState, double &currentpressure, double Threshold,const int relayPin, const int analogPin, const int WindowSize, double& input, double& output,  PID& System)
 {
   String circuitName;
   int maxTime;
+  int minTime = 10;
 
   //initialize pressure
   double pressure = currentpressure;
   double startPressure = pressure;
-
-  //If standby mode, reduce the threshold by the coeficiant.
-  if(half)
-  {
-    Threshold = Threshold / divisor;
-  }
 
   //Start the window timer
   unsigned long windowstarttime;
   windowstarttime = millis();
 
   //Loop while the pressure is too low 
-  while ((pressure < Threshold) && (shotmodeState || purgeState) && circuitState)
+  while ((pressure < Threshold) && (shotmodeState || purgeState || abortState) && circuitState)
     {
       //Check the states of the front panel buttons
       ControlButtonStateManager();
@@ -1094,7 +1089,7 @@ void RaisePressure(bool& circuitState, double divisor, bool half, double &curren
       unsigned long now = millis();
 
       //Adjust time window if necessary
-      if((now - windowstarttime > WindowSize))
+      if((now - windowstarttime + minTime > WindowSize))
       { 
         windowstarttime += WindowSize;
       }
@@ -1140,20 +1135,15 @@ void RaisePressure(bool& circuitState, double divisor, bool half, double &curren
 //-------------------------------------------------------------------------------------------------------------
 //Function for lowering the pressure using PID control
 //-------------------------------------------------------------------------------------------------------------
-void ReducePressure(bool& circuitState, double divisor, bool half, double &currentpressure, double Threshold,const int relayPin, const int analogPin,const int WindowSize, double& input, double& output,  PID& System)
+void ReducePressure(bool& circuitState, double &currentpressure, double Threshold, const int relayPin, const int analogPin,const int WindowSize, double& input, double& output,  PID& System)
 {     
   String circuitName;
   int maxTime;
+  int minTime = 500;
 
   //Initialize the pressure
   double pressure = currentpressure;
   double startPressure = pressure;
-  
-  //If standby mode, reduce the threshold by the coeficiant.
-  if(half)
-  {
-    Threshold = Threshold / divisor;
-  }
 
   //Start the window timer
   unsigned long windowstarttime;
@@ -1163,7 +1153,7 @@ void ReducePressure(bool& circuitState, double divisor, bool half, double &curre
   input = analogRead(analogPin);
 
   //Loop while pressure is too high
-  while (((pressure > Threshold) && (shotmodeState || purgeState) && circuitState) || abortState)
+  while ((pressure > Threshold) && (shotmodeState || purgeState || abortState) && circuitState)
     {
       //Check the states of the front panel buttons
       ControlButtonStateManager();
@@ -1203,7 +1193,7 @@ void ReducePressure(bool& circuitState, double divisor, bool half, double &curre
       unsigned long now = millis();
 
       //Adjust time window if necessary
-      if((now - windowstarttime > WindowSize))
+      if((now - windowstarttime + minTime > WindowSize))
       { 
         windowstarttime += WindowSize;
       }
@@ -1302,7 +1292,7 @@ void Purge(bool& circuitState, int intakerelayPin, int exhaustrelayPin)
       {
         //Check the state of the front panel buttons
         ControlButtonStateManager();
-        
+
         unsigned long currentTime = millis();
 
         // When the required time has passed turn off relays
@@ -1322,13 +1312,50 @@ void Purge(bool& circuitState, int intakerelayPin, int exhaustrelayPin)
 }
 
 
+int pin_map[] = {
+  marxenablePin
+};
+
+bool *pin_state_map[] = {
+  &marxenableState
+};
+
+int led_state_map[] = {
+  marxenableLEDPin
+};
+
+ISR(TIMER1_OVF_vect) {
+  static uint16_t state[5];
+  int i;
+
+  for (i = 0; i < 1; i +=1) {
+    state[i] = (state[i] << 1) | (digitalRead(pin_map[i]) == LOW) | 0xE000;
+    if (state[i] == 0xF000) {
+      *pin_state_map[i] = (*pin_state_map[i] == LOW) ? HIGH : LOW;
+      digitalWrite(led_state_map[i], *pin_state_map[i]);
+    }
+  }
+}
+
+int debounce(int pin, int samples, int m) {
+  while(samples--){
+    if (digitalRead(pin)) m -= 1;
+  }
+
+  return m == 0;
+}
+
+
 //-------------------------------------------------------------------------------------------------------------
 //Fucntion for monitoring the state of the front panel buttons
 //-------------------------------------------------------------------------------------------------------------
 void ControlButtonStateManager()
 { 
   //Read screen
-  myNex.NextionListen();
+  if(!shotmodeState && !purgeState)
+  {
+    myNex.NextionListen();
+  }
   
   //Check the supply pressure
   if(!errorState)
@@ -1346,54 +1373,40 @@ void ControlButtonStateManager()
     //Run the manual reclaimer controller if needed
     manualReclaimerControl();    
   }
-  
-  //Check buttons for HIGH or LOW
-  int readmarxenableState = digitalRead(marxenablePin);
-  int readmtgenableState = digitalRead(mtgenablePin);
-  int readswitchenableState = digitalRead(switchenablePin);
-  int readtg70switchenableState = digitalRead(tg70switchenablePin);
-  int readtg70marxenableState = digitalRead(tg70marxenablePin);
-  int readautomatereclaimerState = digitalRead(automatereclaimerPin);
-  int readpurgeState = digitalRead(purgePin);
-  int readshotmodeState = digitalRead(shotmodePin);
-  int readalarmState = digitalRead(alarmPin);
-  int readstartreclaimerState = digitalRead(reclaimerstartenablePin);
-  int readstopreclaimerState = digitalRead(reclaimerstopenablePin);
-  int readabortState = digitalRead(abortbuttonPin);
 
   //Check the state of the buttons if they have been pressed
-  ControlButtonStateCheck(readmarxenableState, marxenableState, lastmarxenableState);
+  ControlButtonStateCheck(marxenablePin, marxenableState, lastmarxenableState);
   ControlButtonLEDStateCheck(marxenableState,marxenableLEDPin);
   
-  ControlButtonStateCheck(readmtgenableState, mtgenableState, lastmtgenableState);
+  ControlButtonStateCheck(mtgenablePin, mtgenableState, lastmtgenableState);
   ControlButtonLEDStateCheck(mtgenableState, mtgenableLEDPin);
   
-  ControlButtonStateCheck(readswitchenableState, switchenableState, lastswitchenableState);
+  ControlButtonStateCheck(switchenablePin, switchenableState, lastswitchenableState);
   ControlButtonLEDStateCheck(switchenableState, switchenableLEDPin);
   
-  ControlButtonStateCheck(readtg70switchenableState, tg70switchenableState, lasttg70switchenableState);
+  ControlButtonStateCheck(tg70switchenablePin, tg70switchenableState, lasttg70switchenableState);
   ControlButtonLEDStateCheck(tg70switchenableState, tg70switchenableLEDPin);
   
-  ControlButtonStateCheck(readtg70marxenableState, tg70marxenableState, lasttg70marxenableState);
+  ControlButtonStateCheck(tg70marxenablePin, tg70marxenableState, lasttg70marxenableState);
   ControlButtonLEDStateCheck(tg70marxenableState, tg70marxenableLEDPin);
   
-  ControlButtonStateCheck(readabortState, abortState, lastabortState);
+  ControlButtonStateCheck(abortbuttonPin, abortState, lastabortState);
   ControlButtonLEDStateCheck(abortState, abortLEDPin);
   
-  ControlButtonStateCheck(readpurgeState, purgeState, lastpurgeState);
+  ControlButtonStateCheck(purgePin, purgeState, lastpurgeState);
   ControlButtonLEDStateCheck(purgeState, purgeLEDPin);
   
-  ControlButtonStateCheck(readshotmodeState, shotmodeState, lastshotmodeState);
+  ControlButtonStateCheck(shotmodePin, shotmodeState, lastshotmodeState);
   ControlButtonLEDStateCheck(shotmodeState, shotmodeLEDPin);
 
-  ControlButtonStateCheck(readautomatereclaimerState, automatereclaimerState, lastautomatereclaimerState);
+  ControlButtonStateCheck(automatereclaimerPin, automatereclaimerState, lastautomatereclaimerState);
   ControlButtonLEDStateCheck(automatereclaimerState, automatereclaimerLEDPin);
   
-  ControlButtonStateCheckAlarm(readalarmState, alarmState, lastalarmState);
+  ControlButtonStateCheckAlarm(alarmPin, alarmState, lastalarmState);
 
-  ControlButtonStateCheckReclaimer(readstartreclaimerState, startreclaimerState, laststartreclaimerState);
+  ControlButtonStateCheckReclaimer(reclaimerstartenablePin, startreclaimerState, laststartreclaimerState);
 
-  ControlButtonStateCheckReclaimer(readstopreclaimerState, stopreclaimerState, laststopreclaimerState);
+  ControlButtonStateCheckReclaimer(reclaimerstopenablePin, stopreclaimerState, laststopreclaimerState);
 
   //If a state function is activated, set standbymode to true
   if((purgeState || shotmodeState || abortState ) && !errorState)
@@ -1424,17 +1437,25 @@ void ControlButtonStateManager()
 //-------------------------------------------------------------------------------------------------------------
 //Check the state of the buttons
 //-------------------------------------------------------------------------------------------------------------
-void ControlButtonStateCheck(int reading, bool& buttonState, bool& lastbuttonState)
+void ControlButtonStateCheck(int pin, bool& buttonState, bool& lastbuttonState)
 {
   if(!errorState || (errorState && alarmState))
   {
-    if(reading == LOW && !lastbuttonState)
+    double debounceTimer;
+    if(digitalRead(pin) == LOW)
+    {
+      debounceTimer = millis();
+    }
+    while(millis() - debounceTimer <= 50)
+    {
+    }
+    if(digitalRead(pin) == LOW && !lastbuttonState)
     {
       buttonState = !buttonState;
       lastbuttonState = true;
       SaveCurrentSettings();
     }
-    else if(reading == HIGH)
+    else if(digitalRead(pin) == HIGH)
     {
       lastbuttonState = false;
     }
@@ -1445,17 +1466,25 @@ void ControlButtonStateCheck(int reading, bool& buttonState, bool& lastbuttonSta
 //-------------------------------------------------------------------------------------------------------------
 //Check the state of the reclaimer control buttons
 //-------------------------------------------------------------------------------------------------------------
-void ControlButtonStateCheckReclaimer(int reading, bool& buttonState, bool& lastbuttonState)
+void ControlButtonStateCheckReclaimer(int pin, bool& buttonState, bool& lastbuttonState)
 {
   if(!automatereclaimerState)
   {
-    if(reading == LOW && !lastbuttonState)
+    double debounceTimer;
+    if(digitalRead(pin) == LOW)
+    {
+      debounceTimer = millis();
+    }
+    while(millis() - debounceTimer <= 50)
+    {
+    }
+    if(digitalRead(pin) == LOW && !lastbuttonState)
     {
       buttonState = !buttonState;
       lastbuttonState = true;
       SaveCurrentSettings();
     }
-    else if(reading == HIGH)
+    else if(digitalRead(pin) == HIGH)
     {
       lastbuttonState = false;
     }
@@ -1466,16 +1495,24 @@ void ControlButtonStateCheckReclaimer(int reading, bool& buttonState, bool& last
 //-------------------------------------------------------------------------------------------------------------
 //Separate check for the state of the alarm button
 //-------------------------------------------------------------------------------------------------------------
-void ControlButtonStateCheckAlarm(int reading, bool& buttonState, bool& lastbuttonState)
+void ControlButtonStateCheckAlarm(int pin, bool& buttonState, bool& lastbuttonState)
 {
   if(errorState)
   {
-    if(reading == LOW && !lastbuttonState)
+    double debounceTimer;
+    if(digitalRead(pin) == LOW)
+    {
+      debounceTimer = millis();
+    }
+    while(millis() - debounceTimer <= 50)
+    {
+    }
+    if(digitalRead(pin) == LOW && !lastbuttonState)
     {
       buttonState = !buttonState;
       lastbuttonState = true;
     }
-    else if(reading == HIGH)
+    else if(digitalRead(pin) == HIGH)
     {
       lastbuttonState = false;
     }
@@ -1578,63 +1615,6 @@ void SaveCurrentSettings()
     lastPresetFile.println(Reclaimcalibration);
     lastPresetFile.println(Minsupplycalibration);
     lastPresetFile.close();
-
-
-    SD.remove("Checksum.txt");
-    File ChecksumFile = SD.open("Checksum.txt", FILE_WRITE);  //Save the setting
-    ChecksumFile.println(calcCRC8(alarmEnable, 9));
-    ChecksumFile.println(calcCRC8(Marxsetpoint, 9));
-    ChecksumFile.println(calcCRC8(MTGsetpoint, 9));
-    ChecksumFile.println(calcCRC8(switchsetpoint, 9));
-    ChecksumFile.println(calcCRC8(TG70Switchsetpoint, 9));
-    ChecksumFile.println(calcCRC8(TG70Marxsetpoint, 9));
-    ChecksumFile.println(calcCRC8(maxReclaimerPressure, 9));
-    ChecksumFile.println(calcCRC8(minReclaimerPressure, 9));
-    ChecksumFile.println(calcCRC8(marxenableState, 9));
-    ChecksumFile.println(calcCRC8(mtgenableState, 9));
-    ChecksumFile.println(calcCRC8(switchenableState, 9));
-    ChecksumFile.println(calcCRC8(tg70switchenableState, 9));
-    ChecksumFile.println(calcCRC8(tg70marxenableState, 9));
-    ChecksumFile.println(calcCRC8(marxmaxTime, 9));
-    ChecksumFile.println(calcCRC8(mtgmaxTime, 9));
-    ChecksumFile.println(calcCRC8(switchmaxTime, 9));
-    ChecksumFile.println(calcCRC8(tg70switchmaxTime, 9));
-    ChecksumFile.println(calcCRC8(tg70marxmaxTime, 9));
-    ChecksumFile.println(calcCRC8(marxDelay, 9));
-    ChecksumFile.println(calcCRC8(mtgDelay, 9));
-    ChecksumFile.println(calcCRC8(switchDelay, 9));
-    ChecksumFile.println(calcCRC8(tg70marxDelay, 9));
-    ChecksumFile.println(calcCRC8(tg70switchDelay, 9));
-    ChecksumFile.println(calcCRC8(marxPurgeTime, 9));
-    ChecksumFile.println(calcCRC8(mtgPurgeTime, 9));
-    ChecksumFile.println(calcCRC8(switchPurgeTime, 9));
-    ChecksumFile.println(calcCRC8(tg70switchPurgeTime, 9));
-    ChecksumFile.println(calcCRC8(tg70marxPurgeTime, 9));
-    ChecksumFile.println(calcCRC8(minBottlePressure, 9));
-    ChecksumFile.println(calcCRC8(kp_Marx, 9));
-    ChecksumFile.println(calcCRC8(ki_Marx, 9));
-    ChecksumFile.println(calcCRC8(kd_Marx, 9));
-    ChecksumFile.println(calcCRC8(kp_MTG, 9));
-    ChecksumFile.println(calcCRC8(ki_MTG, 9));
-    ChecksumFile.println(calcCRC8(kd_MTG, 9));
-    ChecksumFile.println(calcCRC8(kp_Switch, 9));
-    ChecksumFile.println(calcCRC8(ki_Switch, 9));
-    ChecksumFile.println(calcCRC8(kd_Switch, 9));
-    ChecksumFile.println(calcCRC8(kp_SwitchTG70, 9));
-    ChecksumFile.println(calcCRC8(ki_SwitchTG70, 9));
-    ChecksumFile.println(calcCRC8(kd_SwitchTG70, 9));
-    ChecksumFile.println(calcCRC8(kp_MarxTG70, 9));
-    ChecksumFile.println(calcCRC8(ki_MarxTG70, 9));
-    ChecksumFile.println(calcCRC8(kd_MarxTG70, 9));
-    ChecksumFile.println(calcCRC8(reclaimerSafetyTime, 9));
-    ChecksumFile.println(calcCRC8(Marxcalibration, 9));
-    ChecksumFile.println(calcCRC8(MTGcalibration, 9));
-    ChecksumFile.println(calcCRC8(Switchcalibration, 9));
-    ChecksumFile.println(calcCRC8(TG70Switchcalibration, 9));
-    ChecksumFile.println(calcCRC8(TG70Marxcalibration, 9));
-    ChecksumFile.println(calcCRC8(Reclaimcalibration, 9));
-    ChecksumFile.println(calcCRC8(Minsupplycalibration, 9));
-    ChecksumFile.close();
   }
   return;
 }
@@ -2400,6 +2380,7 @@ void setPID(int selection, int tuneVariable, float setPID)
   double ki = 0;
   double kd = 0;
   double newPID = 0;
+  double oldPID = 0;
 
   ControlButtonStateManager();
   myNex.writeStr("page Confirm_PID");
@@ -2454,16 +2435,19 @@ void setPID(int selection, int tuneVariable, float setPID)
   switch (tuneVariable)
   {
     case 0:
+      oldPID = kp;
       kp = newPID;
       PIDvariableName = " KP set to: ";
       break;
       
     case 1:
+      oldPID = ki;
       ki = newPID;
       PIDvariableName = " KI set to: ";
       break;
 
     case 2:
+      oldPID = kd;
       kd = newPID;
       PIDvariableName = " KD set to: ";
       break;
@@ -2634,18 +2618,16 @@ void alarmController(String errorString)
 
   sysLog("Alarm acknowledged.");
   //User has cleared the error. The alarm is turned off if conditions are fine. If the error is not cleared, it will trigger again at the next check.
-  if(errorState && !alarmState)
+  if(!alarmState)
   {
     digitalWrite(alarmsoundPin,LOW);
     digitalWrite(alarmLEDPin, LOW);
-    errorState = false;
-    standbyMode = true;
     sysLog("Alarm cleared.");
   }
 }
 
 //Read Presets
-
+/*
 void readPresets() {
   if(SD.exists("Presets.txt")) 
   {
@@ -2658,19 +2640,6 @@ void readPresets() {
     preset6 = PresetsFile.readStringUntil('\n');
     brightness = PresetsFile.readStringUntil('\n').toInt();
     color = PresetsFile.readStringUntil('\n').toInt();
-    PresetsFile.close();
-  }
-  else if(sdCard && SD.begin(csPin)) {
-    File PresetsFile = SD.open("Presets.txt", FILE_WRITE);
-    preset1 = String("Preset 1");
-    preset2 = String("Preset 2");
-    preset3 = String("Preset 3");
-    preset4 = String("Preset 4");
-    preset5 = String("Preset 5");
-    preset6 = String("Preset 6");
-    brightness = 100;
-    color = 65535;
-    PresetsFile.close();
   }
   else
   {
@@ -2696,59 +2665,90 @@ void readPresets() {
   myNex.writeStr("Global.bco=" + color);
   
   myNex.writeStr("Main_Menu.bco=" + color);
+  myNex.writeStr("Main_Menu.t0.bco=" + color);
   
   myNex.writeStr("Presets_Select.bco=" + color);
   
   myNex.writeStr("Presets_Menu.bco=" + color);
+  myNex.writeStr("Presets_Menu.t0.bco=" + color);
 
   myNex.writeStr("Timers.bco=" + color);
+  myNex.writeStr("Timers.t0.bco=" + color);
   
   myNex.writeStr("PID.bco=" + color);
+  myNex.writeStr("PID.t0.bco=" + color);
   
   myNex.writeStr("Circuit_Select.bco=" + color);
+  myNex.writeStr("Circuit_Select.t0.bco=" + color);
   
   myNex.writeStr("Alarms.bco=" + color);
+  myNex.writeStr("Alarms..t0.bco=" + color);
 
   myNex.writeStr("Reclaimer.bco=" + color);
+  myNex.writeStr("Reclaimer.t0.bco=" + color);
   
   myNex.writeStr("On_Off.bco=" + color);
+  myNex.writeStr("On_Off.t0.bco=" + color);
   
   myNex.writeStr("Enter_Numbers.bco=" + color);
+  myNex.writeStr("Enter_Numbers.t0.bco=" + color);
+  myNex.writeStr("Enter_Numbers.stringNum.bco=" + color);
   
   myNex.writeStr("Confirm_Presets.bco=" + color);
+  myNex.writeStr("Confirm_Presets.t0.bco=" + color);
   
   myNex.writeStr("Confirm_Press.bco=" + color);
+  myNex.writeStr("Confirm_Press.t0.bco=" + color);
+  myNex.writeStr("Confirm_Press.t1.bco=" + color);
   
   myNex.writeStr("Confirm_On_Off.bco=" + color);
+  myNex.writeStr("Confirm_On_Off.t0.bco=" + color);
+  myNex.writeStr("Confirm_On_Off.t1.bco=" + color);
 
   myNex.writeStr("Confirm_Set.bco=" + color);
+  myNex.writeStr("Confirm_Set.t0.bco=" + color);
+  myNex.writeStr("Confirm_Set.t1.bco=" + color);
   
   myNex.writeStr("Boot_Page.bco=" + color);
+  myNex.writeStr("Boot_Page.bootText.bco=" + color);
   
   myNex.writeStr("Log_Page.bco=" + color);
+  myNex.writeStr("Log_Page.t0.bco=" + color);
+  myNex.writeStr("Log_Page.bootText.bco=" + color);
   
   myNex.writeStr("Preset_Yes_No.bco=" + color);
+  myNex.writeStr("Preset_Yes_No.t0.bco=" + color);
   
   myNex.writeStr("Cir_Purge_Sel.bco=" + color);
-\  
+  myNex.writeStr("Cir_Purge_Sel.t0.bco=" + color);
+  
   myNex.writeStr("Confirm_Number.bco=" + color);
+  myNex.writeStr("Confirm_Number.t0.bco=" + color);
   
   myNex.writeStr("Cir_Delay_Sel.bco=" + color);
-\  
+  myNex.writeStr("Cir_Delay_Sel.t0.bco=" + color);
+  
   myNex.writeStr("Cir_Alarm_Sel.bco=" + color);
-\  
+  myNex.writeStr("Cir_Alarm_Sel.t0.bco=" + color);
+  
   myNex.writeStr("Options.bco=" + color);
-\  
+  myNex.writeStr("Options.t0.bco=" + color);
+  
   myNex.writeStr("Brightness.bco=" + color);
+  myNex.writeStr("Brightness.t0.bco=" + color);
+  myNex.writeStr("Brightness.t1.bco=" + color);
+  myNex.writeStr("Brightness.n0.bco=" + color);
   
   myNex.writeStr("Color.bco=" + color);
-]  
+  myNex.writeStr("Color.t0.bco=" + color);
+  
   myNex.writeStr("Preset_Rename.bco=" + color);
-\}
-
+  myNex.writeStr("Preset_Rename.t0.bco=" + color);
+}
+*/
 
 //Write Presets
-
+/*
 void writePresets() 
 {
   if(SD.exists("Presets.txt")) 
@@ -2760,9 +2760,7 @@ void writePresets()
     preset5 = myNex.readStr("Preset_Rename.t5.txt");
     preset6 = myNex.readStr("Preset_Rename.t6.txt");
     brightness = myNex.readNumber("Brightness.n0.val");
-    color = myNex.readNumber("Gobal.color.val");
 
-    SD.remove("Presets.txt");
     File PresetsFile = SD.open("Presets.txt", FILE_WRITE);
     PresetsFile.println(preset1);
     PresetsFile.println(preset2);
@@ -2772,7 +2770,6 @@ void writePresets()
     PresetsFile.println(preset6);
     PresetsFile.println(brightness);
     PresetsFile.println(color);
-    PresetsFile.close();
 
   }
   else
@@ -2780,396 +2777,7 @@ void writePresets()
     //make page to say no sd card found
   }
 }
-
-
-//Checksum
-
-int Checksum() {
-  char *oldSettings[];
-  char *currentSettings[];
-
-
-  File checksumFile = SD.open("Checksum.txt", FILE_READ);
-
-  int alarmEnable = checksumFile.readStringUntil('\n').toInt();
-	oldSettings[0] = alarmEnable;
-
-  int isCouple = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[1] = isCouple;
-
-	int Marxsetpoint = checksumFile.readStringUntil('\n').toInt();
-	oldSettings[2] = Marxsetpoint;
-    
-	int MTGsetpoint = checksumFile.readStringUntil('\n').toInt();
-	oldSettings[3] = MTGsetpoint;
-    
-	int Switchsetpoint = checksumFile.readStringUntil('\n').toInt();
-	oldSettings[4] = Switchsetpoint;
-    
-	int TG70Switchsetpoint = checksumFile.readStringUntil('\n').toInt();
-	oldSettings[5] = TG70Switchsetpoint;
-    
-	int TG70Marxsetpoint = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[6] = TG70Marxsetpoint;
-
-	int maxReclaimerPressure = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[7] = maxReclaimerPressure;
-
-	int minReclaimerPressure = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[8] = minReclaimerPressure;
-
-	int marxenableState = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[9] = marxenableState;
-	
-	int mtgenableState = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[10] = mtgenableState;
-
-	int switchenableState = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[11] = switchenableState;
-
-	int tg70switchenableState = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[12] = tg70switchenableState;
-
-	int tg70marxenableState = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[13] = tg70marxenableState;
-
-	int marxmaxTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[14] = marxmaxTime;
- 
-	int mtgmaxTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[15] = mtgmaxTime;
-
-	int switchmaxTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[16] = switchmaxTime;
-
-	int tg70switchmaxTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[17] = tg70switchmaxTime
-
-	int tg70marxmaxTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[18] = tg70marxmaxTime
-
-	int marxDelay = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[19] = marxDelay
-
-	int mtgDelay = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[20] = mtgDelay
-
-	int switchDelay = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[21] = switchDelay
-
-	int tg70marxDelay = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[22] = tg70marxDelay;
-
-	int tg70switchDelay = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[23] = tg70switchDelay;
-
-	int marxPurgeTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[24] = marxPurgeTime;
-
-	int mtgPurgeTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[25] = mtgPurgeTime;
-
-	int switchPurgeTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[26] = switchPurgeTime;
-
-	int tg70switchPurgeTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[27] = tg70switchPurgeTime;
-
-	int tg70marxPurgeTime = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[28] = tg70marxPurgeTime;
-
-	int minBottlePressure = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[29] = minBottlePressure;
-
-	int kp_Marx = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[30] = kp_Marx;
-
-	int ki_Marx = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[31] = ki_Marx;
-
-	int kd_Marx = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[32] = kd_Marx;
-
-	int kp_MTG = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[33] = kp_MTG;
-
-	int ki_MTG = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[34] = ki_MTG;
-
-	int kd_MTG = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[35] = kd_MTG;
-
-	int kp_Switch = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[36] = kp_Switch;
-
-	int ki_Switch = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[37] = ki_Switch;
-
-	int kd_Switch = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[38] = kd_Switch;
-
-	int kp_SwitchTG70 = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[39] = kp_SwitchTG70
-
-	int ki_SwitchTG70 = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[40] = ki_SwitchTG70;
-
-	int kd_SwitchTG70 = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[41] = kd_SwitchTG70;
-
-	int kp_MarxTG70 = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[42] = kp_MarxTG70;
-
-	int ki_MarxTG70 = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[43] = ki_MarxTG70;
-
-	int kd_MarxTG70 = checksumFile.readStringUntil('\n').toInt();	
-	oldSettings[44] = kd_MarxTG70;
-
-  reclaimerSafetyTime = checksumFile.readStringUntil('\n').toInt();
-  currentSoldSettingsettings[44] = reclaimerSafetyTime;
-
-  Marxcalibration = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[44] = Marxcalibration;
-
-  MTGcalibration = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[44] = MTGcalibration;
-
-  Switchcalibration = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[44] = Switchcalibration;
-
-  TG70Switchcalibration = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[44] = TG70Switchcalibration;
-
-  TG70Marxcalibration = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[44] = TG70Marxcalibration;
-
-  Reclaimcalibration = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[44] = Reclaimcalibration;
-
-  Minsupplycalibration = checksumFile.readStringUntil('\n').toInt();
-  oldSettings[44] = Minsupplycalibration;
-
-  lastmarxenableState = !marxenableState;
-  oldSettings[44] = calcCRC8(lastmarxenableState, 9);
-
-  lastmtgenableState = !mtgenableState;
-  oldSettings[44] = calcCRC8(lastmtgenableState, 9);
-
-  lastswitchenableState = !switchenableState;
-  oldSettings[44] = calcCRC8(lastswitchenableState, 9);
-
-  lasttg70switchenableState = !tg70switchenableState;
-  oldSettings[44] = calcCRC8(lasttg70switchenableState, 9);
-
-  lasttg70marxenableState = !tg70marxenableState;
-  oldSettings[44] = calcCRC8(lasttg70marxenableState, 9);
-
-
-
-  File previousSettingFile = SD.open("Setting.txt", FILE_READ);
-
-  int alarmEnable = previousSettingFile.readStringUntil('\n').toInt();
-	currentSettings[0] = alarmEnable;
-
-  int isCouple = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[1] = isCouple;
-
-	int Marxsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[2] = Marxsetpoint;
-    
-	int MTGsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[3] = MTGsetpoint;
-    
-	int Switchsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[4] = Switchsetpoint;
-    
-	int TG70Switchsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-	currentSettings[5] = TG70Switchsetpoint;
-    
-	int TG70Marxsetpoint = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[6] = TG70Marxsetpoint;
-
-	int maxReclaimerPressure = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[7] = maxReclaimerPressure;
-
-	int minReclaimerPressure = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[8] = minReclaimerPressure;
-
-	int marxenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[9] = marxenableState;
-	
-	int mtgenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[10] = mtgenableState;
-
-	int switchenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[11] = switchenableState;
-
-	int tg70switchenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[12] = tg70switchenableState;
-
-	int tg70marxenableState = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[13] = tg70marxenableState;
-
-	int marxmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[14] = marxmaxTime;
- 
-	int mtgmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[15] = mtgmaxTime;
-
-	int switchmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[16] = switchmaxTime;
-
-	int tg70switchmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[17] = tg70switchmaxTime
-
-	int tg70marxmaxTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[18] = tg70marxmaxTime
-
-	int marxDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[19] = marxDelay
-
-	int mtgDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[20] = mtgDelay
-
-	int switchDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[21] = switchDelay
-
-	int tg70marxDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[22] = tg70marxDelay;
-
-	int tg70switchDelay = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[23] = tg70switchDelay;
-
-	int marxPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[24] = marxPurgeTime;
-
-	int mtgPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[25] = mtgPurgeTime;
-
-	int switchPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[26] = switchPurgeTime;
-
-	int tg70switchPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[27] = tg70switchPurgeTime;
-
-	int tg70marxPurgeTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[28] = tg70marxPurgeTime;
-
-	int minBottlePressure = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[29] = minBottlePressure;
-
-	int kp_Marx = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[30] = kp_Marx;
-
-	int ki_Marx = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[31] = ki_Marx;
-
-	int kd_Marx = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[32] = kd_Marx;
-
-	int kp_MTG = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[33] = kp_MTG;
-
-	int ki_MTG = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[34] = ki_MTG;
-
-	int kd_MTG = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[35] = kd_MTG;
-
-	int kp_Switch = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[36] = kp_Switch;
-
-	int ki_Switch = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[37] = ki_Switch;
-
-	int kd_Switch = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[38] = kd_Switch;
-
-	int kp_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[39] = kp_SwitchTG70
-
-	int ki_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[40] = ki_SwitchTG70;
-
-	int kd_SwitchTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[41] = kd_SwitchTG70;
-
-	int kp_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[42] = kp_MarxTG70;
-
-	int ki_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[43] = ki_MarxTG70;
-
-	int kd_MarxTG70 = previousSettingFile.readStringUntil('\n').toDouble();	
-	currentSettings[44] = kd_MarxTG70;
-
-  reclaimerSafetyTime = previousSettingFile.readStringUntil('\n').toInt();
-  currentSettings[44] = reclaimerSafetyTime;
-
-  Marxcalibration = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[44] = Marxcalibration;
-
-  MTGcalibration = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[44] = MTGcalibration;
-
-  Switchcalibration = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[44] = Switchcalibration;
-
-  TG70Switchcalibration = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[44] = TG70Switchcalibration;
-
-  TG70Marxcalibration = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[44] = TG70Marxcalibration;
-
-  Reclaimcalibration = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[44] = Reclaimcalibration;
-
-  Minsupplycalibration = previousSettingFile.readStringUntil('\n').toDouble();
-  currentSettings[44] = Minsupplycalibration;
-
-  lastmarxenableState = !marxenableState;
-  currentSettings[44] = lastmarxenableState;
-
-  lastmtgenableState = !mtgenableState;
-  currentSettings[44] = lastmtgenableState;
-
-  lastswitchenableState = !switchenableState;
-  currentSettings[44] = lastswitchenableState;
-
-  lasttg70switchenableState = !tg70switchenableState;
-  currentSettings[44] = lasttg70switchenableState;
-
-  lasttg70marxenableState = !tg70marxenableState;
-  currentSettings[44] = lasttg70marxenableState;
-
-  previousSettingFile.close();
-
-
-  int result = CalcChecksum(*oldSettings, *currentSettings);
-
-  return result;
-}
-
-int CalcChecksum(char *oldSettings, char *currentSettings) {
-  
-  int old = 0, current = 0, i = 0;
-
-  while(i < sizeof(oldSettings)/sizeof(int)) {
-    old = oldSettings[i];
-    current = calcCRC8((uint8_t *)currentSettings[i], 9);
-    i++;
-
-    if(old != current) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-
-
-
+*/
 
 //--------------------------------------------------------------------------------------------
 //TRIGGERS
@@ -3389,11 +2997,9 @@ void trigger8() {
   int cidx;
   double pressure, prev;
   int ar;
-  char sbuf[64];
 
   // read user-input current circuit PSI
   pressure = myNex.readNumber("Calibration.float.val");
-  pressure /= 10;
 
   // get circuit selection from Circuit.val as a circuit-map index
   cidx = myNex.readNumber("Global.Circuit.val");
@@ -3409,6 +3015,8 @@ void trigger8() {
   }
   sysLog("Entered calibration menu.");
 
+  pressure /= 10;
+
   cidx = CIRC_IDX(cidx);
   
   // store previous calibration coefficient
@@ -3417,7 +3025,7 @@ void trigger8() {
   ar = analogRead(analog_map[cidx]);
 
     // page to calibration-status page
-  myNex.writeStr("page Calibrated");
+  myNex.writeStr("page Set_Status");
 
   // if input is non-zero
   if (pressure >= 0.1) {
@@ -3425,29 +3033,31 @@ void trigger8() {
     *(calibration_map)[cidx] = ar;
     *(calibration_map)[cidx] /= pressure;
     // set successful status message
-    sprintf(sbuf, "CALIBRATION SUCCESSFUL!");
     sysLog(String("Successfully calibrated " + String(circuit_map[cidx]) + " from " + String(prev) + " to " + String(*calibration_map[cidx])));
-    myNex.writeStr("Calibrated.status.txt", sbuf);
-
+    myNex.writeStr("Set_Status.status.txt", "CALIBRATION SUCCESSFUL!");
   } else {
     // set failed status message
-    sprintf(sbuf, "CALIBRATION FAILED. (divide by zero)");
     sysLog(String("Failed to set calibration for PSI of " + String(pressure)));
-    myNex.writeStr("Calibrated.status.txt", sbuf);
+    myNex.writeStr("Set_Status.status.txt", "CALIBRATION FAILED. (divide by zero)");
   }
 
-  // state calibration changes to Calibrated page
-  myNex.writeStr("Calibrated.t0.txt", String("Previous Calibration > " + String(prev)));
-  myNex.writeStr("Calibrated.t1.txt", String("Current Calibration > " + String(*calibration_map[cidx])) + String(cidx));
+  // state calibration changes to Set_Status page
+  myNex.writeStr("Set_Status.t0.txt", String("Previous Calibration > " + String(prev)));
+  myNex.writeStr("Set_Status.t1.txt", String("Current Calibration > " + String(*calibration_map[cidx])) + String(cidx));
   SaveCurrentSettings();
+
+  delay(1500);
+  myNex.writeStr("page Calibration");
 }
 
-// calibration circuit selection
+
 void trigger9() {
-  int cidx;
+  int cidx, m;
+
+  m = myNex.readNumber("Global.mod.val");
 
   // get circuit-index from current selection
-  cidx = CIRC_IDX(myNex.readNumber("Global.Circuit.val"));
+  cidx = MOD(myNex.readNumber("Global.Circuit.val"), m);
 
   // update calibration-circuit-name from circuit-string map
   myNex.writeStr("Calibration.Circuit_Disp.txt", circuit_map[cidx]);
@@ -3508,8 +3118,6 @@ void trigger12()
 //Event log display
 void trigger13()
 {
-  ControlButtonStateManager();
-
   if(sdCard)
   {
     if(SD.exists("Log.txt")) //File is found.
@@ -3517,6 +3125,7 @@ void trigger13()
       File logFile = SD.open("Log.txt", FILE_READ);
       while(logFile.position() != logFile.size())
       {
+        ControlButtonStateManager();
         myNex.writeStr("Log_Page.BootText.txt+", String(logFile.readStringUntil('\r\n')));
         myNex.writeStr("Log_Page.BootText.txt+", "\r\n"); 
       }
@@ -3531,77 +3140,185 @@ void trigger13()
   {
     myNex.writeStr("Log_Page.BootText.txt+", globalLog);
   }
+  myNex.writeStr("BootText.val_y=BootText.maxval_y");
+}
+
+// does the PID setting
+void trigger14() {
+  int cidx, m, p;
+  double n;
+  char s[32];
+
+  // read which circuits are being considered
+  m = myNex.readNumber("Global.mod.val");
+  // get circuit selection
+  cidx = MOD(myNex.readNumber("Global.Circuit.val"), m);
+  // get PID-var selection (KP, KI, or KD)
+  p = myNex.readNumber("Global.pidVar.val");
+  // get user-input PID val
+  n = myNex.readNumber("Set_PID.float.val");
+
+  // test for any serial read-errors
+  if (p == 777777 || m == 777777 || cidx == 777777 || n == 777777) {
+    myNex.writeStr("page Confirm_Press");
+    myNex.writeNum("Confirm_Number.Warning_Image.aph", 127);
+    myNex.writeStr("Confirm_Number.t0.txt", "ERROR: Serial communication failure!");
+    sysLog("ERROR: Serial communication failure!");
+    delay(1500);
+    myNex.writeStr("page PID");
+    return;
+  }
+
+  // move decimal place
+  n /= 10;
+
+  // page to parameter-set status page
+  myNex.writeStr("page Set_Status");
+
+  // configure status messages
+  sprintf(s, "%s", (p == 0) ? "KP" : ((p == 1) ? "KI" : (p == 2) ? "KD" : "N/A"));
+  myNex.writeStr("Set_Status.status.txt", String("Successfully set ") + String(s) + String(" !"));
+
+  myNex.writeStr("Set_Status.t0.txt", String("Previous ") + String(s) + " > " + String(*pid_map[cidx][p]));
+  *pid_map[cidx][p] = n;
+  myNex.writeStr("Set_Status.t1.txt", String("Current ")  + String(s) + " > " + String(*pid_map[cidx][p]));
+
+  // save changes
+  SaveCurrentSettings();
+
+  // display delay and return to PID-set page
+  delay(1500);
+  myNex.writeStr("page Set_PID");
+}
+
+// pull current PID value
+void trigger15() {
+  int cidx, m, p;
+  double cur;
+  char s[32];
+
+  // pull circuit modulus
+  m = myNex.readNumber("Global.mod.val");
+  // get circuit-index from current selection
+  cidx = MOD(myNex.readNumber("Global.Circuit.val"), m);
+
+  // read current PID-var
+  p = myNex.readNumber("Global.pidVar.val");
+
+  // update PID-var set-strings
+  sprintf(s, "%s", (p == 0) ? "KP" : ((p == 1) ? "KI" : ((p == 2) ? "KD" : "N/A")));
+  myNex.writeStr("Set_PID.t0.txt", String("Current ") + String(s));
+  myNex.writeStr("Set_PID.t3.txt", String("New ") + String(s));
+
+  // pull current PID-var config
+  cur = *pid_map[cidx][p];
+
+  myNex.writeStr("Set_PID.Circuit_Disp.txt", circuit_map[cidx]);
+
+  // set current PID-var string
+  myNex.writeStr("Set_PID.t4.txt", String(cur));
 }
 
 
 //Brightness
-/*
 void trigger20() {
   brightness = myNex.readNumber("Global.brightness.val");
   myNex.writeStr("dim=" + brightness);
 }
-*/
 
 //Change Preset Names
 void trigger21() {
-  writePresets();
+//  writePresets();
 }
 
+/*
 void trigger22() {
   color = myNex.readNUmber("Global.color.val");
 
   myNex.writeStr("Global.bco=" + color);
   
   myNex.writeStr("Main_Menu.bco=" + color);
+  myNex.writeStr("Main_Menu.t0.bco=" + color);
   
   myNex.writeStr("Presets_Select.bco=" + color);
   
   myNex.writeStr("Presets_Menu.bco=" + color);
+  myNex.writeStr("Presets_Menu.t0.bco=" + color);
 
   myNex.writeStr("Timers.bco=" + color);
+  myNex.writeStr("Timers.t0.bco=" + color);
   
   myNex.writeStr("PID.bco=" + color);
+  myNex.writeStr("PID.t0.bco=" + color);
   
   myNex.writeStr("Circuit_Select.bco=" + color);
+  myNex.writeStr("Circuit_Select.t0.bco=" + color);
   
   myNex.writeStr("Alarms.bco=" + color);
+  myNex.writeStr("Alarms..t0.bco=" + color);
 
   myNex.writeStr("Reclaimer.bco=" + color);
+  myNex.writeStr("Reclaimer.t0.bco=" + color);
   
   myNex.writeStr("On_Off.bco=" + color);
+  myNex.writeStr("On_Off.t0.bco=" + color);
   
   myNex.writeStr("Enter_Numbers.bco=" + color);
+  myNex.writeStr("Enter_Numbers.t0.bco=" + color);
+  myNex.writeStr("Enter_Numbers.stringNum.bco=" + color);
   
   myNex.writeStr("Confirm_Presets.bco=" + color);
+  myNex.writeStr("Confirm_Presets.t0.bco=" + color);
   
   myNex.writeStr("Confirm_Press.bco=" + color);
+  myNex.writeStr("Confirm_Press.t0.bco=" + color);
+  myNex.writeStr("Confirm_Press.t1.bco=" + color);
   
   myNex.writeStr("Confirm_On_Off.bco=" + color);
+  myNex.writeStr("Confirm_On_Off.t0.bco=" + color);
+  myNex.writeStr("Confirm_On_Off.t1.bco=" + color);
 
   myNex.writeStr("Confirm_Set.bco=" + color);
+  myNex.writeStr("Confirm_Set.t0.bco=" + color);
+  myNex.writeStr("Confirm_Set.t1.bco=" + color);
   
   myNex.writeStr("Boot_Page.bco=" + color);
+  myNex.writeStr("Boot_Page.bootText.bco=" + color);
   
   myNex.writeStr("Log_Page.bco=" + color);
+  myNex.writeStr("Log_Page.t0.bco=" + color);
+  myNex.writeStr("Log_Page.bootText.bco=" + color);
   
   myNex.writeStr("Preset_Yes_No.bco=" + color);
+  myNex.writeStr("Preset_Yes_No.t0.bco=" + color);
   
   myNex.writeStr("Cir_Purge_Sel.bco=" + color);
-\  
+  myNex.writeStr("Cir_Purge_Sel.t0.bco=" + color);
+  
   myNex.writeStr("Confirm_Number.bco=" + color);
+  myNex.writeStr("Confirm_Number.t0.bco=" + color);
   
   myNex.writeStr("Cir_Delay_Sel.bco=" + color);
-\  
+  myNex.writeStr("Cir_Delay_Sel.t0.bco=" + color);
+  
   myNex.writeStr("Cir_Alarm_Sel.bco=" + color);
-\  
+  myNex.writeStr("Cir_Alarm_Sel.t0.bco=" + color);
+  
   myNex.writeStr("Options.bco=" + color);
-\  
+  myNex.writeStr("Options.t0.bco=" + color);
+  
   myNex.writeStr("Brightness.bco=" + color);
+  myNex.writeStr("Brightness.t0.bco=" + color);
+  myNex.writeStr("Brightness.t1.bco=" + color);
+  myNex.writeStr("Brightness.n0.bco=" + color);
   
   myNex.writeStr("Color.bco=" + color);
-]  
+  myNex.writeStr("Color.t0.bco=" + color);
+  
   myNex.writeStr("Preset_Rename.bco=" + color);
+  myNex.writeStr("Preset_Rename.t0.bco=" + color);
   
   writePresets();
   
 }
+*/
