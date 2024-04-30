@@ -1,3 +1,14 @@
+/**
+ * @file client.c
+ * @author Bradley Sullivan (bradleysullivan@nevada.unr.edu)
+ * @brief Core client functionalities
+ * @version 0.1
+ * @date 2024-04-24
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "client.h"
 
 char *const circuit_map[] = {
@@ -87,49 +98,89 @@ char *const pktype_map[] = {
   NULL
 };
 
-int init_client(client_t *c, char *dev_path) {
-  int ret = 0;
+/**
+ * @brief Allocates and/or initializes client structures.
+ * If 'c' is provided NULL, a structure is allocated and
+ * returned.
+ * 
+ * @param c Pointer to client structure to initialize
+ * @param dev_buf Path to serial device
+ * @return client_t* Pointer to allocated/initialized structure
+ */
+client_t *c_get(client_t *c, char *dev_buf) {
+  client_t *ret;
+  int i;
 
-  c->s_flags = 0;
-  c->cursor = 0;
+  if (!c)
+    ret = malloc(sizeof(client_t));
+  else
+    ret = c;
 
-  ret = init_remote(&c->r, dev_path, B9600);
-  if (ret >= 0) {
-    // init curses
-    c->scr = initscr();
-    noecho();
-    cbreak();
-    keypad(c->scr, TRUE);
-    nodelay(c->scr, TRUE);
-    curs_set(0);
-    start_color();
-
-    int i;
-    for (i = 0; i < C_NUM_CIRCUITS; i += 1) {
-      c->circuit[i].w = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH, i * CWIN_HEIGHT, 0);
-      wborder(c->circuit[i].w, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-
-    c->view_win = subwin(c->scr, SWIN_HEIGHT, SWIN_WIDTH - 2, CWIN_HEIGHT, CWIN_WIDTH + 1);
-    c->view = subwin(c->scr, SWIN_HEIGHT - 2, SWIN_WIDTH - 4, CWIN_HEIGHT + 1, CWIN_WIDTH + 2);
-    wborder(c->view_win, 0, 0, 0, 0, 0, 0, 0, 0);
-    scrollok(c->view, TRUE);
-
-    c->cmd = subwin(c->scr, CWIN_HEIGHT, CWIN_WIDTH - 2, 0, CWIN_WIDTH + 1);
+  if (!ret) {
+    printf("Failed to allocate client structure...\n");
+    return NULL;
   }
+
+  ret->state = 0;
+  ret->cursor = 0;
+  ret->cmd_input[0] = '\0';
+  ret->poll_time = 10;
+  ret->err = 0;
+  strncpy(ret->dev_buf, dev_buf, 32);
+
+  ret->remote = r_get(NULL, dev_buf, B9600);
+
+  // init curses
+  ret->scr = initscr();
+  noecho();
+  cbreak();
+  keypad(ret->scr, TRUE);
+  nodelay(ret->scr, TRUE);
+  curs_set(0);
+  start_color();
+
+  for (i = 0; i < C_NUM_CIRCUITS; i += 1) {
+    ret->circuit[i] = (circuit_t) { .params[0] = 0, .params[1] = C_PRESSURE_MAX };
+    ret->circuit[i].w = subwin(ret->scr, CWIN_HEIGHT, CWIN_WIDTH, i * CWIN_HEIGHT, 0);
+    wborder(ret->circuit[i].w, 0, 0, 0, 0, 0, 0, 0, 0);
+  }
+
+  ret->sim_win = subwin(ret->scr, CWIN_HEIGHT, CWIN_WIDTH, C_NUM_CIRCUITS * CWIN_HEIGHT, 0);
+  wborder(ret->sim_win, 0, 0, 0, 0, 0, 0, 0, 0);
+
+  ret->view_win = subwin(ret->scr, SWIN_HEIGHT, SWIN_WIDTH - 2, CWIN_HEIGHT, CWIN_WIDTH + 1);
+  ret->view = subwin(ret->scr, SWIN_HEIGHT - 2, SWIN_WIDTH - 4, CWIN_HEIGHT + 1, CWIN_WIDTH + 2);
+  wborder(ret->view_win, 0, 0, 0, 0, 0, 0, 0, 0);
+  scrollok(ret->view, TRUE);
+
+  ret->cmd = subwin(ret->scr, CWIN_HEIGHT, CWIN_WIDTH - 2, 0, CWIN_WIDTH + 1);
 
   return ret;
 }
 
+/**
+ * @brief Configures provided packet with packet 
+ * arguments. Packet arguments are created by parsing
+ * user-input commands.
+ * 
+ * @param c Active client structure
+ * @param p Packet-refreence to construct/configure
+ * @param pargs Arguments detailing configuration
+ * @return int Returns 0 on success, -1 on error. Sets
+ * client 'err'.
+ */
 int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
   int i, l, s, ret;
-  uint8_t *pdata = p->packet.data;
+  uint8_t *pdata;
   valset_t *seek, *sort[MAX_VALUES];
+
+  ret = c->err;
 
   p->packet.type = pargs->op_type;
   p->packet.flags = pargs->op_flags;
   p->packet.timeout = pargs->timeout;
-  ret = 0;
+
+  pdata = p->packet.data;
 
   switch (pargs->op_type) {
     case PK_UPDATE:
@@ -168,7 +219,6 @@ int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
 
               // sort valset pointer array keyed on flag/parameter
               qsort(sort, s, sizeof(valset_t *), val_cmp_flag);
-              // for (int m = 0; m < s; m += 1) printf("sorted[%d] -> %d %d %lf\n", m, sort[m]->op, sort[m]->flag, sort[m]->value);
               // iterate and load values into packet
               for (l = 0; l < s; l += 1) {
                 *pdata++ = (uint8_t) sort[l]->value;
@@ -180,7 +230,7 @@ int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
             case CMD_DMPCFG:
               break;
             default:
-              ret = E_PCREATE;
+              c->err = E_PCREATE;
               break;
           }
         }
@@ -189,115 +239,92 @@ int construct_packet(client_t *c, packet_t *p, packet_args *pargs) {
     case PK_STATUS:
       if (isbset(pargs->op_flags, ST_PING)) {
         seek = pargs->values;
-        if (val_seek(pargs->values, &seek, ST_PING, pargs->next_val))
+        if (val_seek(pargs->values, &seek, ST_PING, pargs->next_val)) {
           *pdata++ = (uint8_t) seek->value;
+        } else {
+          *pdata++ = 1;
+        }
       }
       break;
     default:
-      ret = E_PCREATE;
+      c->err = E_PCREATE;
       break;
   }
 
   p->packet.size = pdata - p->packet.data;
 
-  return ret;
+  return ret == c->err ? 0 : -1;
 }
 
-int ping(client_t *c, packet_t *p) {
-  int replies = 0;
-  while (p->packet.data[0]--) {
-    tx_packet(&c->r);
+/**
+ * @brief Client tick routine. Processes new
+ * remote data, user-input, errors, and device
+ * connection.
+ * 
+ * @param c Active client
+ */
+void update_client(client_t *c) {
+  int i;
+  
+  c->key = wgetch(c->scr);
 
-    if (poll_resp(&c->r, p->packet.timeout * 1000) > 0) {
-      if (isbset(c->r.rx.packet.flags, ST_PING)) {
-        sprintf(c->print_buf, "Ping reply: bytes=%d  TTL=%ds\n", PS_HEADER + p->packet.size, p->packet.timeout);
-        print_view(c, c->print_buf);
-        replies += 1;
-      } else if (isbset(c->r.rx.packet.flags, ST_TIMEOUT)) {
-        sprintf(c->print_buf, "Ping timed out (TTL=%ds)\n", p->packet.timeout);
-        print_view(c, c->print_buf);
-      } 
-    } else {
-      print_view(c, "Device poll timed out\n");
+  if (isbset(c->remote->state, R_NDATA)) {
+    c->receive = r_read(c->remote);
+    if (c->receive) {
+      process_packet(c, c->receive);
+      c->remote->state &= ~(1 << R_NDATA);
     }
   }
 
-  return replies;
-}
-
-void update_client(client_t *c) {
-  int i, r, p;
-
-  c->key = wgetch(c->scr);
-
   // processes client state updates
   for (i = 0; i < 8; i += 1) {
-    if (isbset(c->s_flags, i)) {
+    if (isbset(c->state, i)) {
       switch (i) {
         case S_EXIT:
-          // dealloc client stuff
+          c->remote->state |= (1 << R_EXIT);
           break;
-        case S_POLL:
-          if (isbclr(c->r.r_flags, R_EXIT)) {
-            if (poll_resp(&c->r, 1) > 0) {
-              process_packet(c, &c->r.rx);
-            }
-          }
-          break;
-        case S_INPUT:
-          c->err = process_input(c, c->cmd_input);
-          if (!c->err)  {
+        case S_INPUT:   /* user input/command available to process */
+          print_view(c, c->cmd_input);
+          if (process_input(c, c->cmd_input) == 0)  {
             // construct and transmit packet(s)
-            c->err = construct_packet(c, &c->r.tx, &c->pargs);
-            if (!c->err) {
-              if (isbclr(c->r.r_flags, R_RXINP)) {
-                // draw_packet(c, &c->r.tx);
-                tx_packet(&c->r);
-              } else {
-                c->s_flags |= (1 << S_RETRY);
-              }
+            if (construct_packet(c, c->remote->tx_head, &c->pargs) == 0) {
+              c->remote->state |= (1 << R_FLUSH);
             }
           }
-          c->s_flags &= ~(1 << S_INPUT);
+
+          // reset user-input state
+          c->state &= ~(1 << S_INPUT);
           c->cmd_input[0] = '\0';
           c->cursor = 0;
           break;
-        case S_UPCYCLE:
-        case S_PING:
-          // ping system for nping packets
-          p = c->r.tx.packet.data[0];
-          sprintf(c->print_buf, "\nPINGING SYSTEM: n=%d  TTL=%ds\n", p, c->r.tx.packet.timeout);
-          print_view(c, c->print_buf);
-          r = ping(c, &c->r.tx);
-          sprintf(c->print_buf, "\nRECEIVED: %d of %d replies (%.02lf%%)\n", r, p, 100 * (double)r / p);
-          print_view(c, c->print_buf);
-          c->s_flags &= ~(1 << S_PING);
-          break;
-        case S_RETRY:
-          if (isbclr(c->r.r_flags, R_RXINP)) {
-            tx_packet(&c->r);
-            c->s_flags &= ~(1 << S_RETRY);
+        case S_RECON:
+          print_view(c, "Attempting reconnect...\n");
+          if (reconnect(c->remote, c->dev_buf, 5, 1000) < 0) {
+            c->err = E_CONNECT;
+            print_view(c, "Failed to reconnect to serial device.\n");
+          } else {
+            print_view(c, "Serial device reconnected!\n");
           }
-          break;
+
+          c->state &= ~(1 << S_RECON);
         default:
           break;
       }
     }
   }
 
-  
   if (c->err) {
     process_error(c);
   } else {
     if (process_key(c, c->key)) {                    // returns 1 on key ENTER
-      c->s_flags |= (1 << S_INPUT);
+      c->state |= (1 << S_INPUT);
     }
+    draw_input(c);    
   }
 }
 
 size_t update_circuits(client_t *c, uint8_t *bytes) {
   uint8_t *pdata = bytes;
-  double *cdata;  
   uint8_t cmask;
   uint16_t pmask;
 
@@ -309,14 +336,16 @@ size_t update_circuits(client_t *c, uint8_t *bytes) {
   pmask |= *pdata++;
 
   circuit_t *circuit;
+
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
     if (isbset(cmask, i)) {
       circuit = &c->circuit[i];
-      cdata = circuit->params;
       for (uint8_t k = 0; k < C_NUM_PARAM; k += 1) {
         if (isbset(pmask, k)) {
           // load parameter into enabled circuit
-          *cdata++ = *pdata + ((double)(*(pdata + 1)) / 100);
+          circuit->params[k] = *pdata * 100;
+          circuit->params[k] += *(pdata + 1);
+          circuit->params[k] /= 100;
           pdata += 2;
         }
       }
@@ -331,9 +360,11 @@ size_t update_circuits(client_t *c, uint8_t *bytes) {
 
 size_t update_system(client_t *c, uint8_t *bytes) {
   uint8_t *sbytes = bytes;
+  int i;
 
   // read system flags
-  c->sim.s_flags = *sbytes++;
+  c->sim.state = *sbytes++;
+  c->sim.err = *sbytes++;
   c->sim.c_flags = *sbytes++;
   c->sim.p_flags = *sbytes++;
   c->sim.p_flags <<= 8;
@@ -343,10 +374,21 @@ size_t update_system(client_t *c, uint8_t *bytes) {
   c->sim.up_types = *sbytes++;
   // read system uptime
   c->sim.uptime = 0;
-  for (int i = 0; i < 4; i += 1) {
+  for (i = 0; i < 4; i += 1) {
     c->sim.uptime |= *sbytes++;
     c->sim.uptime <<= 8;
   }
+  // read system reclaimer/supply state
+  c->sim.reclaimer = (float)*sbytes + ((float)(*(sbytes + 1)) / 100);
+  sbytes += 2;
+  c->sim.supply = (float)*sbytes + ((float)(*(sbytes + 1)) / 100);
+  sbytes += 2;
+  c->sim.rec_auto_on = (float)*sbytes + ((float)(*(sbytes + 1)) / 100);
+  sbytes += 2;
+  c->sim.rec_auto_off = (float)*sbytes + ((float)(*(sbytes + 1)) / 100);
+  sbytes += 2;
+  c->sim.supply_min = (float)*sbytes + ((float)(*(sbytes + 1)) / 100);
+  sbytes += 2;
 
   return sbytes - bytes;
 }
