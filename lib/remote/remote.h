@@ -31,9 +31,7 @@
 // update packet flags
 #define UP_SYSTEM   0  // add system updates to update config
 #define UP_CIRCUITS 1  // add circuit updates to update config
-#define UP_REMOTE   2  // add remote updates to update config
-#define UP_REFRESH  3  // system update trigger
-#define UP_REMOVE   4  // specified updates are removed from update config
+#define UP_RESET    2  // clears update flags
 
 // command packet flags
 #define CMD_RESPND  0  // response/ack required
@@ -86,13 +84,13 @@ typedef struct remote_t {
 
   uint8_t ack_timeout;    // response timeout in seconds
 
-  uint8_t r_flags;
+  uint8_t state;
 } remote_t;
 
 int init_remote(remote_t *r, Stream *s);
 
 int rx_packet(remote_t *r);
-size_t tx_packet(packet_t *p, Stream *s);
+int tx_packet(packet_t *p, Stream *s);
 
 size_t ack_packet(remote_t *r, packet_t *p);
 

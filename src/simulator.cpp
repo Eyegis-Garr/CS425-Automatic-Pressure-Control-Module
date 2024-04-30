@@ -9,6 +9,10 @@ volatile uint8_t *PORT_L  = (volatile uint8_t *) 0x10B;
 volatile uint8_t *DDR_L   = (volatile uint8_t *) 0x10A;
 volatile uint8_t *PIN_L   = (volatile uint8_t *) 0x109;
 
+/**
+ * @brief initializes simulator. should be invoked on startup or reset
+ * 
+ */
 void sim_setup() {
   init_ui(&sys.ui);
   init_system();
@@ -18,101 +22,111 @@ void sim_setup() {
 }
 
 void init_system() {
-  sys.s_flags = S_SHOT;
-  sys.c_flags = 0;
-  sys.p_flags = 0;
-  sys.en_flags = (1 << C_MARX);
+  circuit_t *c;
+
+  sys.state = S_SHOT;
+  sys.en_flags = (1 << C_NUM_CIRCUITS) - 1;
 
   // load default circuit settings
   sys.circuits[C_MARX] = (circuit_t) {
-    {
-      0,                  // pressure
-      254,               // set point
+    .params = {
+      0,                   // pressure
+      15,                 // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    1,                  // pressure rate-of-change
-    { A7, 13, 13, 53, 49, 2, 3 },    // pins
-    NULL
+    .roc = 0.1,
+    .supply = NULL,
+    .reclaimer = NULL,
+    .pins = { A7, 38, 39, 53, 49, 2, 3 }
   };
 
   sys.circuits[C_MTG70] = (circuit_t) {
-    {
-      0,                  // pressure
-      254,               // set point
+    .params = {
+      0,                   // pressure
+      15,                 // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    1,                  // pressure rate-of-change
-    { A7, 43, 39, 53, 49, 4, 5 },    // pins
-    NULL
+    .roc = 0.05,
+    .supply = NULL,
+    .reclaimer = NULL,
+    .pins = { A7, 40, 41, 52, 48, 4, 5 }
   };
 
   sys.circuits[C_MTG] = (circuit_t) {
-    {
-      0,                  // pressure
-      254,               // set point
+    .params = {
+      0,                   // pressure
+      15,                 // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    0.5,                  // pressure rate-of-change
-    { A7, 40, 13, 53, 49, 6, 7 },    // pins
-    NULL
+    .roc = 0.2,
+    .supply = NULL,
+    .reclaimer = NULL,
+    .pins = { A7, 42, 43, 51, 47, 6, 7 }
   };
   
   sys.circuits[C_SWITCH] = (circuit_t) {
-    {
-      0,                  // pressure
-      254,               // set point
+    .params = {
+      0,                   // pressure
+      15,                 // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    2.5,                  // pressure rate-of-change
-    { A7, 16, 17, 53, 49, 8, 9 },    // pins
-    NULL
+    .roc = 0.15,
+    .supply = NULL,
+    .reclaimer = NULL,
+    .pins = { A7, 44, 17, 50, 46, 8, 9 }
   };
 
   sys.circuits[C_SWTG70] = (circuit_t) {
-    {
-      0,                  // pressure
-      254,               // set point
+    .params = {
+      0,                   // pressure
+      15,                 // set point
       C_MAX_DEFAULT,       // max time
       1000,                // check time
       C_PURGE_DEFAULT,     // purge time
       C_DELAY_DEFAULT,     // delay time
       50, 0, 25            // PID tuning params
     },
-    0.5,                  // pressure rate-of-change
-    { A7, 20, 21, 53, 49, 11, 12 },    // pins
-    NULL
+    .roc = 0.75,
+    .supply = NULL,
+    .reclaimer = NULL,
+    .pins = { A7, 8, 21, 10, 45, 11, 12 }
   };
   
-  circuit_t *c;
+  sys.supply = S_SUPPLY_MAX;
+  sys.reclaimer = 15;
+  sys.rec_auto_on = 8;
+  sys.rec_auto_off = 2;
+  sys.supply_min = 10;
+
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
     c = &sys.circuits[i];
+
+    // hook/attach circuit to system
+    c->reclaimer = &sys.reclaimer;
+    c->supply = &sys.supply;
 
     // configure circuit PID controller
     pid_set_input(&c->pid, &c->params[P_PRESSURE]);
     pid_set_param(&c->pid, c->params[P_KP], c->params[P_KI], c->params[P_KD]);
-    // configure circuit pressure display
-    c->disp = new TM1637Display(c->pins[I_DISP_CLK], c->pins[I_DISP_DIO]);
-    c->disp->setBrightness(3);
-    c->disp->clear();
   }
   
-  sys.up_types = (1 << UP_CIRCUITS);
+  sys.up_types = 0;
   sys.c_flags = (1 << C_NUM_CIRCUITS) - 1;
   sys.p_flags = (1 << C_NUM_PARAM) - 1;
 
@@ -151,7 +165,7 @@ void init_io() {
 void poll_device(remote_t *r) {
   if (rx_packet(r) > 0) {
     process_packet(r);
-  } else {
+  } else if (isbclr(r->state, R_RXINP)) {
     issue_updates(r);
   }
 }
@@ -176,18 +190,43 @@ ISR(TIMER1_OVF_vect) {
   poll_device(&sys.remote);
 }
 
+/**
+ * @brief updates simulation. should be invoked per iteration.
+ * 
+ */
 void sim_tick() {
   sys.uptime = millis();
 
   // update_ui(&sys.ui);
-  if (sys.s_flags == S_SHOT) {           // continuously checks pressures, keeping within setpoint range
-    shot_pressure(false);
-  } else if (sys.s_flags == S_PURGE) {   // bleed all circuits to 0 pressure
-    purge();
-  } else if (sys.s_flags == S_ABORT) {   // reduce all circuits to half-pressure
-    shot_pressure(true);
-  } if (sys.s_flags == S_ERROR) {
-    // handle and log error
+  switch (sys.state) {
+    case S_SHOT:
+      shot_pressure(false);
+      break;
+    case S_PURGE:
+      purge();
+      break;
+    case S_ABORT:
+      shot_pressure(true);
+      break;
+    case S_ERROR:
+      break;
+  }
+}
+
+void auto_reclaim() {
+  static int r;
+  
+  if (!r && sys.reclaimer >= sys.rec_auto_on) {
+    r = 1;
+  }
+
+  if (r) {
+    if (sys.reclaimer >= sys.rec_auto_off) {
+      sys.reclaimer -= 0.05;
+      sys.supply += 0.05;
+    } else {
+      r = 0;
+    }
   }
 }
 
@@ -202,62 +241,83 @@ void sim_tick() {
  * @param out - binary state of exhaust solenoid
  */
 void modify_circuit(circuit_t *c, uint32_t dt, uint8_t in, uint8_t out) {
-  if (in) {
-    if (!out) {
-      c->params[P_PRESSURE] += c->roc * ((double)dt / 1000);
-    } else {
-      c->params[P_PRESSURE] -= c->roc * ((double)dt / 1000);
+  float pdt;
+
+  pdt = ((float)dt) / 1024.0;
+
+  if (in) {         /* intake open */
+    if (!out) {     /* exhaust closed */
+      // drain supply into circuit
+      pdt *= mapf(*c->supply - c->params[P_PRESSURE], -C_PRESSURE_MAX, C_PRESSURE_MAX, -1, 1);
+      *c->supply -= c->roc * pdt;
+      c->params[P_PRESSURE] += c->roc * pdt;
+    } else {        /* exhaust open */
+      // drain supply into reclaimer
+      pdt *= mapf(*c->reclaimer - *c->supply, -C_PRESSURE_MAX, C_PRESSURE_MAX, -1, 1);
+      *c->reclaimer -= c->roc * pdt;
+      *c->supply += c->roc * pdt;
     }
-  } else {
-    if (out && c->params[P_PRESSURE] >= 0) {
-      c->params[P_PRESSURE] -= c->roc * ((double)dt / 1000);
+  } else {        /* intake closed */
+    if (out) {    /* exhaust open */
+      // drain circuit into reclaimer
+      pdt *= mapf(*c->reclaimer - c->params[P_PRESSURE], -C_PRESSURE_MAX, C_PRESSURE_MAX, -1, 1);
+      *c->reclaimer -= c->roc * pdt;
+      c->params[P_PRESSURE] += c->roc * pdt;
     }
   }
 
-  c->params[P_PRESSURE] = clamp(0, 255, c->params[P_PRESSURE]);
+  c->params[P_PRESSURE] = clampf(0, C_PRESSURE_MAX, c->params[P_PRESSURE]);
+  *c->supply = clampf(0, S_SUPPLY_MAX, *c->supply);
+  *c->reclaimer = clampf(0, S_RECLAIM_MAX, *c->reclaimer);
 
-  if (in || out) {
-    c->disp->showNumberDecEx(c->params[P_PRESSURE], 0x40, false, 2, 0);
-    c->disp->showNumberDecEx(100 * (c->params[P_PRESSURE] - (int)c->params[P_PRESSURE]), 0x40, true, 2, 2);
-  }
+  auto_reclaim();
 }
 
 
 /**
- * @brief purges all circuits to zero pressure (full purge)
+ * @brief opens enabled circuits intake and exhaust for specified
+ * purge time-interval
  * 
  */
 void purge() {
-  uint32_t itime;
-  for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {    // loop system circuits
+  static uint32_t itime;
+  circuit_t *c;
+  int i;
+
+
+  for (i = 0; i < C_NUM_CIRCUITS; i += 1) {    // loop system circuits
     itime = millis();
-    if (sys.en_flags & (1 << i)) {
-      // open exhaust, close intake
-      digitalWrite(sys.circuits[i].pins[I_PRESSURE_IN], LOW);
-      digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], HIGH);
-      while (sys.circuits[i].params[P_PRESSURE] > 0) {
-        modify_circuit(&sys.circuits[i], millis() - itime, 0, 1);
+    c = &sys.circuits[i];
+
+    if (isbset(sys.en_flags, i)) {
+      while (millis() - itime <= c->params[P_PURGE_TIME] * 1000) {
+        // open exhaust, open intake
+        digitalWrite(c->pins[I_PRESSURE_IN], HIGH);
+        digitalWrite(c->pins[I_PRESSURE_OUT], HIGH);
+        
+        // move pressure according to time since last purge-iteration
+        modify_circuit(c, millis() - itime, 1, 1);
       }
-      // close exhaust
-      digitalWrite(sys.circuits[i].pins[I_PRESSURE_OUT], LOW);
-    }    
+
+      // close exhaust, close intake
+      digitalWrite(c->pins[I_PRESSURE_OUT], LOW);
+      digitalWrite(c->pins[I_PRESSURE_IN], LOW);
+    }
   }
 
-  sys.s_flags = S_STANDBY;
+  sys.state = S_STANDBY;
 }
 
 /**
- * @brief modifies circuit pressure to approach set-point.
- * modifies pressure for a single PID window. should be called
- * iteratively.
+ * @brief steps circuit pressure towards set-point.
  * 
- * @param c - circuit to modify
- * @param var - acceptable pressure variance
- * @param half - half-pressure set-point modifier
+ * @param c - circuit to set
+ * @param var - +/- pressure variance in PSI
+ * @param half - true -> set to half of set-point; false -> set to set-point
  */
-void set_pressure(circuit_t *c, double var, int half) {
+void set_pressure(circuit_t *c, float var, int half) {
   uint32_t wstart;
-  double out, set_point = (half) ? c->params[P_SET_POINT] / 2 : c->params[P_SET_POINT];
+  float out, set_point = (half) ? c->params[P_SET_POINT] / 2 : c->params[P_SET_POINT];
   int dir;
 
   pid_set_target(&c->pid, &set_point);
@@ -268,11 +328,11 @@ void set_pressure(circuit_t *c, double var, int half) {
     pid_set_direction(&c->pid, dir);
     wstart = millis();    // base time offset
     do {
-      digitalWrite(c->pins[I_PRESSURE_OUT], dir);
+      // close intake, open exhaust
       digitalWrite(c->pins[I_PRESSURE_IN], dir ^ 1);
+      digitalWrite(c->pins[I_PRESSURE_OUT], dir);
       modify_circuit(c, millis() - wstart, dir ^ 1, dir);
       out = pid_compute(&c->pid);
-      // poll_device(&sys.remote);
     } while (millis() - wstart < out);
   }
 
@@ -282,14 +342,14 @@ void set_pressure(circuit_t *c, double var, int half) {
 }
 
 /**
- * @brief steps all enabled circuits towards desired set-point if
- * circuit check time has expired.
+ * @brief invokes set_pressure for all enabled circuits.
+ * should be invoked iteratively until set-point is reached for all circuits.
  * 
- * @param half - half-pressure set-point modifier
+ * @param half - true -> set to half of set-point; false -> set to set-point
  */
 void shot_pressure(bool half) {
   static int i = 0;
-  double var = 0.05;
+  float var = 0.1;
   circuit_t *c;
 
   if (sys.en_flags & (1 << i)) {   // if enabled

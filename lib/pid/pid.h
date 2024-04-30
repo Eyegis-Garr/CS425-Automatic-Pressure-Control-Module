@@ -5,26 +5,26 @@
 #define REVERSE 1
 
 typedef struct pid_t {
-  double *i;
-  double *o;
-  double *s;
+  float *i;
+  float *o;
+  float *s;
 
-  double kp;
-  double ki;
-  double kd;
+  float kp;
+  float ki;
+  float kd;
 
-  double prev_err;
-  double integral;
-  double deriv;
+  float prev_err;
+  float integral;
+  float deriv;
 
   int dir;
 } pid_t;
 
-double pid_compute(pid_t *p);
-void pid_set_param(pid_t *p, double kp, double ki, double kd);
-void pid_set_input(pid_t *p, double *input);
-void pid_set_output(pid_t *p, double *output);
-void pid_set_target(pid_t *p, double *target);
+float pid_compute(pid_t *p);
+void pid_set_param(pid_t *p, float kp, float ki, float kd);
+void pid_set_input(pid_t *p, float *input);
+void pid_set_output(pid_t *p, float *output);
+void pid_set_target(pid_t *p, float *target);
 void pid_set_direction(pid_t *p, int dir);
 
 #endif // PID_H

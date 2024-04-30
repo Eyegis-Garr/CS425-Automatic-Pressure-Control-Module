@@ -167,7 +167,7 @@ int mode_cb(menu_t *m, option_t *o) {
   m_draw(&tft, alert, M_CLEAR);
 
   if (code == M_CONFIRM) {
-    sys.s_flags = 1 << m->cursor;
+    sys.state = 1 << m->cursor;
 
     sprintf(popup->title, "Entered %s mode", o->name);
     m_draw(&tft, popup, M_DRAW);

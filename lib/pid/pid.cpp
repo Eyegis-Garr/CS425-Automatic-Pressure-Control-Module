@@ -1,35 +1,35 @@
 #include "pid.h"
 
-double pid_compute(pid_t *p) {
-	double err = *p->s - *p->i;
-	double prop = p->kp * err;
+float pid_compute(pid_t *p) {
+	float err = *p->s - *p->i;
+	float prop = p->kp * err;
 
 	p->integral += err;
-	double integral = p->ki * p->integral;
+	float integral = p->ki * p->integral;
 
-	double derivative = p->kd * (err - p->prev_err);
+	float derivative = p->kd * (err - p->prev_err);
 	p->prev_err = err;
 
-	double out = prop + integral + derivative;
+	float out = prop + integral + derivative;
 
 	return out;
 }
 
-void pid_set_param(pid_t *p, double kp, double ki, double kd) {
+void pid_set_param(pid_t *p, float kp, float ki, float kd) {
 	p->kp = kp;
 	p->ki = ki;
 	p->kd = kd;
 }
 
-void pid_set_input(pid_t *p, double *input) {
+void pid_set_input(pid_t *p, float *input) {
 	p->i = input;
 }
 
-void pid_set_output(pid_t *p, double *output) {
+void pid_set_output(pid_t *p, float *output) {
 	p->o = output;
 }
 
-void pid_set_target(pid_t *p, double *target) {
+void pid_set_target(pid_t *p, float *target) {
 	p->s = target;
 }
 

@@ -7,7 +7,7 @@ int init_remote(remote_t *r, Stream *s) {
   r->s = s;
   r->load_state = 0;
   r->rx_head = r->rx.bytes;
-  r->r_flags = 0;
+  r->state = 0;
 
   return 0;
 }
@@ -56,45 +56,79 @@ static size_t cobs_decode(uint8_t *in, size_t length, void *out) {
   return (size_t)(decode - (uint8_t *)out);
 }
 
+static uint8_t chk8(uint8_t *data, size_t len) {
+  uint8_t *rd;
+  uint32_t s;
+
+  for (s = 0, rd = data; rd < data + len; rd += 1) {
+    s += *rd;
+  }
+
+  return (uint8_t)s;
+}
+
 int rx_packet(remote_t *r) {
   static uint8_t rx_buffer[PS_LENGTH + PS_HEADER + 1];
+  uint8_t chk;
+  size_t dec;
   int ret = 0, rd;
 
-  if (isbclr(r->r_flags, R_RXINP)) {
+  if (isbclr(r->state, R_RXINP)) {
     r->rx_head = rx_buffer;
   }
 
   while (r->s->available()) {
-    r->r_flags |= (1 << R_RXINP);
+    r->state |= (1 << R_RXINP);
 
     rd = r->s->read();
 
+    if (rd >= 0) {
+      *r->rx_head++ = rd;
+    }
+
     if (rd == 0) {
-      cobs_decode(rx_buffer, r->rx_head - rx_buffer, &r->rx);
+      dec = cobs_decode(rx_buffer, r->rx_head - rx_buffer, r->rx.bytes);
+
+      chk = chk8(r->rx.bytes, r->rx.packet.size + PS_HEADER - 1);
+      
+      // Serial.println(chk);
+      // for (int i = 0; i < dec; i += 1) {
+      //   Serial.println(r->rx.bytes[i]);
+      // }
+      // Serial.println("===");
+
+      if (r->rx.packet.data[r->rx.packet.size - 1] == chk) {
+        r->state |= (1 << R_NDATA);
+        r->state &= ~(1 << R_RXINP);
+        ret = 1;
+        break;
+      }
 
       r->rx_head = rx_buffer;
-      r->r_flags &= ~(1 << R_RXINP);
-      r->r_flags |= (1 << R_NDATA);
-      ret = 1;
-    } else if (rd > 0) {
-      *r->rx_head++ = rd;
     }
   }
 
   return ret;
 }
 
-size_t tx_packet(packet_t *p, Stream *s) {
+int tx_packet(packet_t *p, Stream *s) {
   static uint8_t tx_buffer[PS_LENGTH + PS_HEADER];
-  size_t wr = 0;
+  size_t wr, en;
+  uint8_t chk;
+
+  p->packet.size += 1;
+
+  chk = chk8(p->bytes, PS_HEADER + p->packet.size - 1);
+
+  p->packet.data[p->packet.size - 1] = chk;
   
-  wr = cobs_encode(p->bytes, p->packet.size + PS_HEADER, tx_buffer);
+  en = cobs_encode(p->bytes, p->packet.size + PS_HEADER, tx_buffer);
 
-  tx_buffer[wr++] = 0;
+  tx_buffer[en++] = 0;
 
-  wr = s->write(tx_buffer, wr);
+  wr = s->write(tx_buffer, en);
 
-  return wr;
+  return (wr == en) ? 0 : -1;
 }
 
 size_t ack_packet(remote_t *r, packet_t *p) {

@@ -6,32 +6,26 @@ int process_packet(remote_t *r) {
 
   switch (r->rx.packet.type) {
     case PK_UPDATE:
-      if (isbset(r->rx.packet.flags, UP_REMOVE)) {
-        // mask UP_REMOVE and bit-clear rest of packet flag-bits (i.e. rest of update types)
-        sys.up_types &= ~(r->rx.packet.flags & ~(1 << UP_REMOVE));
+      if (isbset(r->rx.packet.flags, UP_RESET)) {
+        sys.up_types = 0;
       } else {
-        sys.up_types = r->rx.packet.flags;   // configures system for updating specified system state
-        if (isbset(r->rx.packet.flags, UP_CIRCUITS)) {
-          // store circuits to send updates for
-          sys.c_flags = *rd++;
-          // store parameters to package
-          sys.p_flags = (uint16_t) *rd++;
-          sys.p_flags <<= 8;
-          sys.p_flags |= (uint16_t) *rd++;
-        }
+        sys.up_types |= r->rx.packet.flags;   // configures system for updating specified system state
+      }
+
+      if (isbset(r->rx.packet.flags, UP_CIRCUITS)) {
+        // store circuits to send updates for
+        sys.c_flags = *rd++;
+        // store parameters to package
+        sys.p_flags = (uint16_t) *rd++;
+        sys.p_flags <<= 8;
+        sys.p_flags |= (uint16_t) *rd++;
       }
       break;
     case PK_COMMAND:
       ret = process_command(r->rx.packet.flags, rd);
-      if (isbset(r->rx.packet.flags, CMD_RESPND) && ret) {
-        // if response requested and command successfully executed, send ACK
-        ret = tx_packet(&r->rx, r->s);
-      } else {
-        ret = ack_packet(r, &r->rx);
-      }
       break;
     case PK_STATUS:
-      if (isbset(r->rx.packet.flags, ST_PING)) {
+      if (isbset(r->rx.packet.flags, ST_PING) && isbclr(r->state, R_RXINP)) {
         r->rx.packet.timeout = 0;
         ret = tx_packet(&r->rx, r->s); // echo ping back
       }
@@ -41,9 +35,7 @@ int process_packet(remote_t *r) {
       break;
   }
 
-  if (ret > 0) {
-    r->r_flags &= ~(1 << R_NDATA);
-  }
+  r->state &= ~(1 << R_NDATA);
 
   return ret;
 }
@@ -64,13 +56,14 @@ size_t process_command(uint8_t flags, uint8_t *bytes) {
     if (isbset(flags, i)) {
       switch (i) {
         case CMD_MODESET:
-          sys.s_flags = *cbytes++;
+          sys.state = *cbytes++;
           break;
         case CMD_PARSET:
           cmask = *cbytes++;
           pmask = *cbytes++;
           pmask <<= 8;
           pmask |= (uint16_t) *cbytes++;
+
           bytes += packetize_circuits(cbytes, cmask, pmask, 0);
           break;
         case CMD_SAVE:
@@ -88,7 +81,7 @@ size_t process_command(uint8_t flags, uint8_t *bytes) {
     }
   }
 
-  return (size_t)(cbytes - bytes);
+  return (cbytes > bytes) ? 0 : -1;
 }
 
 /**
@@ -111,8 +104,6 @@ size_t issue_updates(remote_t *r) {
       pdata += packetize_system(pdata);
     } if (isbset(sys.up_types, UP_CIRCUITS)) {
       pdata += packetize_circuits(pdata, sys.c_flags, sys.p_flags, 1);
-    } if (isbset(sys.up_types, UP_REMOTE)) {
-      pdata += packetize_remote(pdata);
     }
   }
 
@@ -134,7 +125,8 @@ size_t packetize_system(uint8_t *bytes) {
   uint8_t *sbytes = bytes;
 
   // store system flags
-  *sbytes++ = sys.s_flags;
+  *sbytes++ = sys.state;
+  *sbytes++ = sys.err;
   *sbytes++ = sys.c_flags;
   *sbytes++ = sys.p_flags >> 8;
   *sbytes++ = sys.p_flags;
@@ -146,6 +138,17 @@ size_t packetize_system(uint8_t *bytes) {
   *sbytes++ = sys.uptime >> 16;
   *sbytes++ = sys.uptime >> 8;
   *sbytes++ = sys.uptime; 
+  // store reclaimer and supply state
+  *sbytes++ = sys.reclaimer;
+  *sbytes++ = 100 * (sys.reclaimer - (int)sys.reclaimer);
+  *sbytes++ = sys.supply;
+  *sbytes++ = 100 * (sys.supply - (int)sys.supply);
+  *sbytes++ = sys.rec_auto_on;
+  *sbytes++ = 100 * (sys.rec_auto_on - (int)sys.rec_auto_on);
+  *sbytes++ = sys.rec_auto_off;
+  *sbytes++ = 100 * (sys.rec_auto_off - (int)sys.rec_auto_off);
+  *sbytes++ = sys.supply_min;
+  *sbytes++ = 100 * (sys.supply_min - (int)sys.supply_min);
 
   return sbytes - bytes;
 }
@@ -172,7 +175,6 @@ size_t packetize_system(uint8_t *bytes) {
  */
 size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t dir) {
   uint8_t *pdata = bytes;
-  double *cdata;
   circuit_t *c;
 
   if (dir) {
@@ -184,14 +186,13 @@ size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
     if (isbset(cmask, i)) {
       c = &sys.circuits[i];
-      cdata = c->params;
       for (int k = 0; k < C_NUM_PARAM; k += 1) {
         if (isbset(pmask, k)) {
           if (dir) {
-            *pdata++ = (uint8_t) c->params[k];
-            *pdata++ = (uint8_t) ((c->params[k] - (uint8_t)c->params[k]) * 100);
+            *pdata++ = c->params[k];
+            *pdata++ = 100 * (c->params[k] - (int)c->params[k]);
           } else {
-            *cdata++ = *pdata + ((double)(*(pdata + 1)) / 100);
+            c->params[k] = *pdata + ((float)(*(pdata + 1)) / 100);
             pdata += 2;
           }
         }
@@ -200,7 +201,8 @@ size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t
       if (dir) {
         // set circuit binary-state (solenoid io, en button, en LED)
         *pdata++ = (digitalRead(c->pins[I_PRESSURE_IN]) << I_PRESSURE_IN)    |
-                   (digitalRead(c->pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT);
+                   (digitalRead(c->pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT)  |
+                   (digitalRead(c->pins[I_LED]) << I_ENABLE_BTN);
       }
     }
   }
@@ -211,7 +213,7 @@ size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t
 size_t packetize_remote(uint8_t *bytes) {
   uint8_t *rbytes = bytes + 1;
 
-  *rbytes++ = sys.remote.r_flags;
+  *rbytes++ = sys.remote.state;
 
   *rbytes++ = sys.remote.rx.packet.type;
   *rbytes++ = sys.remote.rx.packet.flags;
