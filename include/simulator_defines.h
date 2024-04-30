@@ -1,16 +1,18 @@
 #ifndef SIMULATOR_DEFINES_H
 #define SIMULATOR_DEFINES_H
 
-#define S_NUM_MODES 8
-// system state bit positions
+// system state numbers
 #define S_SHOT    0
 #define S_ABORT   1
 #define S_PURGE   2
 #define S_ALARM   3
-#define S_RECLAIM 4
+#define S_AUTOREC 4
 #define S_STANDBY 5
 #define S_ERROR   6
 #define S_REMOTE  7
+
+#define E_CMODIFY     1
+#define E_LOWSUPPLY   2
 
 // system circuit array/bit indices
 #define C_NUM_CIRCUITS 5
@@ -47,8 +49,11 @@
 // system circuit defaults (time values in seconds)
 #define C_MAX_DEFAULT   	5
 #define C_DELAY_DEFAULT		1
-#define C_PURGE_DEFAULT		120
+#define C_PURGE_DEFAULT		5
 #define C_RECLAIM_TIME		30
+#define C_PRESSURE_MAX    25.0
+#define S_SUPPLY_MAX      150.0
+#define S_RECLAIM_MAX     32.0
 
 #define IN_RANGE(v, min, max) ((v >= min && v <= max))
 

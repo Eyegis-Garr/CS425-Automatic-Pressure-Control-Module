@@ -35,13 +35,13 @@ typedef struct io_t {
  * 
  */
 typedef struct circuit_t {
-  double params[C_NUM_PARAM];
-  double roc;
+  float params[C_NUM_PARAM];
+  float roc;
+  float *supply;
+  float *reclaimer;
 
   uint8_t pins[C_NUM_IO];
   pid_t pid;
-
-  TM1637Display *disp;
 } circuit_t;
 
 /**
@@ -65,7 +65,8 @@ typedef struct circuit_t {
  * 
  */
 typedef struct system_t {
-  uint8_t s_flags;    // state
+  uint8_t state;      // state
+  uint8_t err;        // error number
   uint8_t c_flags;    // circuit mask
   uint16_t p_flags;   // parameter mask
   uint8_t en_flags;   // circuit enable/disable
@@ -73,6 +74,12 @@ typedef struct system_t {
   uint8_t up_types;   // updates to issue
   uint32_t uptime;    // system uptime in ms
   
+  float reclaimer;
+  float supply;
+  float rec_auto_on;
+  float rec_auto_off;
+  float supply_min;
+
   circuit_t circuits[C_NUM_CIRCUITS];
   io_t c_button;
   io_t c_led;
@@ -93,44 +100,14 @@ extern volatile uint8_t *PORT_L;
 extern volatile uint8_t *DDR_L;
 extern volatile uint8_t *PIN_L;
 
-/**
- * @brief initializes simulator. should be invoked on startup or reset
- * 
- */
 void sim_setup();
 void init_system();
 void init_io();
-
-/**
- * @brief updates simulation. should be invoked per iteration.
- * 
- */
 void sim_tick();
-
+void auto_reclaim();
 void modify_circuit(circuit_t *c, uint32_t dt);
-
-/**
- * @brief purges all enabled system circuits. currently lowers pressure to 0.
- * can/should purge for each circuit's purge time.
- * 
- */
 void purge();
-
-/**
- * @brief steps circuit pressure towards set-point.
- * 
- * @param c - circuit to set
- * @param var - +/- pressure variance in PSI
- * @param half - true -> set to half of set-point; false -> set to set-point
- */
-void set_pressure(circuit_t *c, double var, int half);
-
-/**
- * @brief invokes set_pressure for all enabled circuits.
- * should be invoked iteratively until set-point is reached for all circuits.
- * 
- * @param half - true -> set to half of set-point; false -> set to set-point
- */
+void set_pressure(circuit_t *c, float var, int half);
 void shot_pressure(bool half);
 
 #endif // SIMULATOR_H
