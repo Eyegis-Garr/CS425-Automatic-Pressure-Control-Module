@@ -46,14 +46,17 @@
 #define P_KI          7
 #define P_KD          8
 
-// system circuit defaults (time values in seconds)
-#define C_MAX_DEFAULT   	5
-#define C_DELAY_DEFAULT		1
-#define C_PURGE_DEFAULT		5
-#define C_RECLAIM_TIME		30
-#define C_PRESSURE_MAX    25.0
+// system circuit defaults (time values in milliseconds)
+#define C_MAX_DEFAULT   	5000
+#define C_DELAY_DEFAULT		1000
+#define C_PURGE_DEFAULT		5000
+#define C_RECLAIM_TIME		5000
+#define C_PRESSURE_MAX    80.0
 #define S_SUPPLY_MAX      150.0
 #define S_RECLAIM_MAX     32.0
+
+#define CWIN_WIDTH  100
+#define CWIN_HEIGHT 75
 
 #define IN_RANGE(v, min, max) ((v >= min && v <= max))
 

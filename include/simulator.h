@@ -2,13 +2,14 @@
 #define SIMULATOR_H
 
 #include <Arduino.h>
-#include <TM1637Display.h>
+#include <Adafruit_ILI9341.h>
 #include <avr8-stub.h>
 
-#include "ui.h"
-#include "pid.h"
+
 #include "simulator_defines.h"
 #include "processing.h"
+#include "util.h"
+#include "pid.h"
 
 typedef struct io_t {
   volatile uint8_t *pin;
@@ -42,7 +43,9 @@ typedef struct circuit_t {
 
   uint8_t pins[C_NUM_IO];
   pid_t pid;
+  int idx;
 } circuit_t;
+
 
 /**
  * @brief system model
@@ -78,6 +81,7 @@ typedef struct system_t {
   float supply;
   float rec_auto_on;
   float rec_auto_off;
+  float rec_roc;
   float supply_min;
 
   circuit_t circuits[C_NUM_CIRCUITS];
@@ -88,9 +92,10 @@ typedef struct system_t {
 
   int pid_window_size;
 
-  ui_t ui;
+  Adafruit_ILI9341 *disp;
 } system_t;
 
+extern Adafruit_ILI9341 disp;
 extern system_t sys;
 
 extern volatile uint8_t *PORT_B;
@@ -106,6 +111,7 @@ void init_io();
 void sim_tick();
 void auto_reclaim();
 void modify_circuit(circuit_t *c, uint32_t dt);
+void draw_circuit(circuit_t *c, int in, int out);
 void purge();
 void set_pressure(circuit_t *c, float var, int half);
 void shot_pressure(bool half);

@@ -140,15 +140,15 @@ size_t packetize_system(uint8_t *bytes) {
   *sbytes++ = sys.uptime; 
   // store reclaimer and supply state
   *sbytes++ = sys.reclaimer;
-  *sbytes++ = 100 * (sys.reclaimer - (int)sys.reclaimer);
+  *sbytes++ = (uint8_t)(100 * (sys.reclaimer - (uint8_t)sys.reclaimer));
   *sbytes++ = sys.supply;
-  *sbytes++ = 100 * (sys.supply - (int)sys.supply);
+  *sbytes++ = (uint8_t)(100.0 * (sys.supply - (uint8_t)sys.supply));
   *sbytes++ = sys.rec_auto_on;
-  *sbytes++ = 100 * (sys.rec_auto_on - (int)sys.rec_auto_on);
+  *sbytes++ = (uint8_t)(100 * (sys.rec_auto_on - (uint8_t)sys.rec_auto_on));
   *sbytes++ = sys.rec_auto_off;
-  *sbytes++ = 100 * (sys.rec_auto_off - (int)sys.rec_auto_off);
+  *sbytes++ = (uint8_t)(100 * (sys.rec_auto_off - (uint8_t)sys.rec_auto_off));
   *sbytes++ = sys.supply_min;
-  *sbytes++ = 100 * (sys.supply_min - (int)sys.supply_min);
+  *sbytes++ = (uint8_t)(100 * (sys.supply_min - (uint8_t)sys.supply_min));
 
   return sbytes - bytes;
 }
@@ -202,7 +202,7 @@ size_t packetize_circuits(uint8_t *bytes, uint8_t cmask, uint16_t pmask, uint8_t
         // set circuit binary-state (solenoid io, en button, en LED)
         *pdata++ = (digitalRead(c->pins[I_PRESSURE_IN]) << I_PRESSURE_IN)    |
                    (digitalRead(c->pins[I_PRESSURE_OUT]) << I_PRESSURE_OUT)  |
-                   (digitalRead(c->pins[I_LED]) << I_ENABLE_BTN);
+                   (isbset(*sys.c_led.pin, i) << I_ENABLE_BTN);
       }
     }
   }
