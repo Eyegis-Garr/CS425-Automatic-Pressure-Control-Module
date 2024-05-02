@@ -73,7 +73,7 @@
  * @brief Circuit, reclaimer and supply pressure max values
  * 
  */
-#define C_PRESSURE_MAX    25.0
+#define C_PRESSURE_MAX    80.0
 #define S_SUPPLY_MAX      150.0
 #define S_RECLAIM_MAX     32.0
 
