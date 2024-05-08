@@ -33,6 +33,12 @@ void sim_setup() {
   sys.pid_window_size = 5000;
 }
 
+/**
+ * @brief Sets initial system variables. Called from sim_setup()
+ * 
+ * Configures/initializes system circuits, PID controllers and remote structure
+ * 
+ */
 void init_system() {
   uint16_t x, y, tw, th;
   int16_t tx, ty;
@@ -189,6 +195,10 @@ void init_system() {
   init_remote(&sys.remote, &Serial1);
 }
 
+/**
+ * @brief Initializes digital IO, memory mapped IO, and timer 1 register configuration
+ * 
+ */
 void init_io() {
   for (int i = 0; i < C_NUM_CIRCUITS; i += 1) {
     pinMode(sys.circuits[i].pins[I_PRESSURE_IN], OUTPUT);
@@ -218,6 +228,12 @@ void init_io() {
   TIMSK1 |= (1 << TOIE1);                 // output-compare interrupt enable for timer 1A
 }
 
+/**
+ * @brief Polls provided remote structure for available data.
+ * If no receives are in-progress, outgoing updates are issued through issue_updates
+ * 
+ * @param r Remote data structure to poll
+ */
 void poll_device(remote_t *r) {
   if (rx_packet(r) > 0) {
     process_packet(r);
@@ -226,6 +242,16 @@ void poll_device(remote_t *r) {
   }
 }
 
+/**
+ * @brief Timer 1 Overflow interrupt service routine.
+ * Configured to execute at a rate of 1KHz. 
+ * 
+ * Polls memory mapped circuit enable button IO. Debounces
+ * button state-readings.
+ * 
+ * Invokes poll_device on the system's remote device
+ * 
+ */
 ISR(TIMER1_OVF_vect) {
   static uint8_t state[C_NUM_CIRCUITS];
   uint8_t i;
